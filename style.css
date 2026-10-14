@@ -419,9 +419,7 @@ body {
   font-weight: 500;
 }
 
-/* ============================================================== */
-/* SCHEDULE VIEW: HORAIRE GLISSABLE & REDIMENSIONNABLE           */
-/* ============================================================== */
+/* HORAIRE VERTICAL */
 .day-schedule-scroll {
   flex: 1;
   min-height: 0;
@@ -432,7 +430,7 @@ body {
 
 .schedule-grid-canvas {
   position: relative;
-  height: calc(16 * var(--hour-height)); /* 07:00 to 22:00 */
+  height: calc(16 * var(--hour-height));
   width: 100%;
 }
 
@@ -462,7 +460,7 @@ body {
   height: 1px;
 }
 
-/* LIVE NOW LINE */
+/* NOW LINE */
 .now-timeline-marker {
   position: absolute;
   left: 0;
@@ -499,7 +497,7 @@ body {
   letter-spacing: 0.04em;
 }
 
-/* BLOC HORAIRE REPOSITIONNABLE ET REDIMENSIONNABLE */
+/* BLOCS HORAIRES */
 .schedule-block-item {
   position: absolute;
   left: 48px;
@@ -541,7 +539,6 @@ body {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
 }
 
-/* POIGNÉE DE REDIMENSIONNEMENT EN BAS DU BLOC */
 .resize-handle {
   position: absolute;
   left: 0;
@@ -570,7 +567,6 @@ body {
   transform: scaleY(1.4);
 }
 
-/* CATÉGORIES ET ROLLOVER */
 .schedule-block-item.cat-work { border-left-color: var(--color-work) !important; }
 .schedule-block-item.cat-home { border-left-color: var(--color-home) !important; }
 .schedule-block-item.cat-fun  { border-left-color: var(--color-fun) !important;  }
@@ -614,14 +610,11 @@ body {
   gap: 4px;
 }
 
-/* DROP HIGHLIGHT SUR LE CANEVAS */
 .schedule-grid-canvas.drag-over {
   background: rgba(255, 255, 255, 0.02);
 }
 
-/* ============================================================== */
-/* DOCK DES TÂCHES DU BAS                                         */
-/* ============================================================== */
+/* DOCK INFÉRIEUR (SOUPLE & VISIBLE) */
 .day-dock {
   border-top: 1px solid var(--card-border);
   background: var(--card-bg);
@@ -629,7 +622,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 220px;
+  min-height: 90px;
+  max-height: 260px;
   flex-shrink: 0;
   transition: background 0.15s ease;
 }
@@ -671,11 +665,11 @@ body {
   flex-direction: column;
   gap: 5px;
   overflow-y: auto;
-  max-height: 160px;
+  max-height: 210px;
   padding-right: 2px;
 }
 
-/* TASK ITEM (DOCK & DRAWER) */
+/* TASK ITEM */
 .task-item {
   background: #18181b;
   border: 1px solid var(--card-border);
@@ -771,7 +765,6 @@ body {
   color: var(--text-main);
 }
 
-/* MICRO PASTILLE INLINE TAGS (#TAG) */
 .task-inline-tag {
   display: inline-flex;
   align-items: center;
@@ -790,7 +783,7 @@ body {
   background: rgba(255, 255, 255, 0.16);
 }
 
-/* MENU POPOVER ACTIONS (⋮) */
+/* POPOVER */
 .task-popover-menu {
   position: fixed;
   background: #1c1c1f;
@@ -837,7 +830,7 @@ body {
   background: rgba(239, 68, 68, 0.12);
 }
 
-/* BACKLOG DRAWER (LATER) */
+/* DRAWER */
 .backlog-drawer {
   position: absolute;
   top: 0;
@@ -922,7 +915,7 @@ body {
   padding: 10px 12px;
 }
 
-/* MODALES & BACKDROP CLICK */
+/* MODALES */
 .modal-overlay {
   display: none;
   position: fixed;
