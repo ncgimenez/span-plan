@@ -28,7 +28,8 @@ function goToFocusApp() {
 }
 
 function exportData() {
-  const exportBlob = new Blob([JSON.stringify(window.SpanPlanState.tasks, null, 2)], { type: 'application/json' });
+  const tasks = (window.SpanPlanState && window.SpanPlanState.tasks) || [];
+  const exportBlob = new Blob([JSON.stringify(tasks, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(exportBlob);
   const a = document.createElement('a');
   a.href = url;
@@ -46,7 +47,7 @@ function importData(event) {
       const data = JSON.parse(e.target.result);
       if (Array.isArray(data)) {
         window.SpanPlanState.tasks = data;
-        savePlanState();
+        if (typeof savePlanState === 'function') savePlanState();
         alert('Tasks imported successfully!');
       }
     } catch {
@@ -63,16 +64,16 @@ window.addEventListener('keydown', (e) => {
 
   if (e.key === 't' || e.key === 'T') {
     e.preventDefault();
-    jumpToToday();
+    if (typeof jumpToToday === 'function') jumpToToday();
   } else if (e.key === 'ArrowRight') {
     e.preventDefault();
-    navigateTimeline(1);
+    if (typeof navigateTimeline === 'function') navigateTimeline(1);
   } else if (e.key === 'ArrowLeft') {
     e.preventDefault();
-    navigateTimeline(-1);
+    if (typeof navigateTimeline === 'function') navigateTimeline(-1);
   } else if (e.key === 'l' || e.key === 'L') {
     e.preventDefault();
-    toggleBacklogDrawer();
+    if (typeof toggleBacklogDrawer === 'function') toggleBacklogDrawer();
   }
 });
 
@@ -84,4 +85,3 @@ window.addEventListener('DOMContentLoaded', () => {
   const toggleBtn = document.getElementById('themeToggleBtn');
   if (toggleBtn) toggleBtn.textContent = savedTheme.charAt(0).toUpperCase() + savedTheme.slice(1);
 });
-
