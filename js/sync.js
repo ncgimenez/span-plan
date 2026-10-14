@@ -1,3 +1,4 @@
+// Configuration Supabase partagée avec Span Focus
 const SUPABASE_URL = 'https://xzoukiveknyuxmbrcsvb.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_8g571gv3CFOyJ0lMtaAf4w_CcITQovd';
 
@@ -13,10 +14,11 @@ function getOrCreateSyncId() {
 }
 
 let SYNC_USER_ID = getOrCreateSyncId();
+let isCloudSyncInProgress = false;
 
 function copyCurrentSyncKey() {
   navigator.clipboard.writeText(SYNC_USER_ID).then(() => {
-    alert("Clé de synchronisation copiée !");
+    alert("Sync key copied to clipboard!");
   });
 }
 
@@ -30,7 +32,7 @@ async function handleLinkClick() {
   localStorage.setItem('span_sync_user', key);
   updateSyncKeyDisplay();
   await loadPlanFromCloud();
-  alert("Span Plan connecté au compte !");
+  alert("Span Plan linked successfully!");
 }
 
 function updateSyncKeyDisplay() {
@@ -39,6 +41,7 @@ function updateSyncKeyDisplay() {
 }
 
 async function syncPlanToCloud() {
+  if (isCloudSyncInProgress) return;
   try {
     const payload = {
       id: SYNC_USER_ID,
@@ -47,7 +50,7 @@ async function syncPlanToCloud() {
     };
     await supabaseClient.from('user_state').upsert(payload);
   } catch (err) {
-    console.error('Erreur cloud plan:', err);
+    console.warn('Cloud sync write error:', err.message);
   }
 }
 
@@ -59,13 +62,17 @@ async function loadPlanFromCloud() {
       .eq('id', SYNC_USER_ID)
       .single();
 
-    if (data && data.plan_tasks) {
+    if (data && data.plan_tasks && Array.isArray(data.plan_tasks)) {
+      isCloudSyncInProgress = true;
       window.SpanPlanState.tasks = data.plan_tasks;
       localStorage.setItem('span_plan_tasks', JSON.stringify(data.plan_tasks));
-      if (typeof renderAllBuckets === 'function') renderAllBuckets();
+      if (typeof executeAutoRollover === 'function') executeAutoRollover();
+      if (typeof renderPlanGrid === 'function') renderPlanGrid();
+      if (typeof renderBacklogDrawer === 'function') renderBacklogDrawer();
+      isCloudSyncInProgress = false;
     }
   } catch (err) {
-    console.error('Erreur lecture cloud plan:', err);
+    console.warn('Cloud sync read error:', err.message);
   }
 }
 
