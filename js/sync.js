@@ -2,7 +2,9 @@
 const SUPABASE_URL = 'https://xzoukiveknyuxmbrcsvb.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_8g571gv3CFOyJ0lMtaAf4w_CcITQovd';
 
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = (typeof supabase !== 'undefined') 
+  ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) 
+  : null;
 
 function getOrCreateSyncId() {
   let id = localStorage.getItem('span_sync_user');
@@ -19,6 +21,8 @@ let isCloudSyncInProgress = false;
 function copyCurrentSyncKey() {
   navigator.clipboard.writeText(SYNC_USER_ID).then(() => {
     alert("Sync key copied to clipboard!");
+  }).catch(() => {
+    alert("Failed to copy sync key.");
   });
 }
 
@@ -41,11 +45,11 @@ function updateSyncKeyDisplay() {
 }
 
 async function syncPlanToCloud() {
-  if (isCloudSyncInProgress) return;
+  if (isCloudSyncInProgress || !supabaseClient) return;
   try {
     const payload = {
       id: SYNC_USER_ID,
-      plan_tasks: window.SpanPlanState.tasks,
+      plan_tasks: (window.SpanPlanState && window.SpanPlanState.tasks) || [],
       updated_at: new Date().toISOString()
     };
     await supabaseClient.from('user_state').upsert(payload);
@@ -55,28 +59,39 @@ async function syncPlanToCloud() {
 }
 
 async function loadPlanFromCloud() {
+  if (!supabaseClient) return;
   try {
-    const { data } = await supabaseClient
+    const { data, error } = await supabaseClient
       .from('user_state')
       .select('plan_tasks')
       .eq('id', SYNC_USER_ID)
       .single();
 
-    if (data && data.plan_tasks && Array.isArray(data.plan_tasks)) {
+    if (error && error.code !== 'PGRST116') {
+      console.warn('Cloud sync read warning:', error.message);
+      return;
+    }
+
+    if (data && data.plan_tasks && Array.isArray(data.plan_tasks) && data.plan_tasks.length > 0) {
       isCloudSyncInProgress = true;
       window.SpanPlanState.tasks = data.plan_tasks;
       localStorage.setItem('span_plan_tasks', JSON.stringify(data.plan_tasks));
+      
       if (typeof executeAutoRollover === 'function') executeAutoRollover();
       if (typeof renderPlanGrid === 'function') renderPlanGrid();
       if (typeof renderBacklogDrawer === 'function') renderBacklogDrawer();
+      if (typeof updateCounters === 'function') updateCounters();
       isCloudSyncInProgress = false;
     }
   } catch (err) {
-    console.warn('Cloud sync read error:', err.message);
+    console.warn('Cloud sync connection bypass:', err.message);
   }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
   updateSyncKeyDisplay();
-  loadPlanFromCloud();
+  // Chargement en arrière-plan sans bloquer l'interface
+  setTimeout(() => {
+    loadPlanFromCloud();
+  }, 100);
 });
