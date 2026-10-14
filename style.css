@@ -262,7 +262,7 @@ body {
   color: var(--text-main);
 }
 
-/* QUICK ADD BAR (OPTIONAL TIMING ONLY) */
+/* QUICK ADD BAR */
 .quick-add-container {
   display: flex;
   align-items: center;
@@ -320,7 +320,7 @@ body {
   background: rgba(255, 255, 255, 0.18);
 }
 
-/* MAIN WORKSPACE */
+/* WORKSPACE */
 .workspace-main {
   flex: 1;
   min-height: 0;
@@ -420,7 +420,7 @@ body {
 }
 
 /* ============================================================== */
-/* SCHEDULE VIEW: VERTICAL TIMELINE GRID (UPPER AREA)            */
+/* SCHEDULE VIEW: HORAIRE GLISSABLE & REDIMENSIONNABLE           */
 /* ============================================================== */
 .day-schedule-scroll {
   flex: 1;
@@ -432,7 +432,7 @@ body {
 
 .schedule-grid-canvas {
   position: relative;
-  height: calc(16 * var(--hour-height)); /* 07:00 to 22:00 = 15 hours + 1 buffer */
+  height: calc(16 * var(--hour-height)); /* 07:00 to 22:00 */
   width: 100%;
 }
 
@@ -462,7 +462,7 @@ body {
   height: 1px;
 }
 
-/* THE "NOW" LIVE TIMELINE INDICATOR */
+/* LIVE NOW LINE */
 .now-timeline-marker {
   position: absolute;
   left: 0;
@@ -499,23 +499,41 @@ body {
   letter-spacing: 0.04em;
 }
 
-/* SCHEDULED EVENT / TIMED BLOCK ON CANVAS */
+/* BLOC HORAIRE REPOSITIONNABLE ET REDIMENSIONNABLE */
 .schedule-block-item {
   position: absolute;
-  left: 50px;
+  left: 48px;
   right: 8px;
   background: #18181b;
   border: 1px solid var(--card-border);
   border-left: 3.5px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
-  padding: 6px 8px;
-  overflow: hidden;
+  padding: 6px 8px 10px 8px;
   cursor: grab;
   z-index: 5;
   transition: box-shadow 0.15s ease, border-color 0.15s ease;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+.schedule-block-item:active {
+  cursor: grabbing;
+}
+
+.schedule-block-item.dragging {
+  opacity: 0.45;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+  z-index: 50;
+}
+
+.schedule-block-item.is-resizing {
+  user-select: none;
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  z-index: 40;
 }
 
 .schedule-block-item:hover {
@@ -523,9 +541,45 @@ body {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
 }
 
-.schedule-block-item.cat-work { border-left-color: var(--color-work); }
-.schedule-block-item.cat-home { border-left-color: var(--color-home); }
-.schedule-block-item.cat-fun  { border-left-color: var(--color-fun);  }
+/* POIGNÉE DE REDIMENSIONNEMENT EN BAS DU BLOC */
+.resize-handle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 8px;
+  cursor: ns-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.resize-handle::after {
+  content: "";
+  width: 22px;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.schedule-block-item:hover .resize-handle::after,
+.resize-handle:hover::after {
+  background: var(--text-main);
+  transform: scaleY(1.4);
+}
+
+/* CATÉGORIES ET ROLLOVER */
+.schedule-block-item.cat-work { border-left-color: var(--color-work) !important; }
+.schedule-block-item.cat-home { border-left-color: var(--color-home) !important; }
+.schedule-block-item.cat-fun  { border-left-color: var(--color-fun) !important;  }
+
+.schedule-block-item.rollover .schedule-block-title {
+  color: var(--streak) !important;
+  font-style: italic;
+  font-weight: 500;
+}
 
 .schedule-block-top {
   display: flex;
@@ -550,8 +604,23 @@ body {
   color: var(--text-muted);
 }
 
+.schedule-block-sub {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-weight: 500;
+  padding-left: 22px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* DROP HIGHLIGHT SUR LE CANEVAS */
+.schedule-grid-canvas.drag-over {
+  background: rgba(255, 255, 255, 0.02);
+}
+
 /* ============================================================== */
-/* DOCK DES TÂCHES NON PLANIFIÉES DU JOUR (LOWER AREA)            */
+/* DOCK DES TÂCHES DU BAS                                         */
 /* ============================================================== */
 .day-dock {
   border-top: 1px solid var(--card-border);
@@ -562,6 +631,12 @@ body {
   gap: 6px;
   max-height: 220px;
   flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.day-dock.drag-over {
+  background: rgba(255, 255, 255, 0.06);
+  outline: 1.5px dashed rgba(255, 255, 255, 0.3);
 }
 
 .dock-header {
@@ -623,9 +698,9 @@ body {
   border-color: var(--card-border-hover);
 }
 
-.task-item.cat-work { border-left-color: var(--color-work); }
-.task-item.cat-home { border-left-color: var(--color-home); }
-.task-item.cat-fun  { border-left-color: var(--color-fun);  }
+.task-item.cat-work { border-left-color: var(--color-work) !important; }
+.task-item.cat-home { border-left-color: var(--color-home) !important; }
+.task-item.cat-fun  { border-left-color: var(--color-fun) !important;  }
 
 .task-item.rollover .task-text {
   color: var(--streak) !important;
@@ -653,7 +728,8 @@ body {
   font-size: 10px;
 }
 
-.task-item.completed .checkbox {
+.task-item.completed .checkbox,
+.schedule-block-item.completed .checkbox {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--bg);
@@ -670,7 +746,8 @@ body {
   cursor: pointer;
 }
 
-.task-item.completed .task-text {
+.task-item.completed .task-text,
+.schedule-block-item.completed .schedule-block-title {
   color: var(--text-muted) !important;
   text-decoration: line-through;
   font-style: normal !important;
@@ -845,7 +922,7 @@ body {
   padding: 10px 12px;
 }
 
-/* MODALES & FERMETURE AU CLIC EXTERIEUR */
+/* MODALES & BACKDROP CLICK */
 .modal-overlay {
   display: none;
   position: fixed;
