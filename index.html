@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Plan">
 
-  <link rel="stylesheet" href="style.css?v=3.0">
+  <link rel="stylesheet" href="style.css?v=3.1">
 </head>
 <body>
 
@@ -42,7 +42,7 @@
       </div>
     </header>
 
-    <!-- TIMELINE CONTROLS (SIMPLIFIED - ROLLING/CALENDAR REMOVED) -->
+    <!-- TIMELINE CONTROLS -->
     <div class="timeline-bar">
       <div class="timeline-nav">
         <button class="nav-arrow-btn" onclick="navigateTimeline(-1)" title="Previous period">‹</button>
@@ -66,7 +66,7 @@
     <!-- QUICK ADD BAR WITH SHORTCUTS (!m, !a, !e) -->
     <div class="quick-add-container">
       <input type="text" class="quick-input" id="quickTaskInput" 
-             placeholder="Add task... (Use !m morning, !a afternoon, !e evening, e.g., 'Prep report 10:00 !m')" 
+             placeholder="Add task... (e.g. 'Prep review 10:00 !m #project')" 
              onkeydown="if(event.key==='Enter') submitQuickAdd()">
       
       <select class="quick-select" id="quickTargetDate">
@@ -211,18 +211,22 @@
         </div>
 
         <div style="margin-top: 14px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Multi-Device Sync (Supabase)</div>
-        <div class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+        
+        <!-- SEMENTIC FORM TO TRIGGER BROWSER / KEYCHAIN PASSWORD SAVER -->
+        <form id="keychainSyncForm" onsubmit="event.preventDefault(); handleLinkClick();" autocomplete="on" style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
           <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
             <div style="font-size: 13px; color: var(--text-muted);">
               Key: <strong id="displaySyncKey" style="color: var(--text-main); font-family: monospace;">...</strong>
             </div>
             <button class="btn-theme-toggle" type="button" onclick="copyCurrentSyncKey()">Copy</button>
           </div>
+          
           <div style="display: flex; gap: 6px; width: 100%;">
-            <input type="text" id="inputSyncKey" placeholder="Paste sync key from Span Focus..." style="flex: 1; background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-main); padding: 8px 10px; border-radius: 8px; font-size: 13px; outline: none;">
-            <button class="btn-theme-toggle" type="button" onclick="handleLinkClick()">Link</button>
+            <input type="text" name="username" id="inputSyncKey" autocomplete="username" placeholder="Paste sync key from Span Focus..." style="flex: 1; background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-main); padding: 8px 10px; border-radius: 8px; font-size: 13px; outline: none;">
+            <input type="password" name="password" id="inputSyncSecret" autocomplete="current-password" style="display: none;">
+            <button class="btn-theme-toggle" type="submit">Link</button>
           </div>
-        </div>
+        </form>
 
         <div class="backup-section">
           <button class="btn-backup" onclick="exportData()">Download JSON</button>
@@ -236,8 +240,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=3.0"></script>
-  <script src="js/plan.js?v=3.0"></script>
-  <script src="js/app.js?v=3.0"></script>
+  <script src="js/sync.js?v=3.1"></script>
+  <script src="js/plan.js?v=3.1"></script>
+  <script src="js/app.js?v=3.1"></script>
 </body>
 </html>
