@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Plan">
 
-  <link rel="stylesheet" href="style.css?v=3.2">
+  <link rel="stylesheet" href="style.css?v=3.3">
 </head>
 <body>
 
@@ -24,15 +24,17 @@
         <span class="brand-app" id="headerTitle">Plan</span>
       </div>
       
-      <!-- CATEGORY / CONTEXT SWITCHER (BOLD & UNIFIED COLORS) -->
+      <!-- CATEGORY / CONTEXT SWITCHER (WORK - LIFE - FUN) -->
       <div class="context-switch" id="contextSwitch">
         <button class="context-btn active" data-context="all" onclick="setContextFilter('all')">All</button>
         <button class="context-btn cat-work" data-context="work" onclick="setContextFilter('work')">Work</button>
-        <button class="context-btn cat-home" data-context="home" onclick="setContextFilter('home')">Home</button>
+        <button class="context-btn cat-life" data-context="life" onclick="setContextFilter('life')">Life</button>
         <button class="context-btn cat-fun" data-context="fun" onclick="setContextFilter('fun')">Fun</button>
       </div>
 
       <div class="header-actions">
+        <!-- BOUTON DE SECOURS RAPIDE -->
+        <button class="icon-btn mini" onclick="recoverMissingTasks()" title="Rapatrier automatiquement les tâches perdues">🔄 Rapatrier</button>
         <button class="icon-btn" id="btnToggleDrawer" onclick="toggleBacklogDrawer()" title="Toggle Backlog (Later)">
           <span>Later</span>
           <span class="backlog-counter-pill" id="globalLaterCount">0</span>
@@ -52,7 +54,6 @@
       </div>
 
       <div class="view-mode-controls">
-        <!-- DAYS VISIBLE SELECTOR -->
         <div class="pill-group" id="daysSelectorGroup">
           <button class="pill-btn" data-days="1" onclick="setVisibleDays(1)">1D</button>
           <button class="pill-btn" data-days="2" onclick="setVisibleDays(2)">2D</button>
@@ -63,7 +64,7 @@
       </div>
     </div>
 
-    <!-- QUICK ADD BAR (ZERO FORCED TIMING) -->
+    <!-- QUICK ADD BAR -->
     <div class="quick-add-container">
       <input type="text" class="quick-input" id="quickTaskInput" 
              placeholder="Add task or event (e.g. 'Team standup 10:00' or simple 'Buy groceries')" 
@@ -77,7 +78,7 @@
 
       <select class="quick-select" id="quickContextSelect">
         <option value="work">Work</option>
-        <option value="home">Home</option>
+        <option value="life">Life</option>
         <option value="fun">Fun</option>
       </select>
 
@@ -86,14 +87,13 @@
 
     <!-- MAIN WORKSPACE -->
     <main class="workspace-main">
-      <!-- HORIZONTAL SCROLL / SWIPEABLE GRID -->
       <div class="planner-board-container" id="plannerBoardContainer">
         <div class="planner-grid" id="plannerGrid">
           <!-- Rendered dynamically by plan.js -->
         </div>
       </div>
 
-      <!-- RETRACTABLE & PINNABLE BACKLOG DRAWER -->
+      <!-- RETRACTABLE BACKLOG DRAWER -->
       <aside class="backlog-drawer" id="backlogDrawer">
         <div class="drawer-header">
           <div class="drawer-title-wrap">
@@ -143,7 +143,7 @@
     <button type="button" class="popover-item danger" onclick="popoverAction('delete')">✕ Delete Task</button>
   </div>
 
-  <!-- EDIT TASK MODAL (BACKDROP CLICK AUTO-CLOSES) -->
+  <!-- EDIT TASK MODAL -->
   <div class="modal-overlay" id="editModalOverlay" onclick="handleBackdropClick(event, 'editModalOverlay')">
     <div class="modal-card" onclick="event.stopPropagation()">
       <div class="modal-header">
@@ -168,7 +168,7 @@
         <label class="modal-label">Context Category</label>
         <div class="category-pills" id="modalContextPills">
           <button type="button" class="cat-pill cat-work" data-context="work" onclick="selectEditContext('work')">Work</button>
-          <button type="button" class="cat-pill cat-home" data-context="home" onclick="selectEditContext('home')">Home</button>
+          <button type="button" class="cat-pill cat-life" data-context="life" onclick="selectEditContext('life')">Life</button>
           <button type="button" class="cat-pill cat-fun" data-context="fun" onclick="selectEditContext('fun')">Fun</button>
         </div>
       </div>
@@ -179,7 +179,7 @@
     </div>
   </div>
 
-  <!-- SETTINGS MODAL (BACKDROP CLICK AUTO-CLOSES) -->
+  <!-- SETTINGS MODAL -->
   <div class="modal-overlay" id="settingsModalOverlay" onclick="handleBackdropClick(event, 'settingsModalOverlay')">
     <div class="modal-card" onclick="event.stopPropagation()">
       <div class="modal-header">
@@ -224,8 +224,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=3.2"></script>
-  <script src="js/plan.js?v=3.2"></script>
-  <script src="js/app.js?v=3.2"></script>
+  <script src="js/sync.js?v=3.3"></script>
+  <script src="js/plan.js?v=3.3"></script>
+  <script src="js/app.js?v=3.3"></script>
 </body>
 </html>
