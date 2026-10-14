@@ -17,6 +17,7 @@ function getOrCreateSyncId() {
 
 let SYNC_USER_ID = getOrCreateSyncId();
 let isCloudSyncInProgress = false;
+let realtimeSubscription = null;
 
 function copyCurrentSyncKey() {
   navigator.clipboard.writeText(SYNC_USER_ID).then(() => {
@@ -45,6 +46,7 @@ async function handleLinkClick() {
   syncKeychainInputs(key);
   updateSyncKeyDisplay();
 
+  setupRealtimeSubscription();
   await loadPlanFromCloud();
   alert("Span Plan linked successfully!");
 }
@@ -55,6 +57,7 @@ function updateSyncKeyDisplay() {
   syncKeychainInputs(SYNC_USER_ID);
 }
 
+// ENVOI VERS SUPABASE
 async function syncPlanToCloud() {
   if (isCloudSyncInProgress || !supabaseClient) return;
   try {
@@ -69,7 +72,7 @@ async function syncPlanToCloud() {
   }
 }
 
-// FUSION INTELLIGENTE : NE SUPPRIME JAMAIS LES TÂCHES LOCALES
+// FUSION INTELLIGENTE ET APPLICATION DIRECTE
 async function loadPlanFromCloud() {
   if (!supabaseClient) return;
   try {
@@ -90,7 +93,7 @@ async function loadPlanFromCloud() {
       const localTasks = (window.SpanPlanState && window.SpanPlanState.tasks) || [];
       const remoteTasks = data.plan_tasks;
 
-      // Dictionnaire pour préserver chaque tâche unique
+      // Fusion par ID : respecte les nouveautés distantes et conserve les ajouts récents
       const mergedMap = new Map();
 
       // On insère d'abord les tâches distantes
@@ -98,10 +101,13 @@ async function loadPlanFromCloud() {
         if (task && task.id) mergedMap.set(task.id, task);
       });
 
-      // On fusionne avec les tâches locales (priorité au travail en cours)
+      // On fusionne avec les tâches locales
       localTasks.forEach(task => {
         if (task && task.id) {
-          mergedMap.set(task.id, task);
+          // Si la tâche n'existait pas sur le cloud, on la préserve
+          if (!mergedMap.has(task.id)) {
+            mergedMap.set(task.id, task);
+          }
         }
       });
 
@@ -117,15 +123,57 @@ async function loadPlanFromCloud() {
 
       isCloudSyncInProgress = false;
 
-      // Si le local avait du neuf, on met à jour le cloud tout de suite
+      // Si le local avait des éléments non encore présents sur le cloud, on synchronise
       if (mergedList.length > remoteTasks.length) {
         syncPlanToCloud();
       }
     }
   } catch (err) {
     console.warn('Cloud sync merge bypass:', err.message);
+    isCloudSyncInProgress = false;
   }
 }
+
+// ABONNEMENT EN TEMPS RÉEL (WEBSOCKET SUPABASE)
+function setupRealtimeSubscription() {
+  if (!supabaseClient) return;
+
+  if (realtimeSubscription) {
+    supabaseClient.removeChannel(realtimeSubscription);
+  }
+
+  realtimeSubscription = supabaseClient
+    .channel('realtime_span_plan_' + SYNC_USER_ID)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'user_state',
+        filter: `id=eq.${SYNC_USER_ID}`
+      },
+      (payload) => {
+        if (payload.new && payload.new.plan_tasks) {
+          // Évite une boucle si c'est cet appareil qui vient d'écrire
+          if (!isCloudSyncInProgress) {
+            loadPlanFromCloud();
+          }
+        }
+      }
+    )
+    .subscribe();
+}
+
+// RÉACTUALISATION AUTOMATIQUE QUAND ON ROUVRE L'APP SUR MOBILE
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    loadPlanFromCloud();
+  }
+});
+
+window.addEventListener('focus', () => {
+  loadPlanFromCloud();
+});
 
 window.addEventListener('DOMContentLoaded', () => {
   updateSyncKeyDisplay();
@@ -138,6 +186,8 @@ window.addEventListener('DOMContentLoaded', () => {
       if (inputSecret) inputSecret.value = val;
     });
   }
+
+  setupRealtimeSubscription();
 
   setTimeout(() => {
     loadPlanFromCloud();
