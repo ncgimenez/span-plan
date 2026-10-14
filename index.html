@@ -24,15 +24,17 @@
         <span class="brand-app" id="headerTitle">Plan</span>
       </div>
       
+
       <!-- CATEGORY / CONTEXT SWITCHER (WORK - LIFE - FUN) -->
       <div class="context-switch" id="contextSwitch">
-        <button class="context-btn active" data-context="all" onclick="setContextFilter('all')">All</button>
-        <button class="context-btn cat-work" data-context="work" onclick="setContextFilter('work')">Work</button>
-        <button class="context-btn cat-life" data-context="life" onclick="setContextFilter('life')">Life</button>
-        <button class="context-btn cat-fun" data-context="fun" onclick="setContextFilter('fun')">Fun</button>
+        <button class="context-btn active" data-context="all" onclick="setContextFilter('all')"><span>All</span></button>
+        <button class="context-btn cat-work" data-context="work" onclick="setContextFilter('work')"><span>Work</span></button>
+        <button class="context-btn cat-life" data-context="life" onclick="setContextFilter('life')"><span>Life</span></button>
+        <button class="context-btn cat-fun" data-context="fun" onclick="setContextFilter('fun')"><span>Fun</span></button>
       </div>
 
-      <div class="header-actions">
+      
+      
         <!-- BOUTON DE SECOURS RAPIDE -->
         <button class="icon-btn mini" onclick="recoverMissingTasks()" title="Rapatrier automatiquement les tâches perdues">🔄 Rapatrier</button>
         <button class="icon-btn" id="btnToggleDrawer" onclick="toggleBacklogDrawer()" title="Toggle Backlog (Later)">
