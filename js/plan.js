@@ -16,7 +16,10 @@ const tomorrow = new Date();
 tomorrow.setDate(tomorrow.getDate() + 1);
 const TOMORROW_STR = getLocalDateString(tomorrow);
 
-// Normalisation des catégories existantes vers la triade unifiée
+const START_HOUR = 7;
+const END_HOUR = 22;
+const HOUR_HEIGHT = 54;
+
 function normalizePlanContext(cat) {
   if (!cat) return 'work';
   const c = String(cat).toLowerCase();
@@ -26,24 +29,21 @@ function normalizePlanContext(cat) {
   return 'work';
 }
 
-// Extraction automatique des tags inline (#tag) du titre
 function renderTitleWithTagsHtml(titleStr) {
-  if (!titleStr) return 'Untitled task';
+  if (!titleStr) return 'Untitled';
   return titleStr.replace(/#([\w\-]+)/g, (match, tag) => {
     return `<span class="task-inline-tag" onclick="event.stopPropagation(); filterByTag('${tag}')">#${tag}</span>`;
   });
 }
 
-// Données par défaut
+// Données initiales d'exemple
 const defaultInitialTasks = [
   {
     id: 'p_sample_today_1',
     title: 'Team standup meeting #work',
     date: TODAY_STR,
-    slot: 'morning',
     time: '09:30',
     context: 'work',
-    estimate: 1,
     completed: false,
     isRollover: false
   },
@@ -51,21 +51,26 @@ const defaultInitialTasks = [
     id: 'p_sample_today_2',
     title: 'Grocery shopping #home',
     date: TODAY_STR,
-    slot: 'evening',
-    time: '18:30',
+    time: '',
     context: 'home',
-    estimate: 1,
+    completed: false,
+    isRollover: false
+  },
+  {
+    id: 'p_sample_today_3',
+    title: 'Review quarterly architecture notes',
+    date: TODAY_STR,
+    time: '14:30',
+    context: 'work',
     completed: false,
     isRollover: false
   },
   {
     id: 'p_sample_tomorrow_1',
-    title: 'Study architecture patterns #study',
+    title: 'Plan vacation itinerary #fun',
     date: TOMORROW_STR,
-    slot: 'morning',
     time: '',
     context: 'fun',
-    estimate: 2,
     completed: false,
     isRollover: false
   }
@@ -83,12 +88,10 @@ if (!Array.isArray(rawTasks) || rawTasks.length === 0) {
 } else {
   window.SpanPlanState.tasks = rawTasks.map(t => ({
     id: t.id || ('p_' + Math.random().toString(36).substr(2, 9)),
-    title: t.title || 'Untitled task',
+    title: t.title || 'Untitled',
     date: t.date || null,
-    slot: t.slot || 'morning',
     time: t.time || '',
     context: normalizePlanContext(t.context || t.category),
-    estimate: typeof t.estimate === 'number' ? t.estimate : 1,
     completed: !!t.completed,
     isRollover: !!t.isRollover
   }));
@@ -101,29 +104,22 @@ let currentTagFilter = null;
 let isDrawerPinned = localStorage.getItem('span_plan_drawer_pinned') === 'true';
 
 let editingTaskId = null;
-let editingSlot = 'morning';
 let editingContext = 'work';
-let editingEstimate = 1;
 let popoverTargetTaskId = null;
 
-// Filtre rapide au clic sur un tag
+// Filtre tag
 function filterByTag(tag) {
-  if (currentTagFilter === tag) {
-    currentTagFilter = null;
-  } else {
-    currentTagFilter = tag;
-  }
+  currentTagFilter = (currentTagFilter === tag) ? null : tag;
   renderPlanGrid();
   renderBacklogDrawer();
 }
 
-// ROLLOVER AUTOMATIQUE
+// ROLLOVER AUTOMATIQUE SANS HEURE FORCÉE
 function executeAutoRollover() {
   let hasChanges = false;
   window.SpanPlanState.tasks.forEach(task => {
     if (task.date && task.date < TODAY_STR && !task.completed) {
       task.date = TODAY_STR;
-      task.slot = 'morning';
       task.isRollover = true;
       hasChanges = true;
     }
@@ -153,7 +149,7 @@ function calculateVisibleDates() {
   return dates;
 }
 
-// RENDU EN COLONNES
+// RENDU PRINCIPAL DU PLANNING (AGENDA + DOCK INFÉRIEUR)
 function renderPlanGrid() {
   const grid = document.getElementById('plannerGrid');
   if (!grid) return;
@@ -176,7 +172,8 @@ function renderPlanGrid() {
       return dateMatch && contextMatch && tagMatch;
     });
 
-    const totalEst = dayTasks.reduce((acc, t) => acc + (t.estimate || 1), 0);
+    const timedTasks = dayTasks.filter(t => !!t.time);
+    const unscheduledTasks = dayTasks.filter(t => !t.time);
 
     const col = document.createElement('div');
     col.className = `day-column ${isToday ? 'is-today' : ''}`;
@@ -188,12 +185,27 @@ function renderPlanGrid() {
           <span class="day-name">${isToday ? 'Today' : dayName}</span>
           <span class="day-date">${dayNum}</span>
         </div>
-        <span class="day-meta-est">⏱ ${totalEst * 25}m</span>
+        <span class="day-meta-est">${dayTasks.length} items</span>
       </div>
-      <div class="day-body">
-        ${renderDaySlot(dateStr, 'morning', '🌅 Morning', dayTasks)}
-        ${renderDaySlot(dateStr, 'afternoon', '☀️ Afternoon', dayTasks)}
-        ${renderDaySlot(dateStr, 'evening', '🌙 Evening', dayTasks)}
+
+      <!-- CANEVAS HORAIRE VERTICAL (UPPER AREA) -->
+      <div class="day-schedule-scroll" id="scheduleScroll_${dateStr}">
+        <div class="schedule-grid-canvas">
+          ${renderHourLines()}
+          ${isToday ? renderNowLineHtml() : ''}
+          ${renderTimedBlocks(timedTasks)}
+        </div>
+      </div>
+
+      <!-- DOCK DU BAS POUR TÂCHES NON PLANIFIÉES DU JOUR -->
+      <div class="day-dock" ondragover="allowDrop(event)" ondrop="handleDropToDock(event, '${dateStr}')">
+        <div class="dock-header">
+          <span class="dock-title">📋 To-do</span>
+          <span class="dock-count-pill">${unscheduledTasks.length}</span>
+        </div>
+        <ul class="dock-task-list">
+          ${renderUnscheduledList(unscheduledTasks)}
+        </ul>
       </div>
     `;
 
@@ -203,75 +215,105 @@ function renderPlanGrid() {
   updateRangeLabel(visibleDates);
 }
 
-function renderDaySlot(dateStr, slotName, slotLabel, dayTasks) {
-  const slotTasks = dayTasks.filter(t => (t.slot === slotName || (!t.slot && slotName === 'morning')));
+// Lignes d'heures de 07:00 à 22:00
+function renderHourLines() {
+  let html = '';
+  for (let h = START_HOUR; h <= END_HOUR; h++) {
+    const top = (h - START_HOUR) * HOUR_HEIGHT;
+    const label = `${String(h).padStart(2, '0')}:00`;
+    html += `
+      <div class="hour-row" style="top: ${top}px;">
+        <span class="hour-label">${label}</span>
+        <div class="hour-line"></div>
+      </div>
+    `;
+  }
+  return html;
+}
 
-  slotTasks.sort((a, b) => {
-    const timeA = a.time || '';
-    const timeB = b.time || '';
-    if (timeA && timeB) return timeA.localeCompare(timeB);
-    if (timeA) return -1;
-    if (timeB) return 1;
-    return 0;
-  });
+// Ligne rouge dynamique en direct
+function renderNowLineHtml() {
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const startMinutes = START_HOUR * 60;
+  const endMinutes = END_HOUR * 60;
 
-  let contentHtml = slotTasks.length > 0 
-    ? slotTasks.map(t => createTaskCardHtml(t)).join('')
-    : `<div class="slot-empty-notice">No tasks</div>`;
+  if (currentMinutes < startMinutes || currentMinutes > endMinutes) return '';
+
+  const top = ((currentMinutes - startMinutes) / 60) * HOUR_HEIGHT;
+  const timeLabel = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
   return `
-    <div class="day-section">
-      <span class="section-label">${slotLabel}</span>
-      <div class="section-slot-dropzone" 
-           data-date="${dateStr}" 
-           data-slot="${slotName}"
-           ondragover="allowDrop(event)" 
-           ondragleave="removeDropHighlight(event)"
-           ondrop="handleDropToSlot(event, '${dateStr}', '${slotName}')">
-        ${contentHtml}
-      </div>
+    <div class="now-timeline-marker" style="top: ${top}px;">
+      <span class="now-badge">${timeLabel}</span>
     </div>
   `;
 }
 
-// CARTE DE TÂCHE AVEC TITRE INLINE TAGS
-function createTaskCardHtml(task) {
-  const isRollover = !!task.isRollover;
-  const contextClass = task.context ? `cat-${task.context}` : 'cat-work';
-  const rolloverPrefix = isRollover ? '⟳ ' : '';
+// Blocs horaires sur le calendrier
+function renderTimedBlocks(tasks) {
+  return tasks.map(task => {
+    const parts = task.time.split(':');
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) || 0;
+    const totalMinutes = h * 60 + m;
+    const startMinutes = START_HOUR * 60;
 
-  const detailItems = [];
-  if (task.time) {
-    detailItems.push(`<span class="task-detail-item">🕒 ${task.time}</span>`);
-  }
-  if (task.estimate) {
-    detailItems.push(`<span class="task-detail-item">⏱ ${task.estimate * 25}m</span>`);
-  }
+    let top = ((totalMinutes - startMinutes) / 60) * HOUR_HEIGHT;
+    top = Math.max(0, top);
 
-  const detailsHtml = detailItems.length > 0 
-    ? `<div class="task-row-details">${detailItems.join('<span class="task-detail-bullet">•</span>')}</div>`
-    : '';
+    const height = Math.max(38, (45 / 60) * HOUR_HEIGHT);
+    const rolloverClass = task.isRollover ? 'rollover' : '';
+    const rolloverPrefix = task.isRollover ? '⟳ ' : '';
 
-  return `
-    <div class="task-item ${task.completed ? 'completed' : ''} ${isRollover ? 'rollover' : ''} ${contextClass}" 
-         draggable="true" 
-         ondragstart="handleDragStart(event, '${task.id}')"
-         id="task_${task.id}">
-      <div class="task-row-main">
-        <div class="checkbox" onclick="event.stopPropagation(); toggleTaskCompletion('${task.id}')">
-          ${task.completed ? '✓' : ''}
+    return `
+      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass}" 
+           style="top: ${top}px; height: ${height}px;"
+           draggable="true" 
+           ondragstart="handleDragStart(event, '${task.id}')"
+           onclick="openEditModal('${task.id}')">
+        <div class="schedule-block-top">
+          <div class="checkbox" onclick="event.stopPropagation(); toggleTaskCompletion('${task.id}')">
+            ${task.completed ? '✓' : ''}
+          </div>
+          <span class="schedule-block-title">${rolloverPrefix}${renderTitleWithTagsHtml(task.title)}</span>
+          <span class="schedule-block-time">${task.time}</span>
+          <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')">⋮</button>
         </div>
-        <span class="task-text" onclick="openEditModal('${task.id}')">
-          ${rolloverPrefix}${renderTitleWithTagsHtml(task.title)}
-        </span>
-        <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Actions">⋮</button>
       </div>
-      ${detailsHtml}
-    </div>
-  `;
+    `;
+  }).join('');
 }
 
-// MENU POPOVER ACTIONS (⋮)
+// Liste de tâches non planifiées dans le Dock
+function renderUnscheduledList(tasks) {
+  if (tasks.length === 0) {
+    return `<li style="font-size: 11px; color: rgba(255,255,255,0.2); padding: 8px 4px; text-align: center;">No unscheduled tasks</li>`;
+  }
+
+  return tasks.map(task => {
+    const rolloverClass = task.isRollover ? 'rollover' : '';
+    const rolloverPrefix = task.isRollover ? '⟳ ' : '';
+
+    return `
+      <li class="task-item cat-${task.context || 'work'} ${rolloverClass}"
+          draggable="true"
+          ondragstart="handleDragStart(event, '${task.id}')">
+        <div class="task-row-main">
+          <div class="checkbox" onclick="event.stopPropagation(); toggleTaskCompletion('${task.id}')">
+            ${task.completed ? '✓' : ''}
+          </div>
+          <span class="task-text" onclick="openEditModal('${task.id}')">
+            ${rolloverPrefix}${renderTitleWithTagsHtml(task.title)}
+          </span>
+          <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')">⋮</button>
+        </div>
+      </li>
+    `;
+  }).join('');
+}
+
+// POPOVER ACTIONS (⋮)
 function openTaskPopover(e, id) {
   popoverTargetTaskId = id;
   const menu = document.getElementById('taskPopoverMenu');
@@ -292,6 +334,13 @@ function closeTaskPopover() {
   popoverTargetTaskId = null;
 }
 
+// FERMETURE AU CLIC EXTERIEUR (BACKDROP)
+function handleBackdropClick(event, modalId) {
+  if (event.target.id === modalId) {
+    document.getElementById(modalId).style.display = 'none';
+  }
+}
+
 document.addEventListener('click', (e) => {
   if (!e.target.closest('#taskPopoverMenu') && !e.target.closest('.btn-task-menu')) {
     closeTaskPopover();
@@ -308,7 +357,7 @@ function popoverAction(action) {
   else if (action === 'delete') deleteTask(id);
 }
 
-// TIROIR BACKLOG
+// TIROIR BACKLOG (LATER)
 function renderBacklogDrawer() {
   const list = document.getElementById('backlogTaskList');
   if (!list) return;
@@ -336,11 +385,8 @@ function renderBacklogDrawer() {
     li.innerHTML = `
       <div class="task-row-main">
         <span class="task-text" onclick="openEditModal('${task.id}')">${renderTitleWithTagsHtml(task.title)}</span>
-        <button class="btn-task-action" onclick="scheduleTaskDirectly('${task.id}', '${TODAY_STR}', 'morning')" title="Schedule Today">☀️</button>
+        <button class="btn-task-action" onclick="scheduleTaskDirectly('${task.id}', '${TODAY_STR}')" title="Schedule Today">☀️</button>
         <button class="btn-task-action" onclick="deleteTask('${task.id}')" title="Delete">✕</button>
-      </div>
-      <div class="task-row-details" style="padding-left: 0;">
-        <span class="task-detail-item">⏱ ${task.estimate ? task.estimate * 25 : 25}m</span>
       </div>
     `;
     list.appendChild(li);
@@ -393,20 +439,18 @@ function moveToBacklog(id) {
   const task = window.SpanPlanState.tasks.find(t => t.id === id);
   if (!task) return;
   task.date = null;
-  task.slot = null;
+  task.time = '';
   task.isRollover = false;
   savePlanState();
 }
 
-function scheduleTaskDirectly(id, targetDate, targetSlot) {
+function scheduleTaskDirectly(id, targetDate) {
   const task = window.SpanPlanState.tasks.find(t => t.id === id);
   if (!task) return;
   task.date = targetDate;
-  task.slot = targetSlot;
   savePlanState();
 }
 
-// ENVOI VERS SPAN FOCUS AVEC LA BONNE CATÉGORIE
 function pushToSpanFocus(id) {
   const task = window.SpanPlanState.tasks.find(t => t.id === id);
   if (!task) return;
@@ -416,7 +460,6 @@ function pushToSpanFocus(id) {
     id: 't_' + Date.now(),
     title: task.title,
     category: task.context ? (task.context.charAt(0).toUpperCase() + task.context.slice(1)) : 'Work',
-    estimate: task.estimate || 1,
     completed: false,
     isFavorite: true
   });
@@ -434,25 +477,16 @@ function handleDragStart(e, id) {
 
 function allowDrop(e) {
   e.preventDefault();
-  const zone = e.currentTarget;
-  if (zone.classList.contains('section-slot-dropzone')) {
-    zone.classList.add('drag-over');
-  }
 }
 
-function removeDropHighlight(e) {
-  e.currentTarget.classList.remove('drag-over');
-}
-
-function handleDropToSlot(e, dateStr, slotName) {
+function handleDropToDock(e, dateStr) {
   e.preventDefault();
-  e.currentTarget.classList.remove('drag-over');
   if (!draggedTaskId) return;
 
   const task = window.SpanPlanState.tasks.find(t => t.id === draggedTaskId);
   if (task) {
     task.date = dateStr;
-    task.slot = slotName;
+    task.time = ''; // Devient une tâche non planifiée dans le dock
     task.isRollover = false;
     savePlanState();
   }
@@ -466,14 +500,14 @@ function handleDropToBacklog(e) {
   const task = window.SpanPlanState.tasks.find(t => t.id === draggedTaskId);
   if (task) {
     task.date = null;
-    task.slot = null;
+    task.time = '';
     task.isRollover = false;
     savePlanState();
   }
   draggedTaskId = null;
 }
 
-// PARSING RAPIDE AVEC SHORTCUTS & INLINE TAGS
+// PARSING RAPIDE : AUCUN TEMPS IMPOSÉ
 function submitQuickAdd() {
   const input = document.getElementById('quickTaskInput');
   const targetSelect = document.getElementById('quickTargetDate');
@@ -482,23 +516,11 @@ function submitQuickAdd() {
   let rawText = input ? input.value.trim() : '';
   if (!rawText) return;
 
-  let assignedSlot = 'morning';
   let targetDate = TODAY_STR;
-
   if (targetSelect && targetSelect.value === 'tomorrow') targetDate = TOMORROW_STR;
   else if (targetSelect && targetSelect.value === 'later') targetDate = null;
 
-  if (rawText.includes('!m') || rawText.includes('/m') || rawText.toUpperCase().includes('AM')) {
-    assignedSlot = 'morning';
-    rawText = rawText.replace(/!m|\/m|\bAM\b/gi, '').trim();
-  } else if (rawText.includes('!a') || rawText.includes('/a') || rawText.toUpperCase().includes('MD')) {
-    assignedSlot = 'afternoon';
-    rawText = rawText.replace(/!a|\/a|\bMD\b/gi, '').trim();
-  } else if (rawText.includes('!e') || rawText.includes('/e') || rawText.toUpperCase().includes('PM')) {
-    assignedSlot = 'evening';
-    rawText = rawText.replace(/!e|\/e|\bPM\b/gi, '').trim();
-  }
-
+  // Extraction d'heure si l'utilisateur l'a volontairement écrite
   let extractedTime = '';
   const timeRegex = /\b([0-1]?[0-9]|2[0-3]):([0-5][0-9])\b/;
   const match = rawText.match(timeRegex);
@@ -511,10 +533,8 @@ function submitQuickAdd() {
     id: 'p_' + Date.now(),
     title: rawText,
     date: targetDate,
-    slot: targetDate ? assignedSlot : null,
     time: extractedTime,
     context: contextSelect ? contextSelect.value : 'work',
-    estimate: 1,
     completed: false,
     isRollover: false
   };
@@ -533,10 +553,8 @@ function addBacklogTask() {
     id: 'p_' + Date.now(),
     title: text,
     date: null,
-    slot: null,
     time: '',
     context: currentContextFilter === 'all' ? 'work' : currentContextFilter,
-    estimate: 1,
     completed: false,
     isRollover: false
   };
@@ -552,19 +570,11 @@ function openEditModal(id) {
   if (!task) return;
 
   editingTaskId = id;
-  editingSlot = task.slot || 'morning';
   editingContext = task.context || 'work';
-  editingEstimate = task.estimate || 1;
 
   document.getElementById('editTaskTitle').value = task.title;
   document.getElementById('editTaskDate').value = task.date || '';
   document.getElementById('editTaskTime').value = task.time || '';
-  document.getElementById('editPomodoroEstimate').textContent = editingEstimate;
-  document.getElementById('editEstMinutes').textContent = editingEstimate * 25;
-
-  document.querySelectorAll('#modalSlotPills .cat-pill').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.slot === editingSlot);
-  });
 
   document.querySelectorAll('#modalContextPills .cat-pill').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.context === editingContext);
@@ -578,24 +588,11 @@ function closeEditModal() {
   editingTaskId = null;
 }
 
-function selectEditSlot(slot) {
-  editingSlot = slot;
-  document.querySelectorAll('#modalSlotPills .cat-pill').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.slot === slot);
-  });
-}
-
 function selectEditContext(ctx) {
   editingContext = ctx;
   document.querySelectorAll('#modalContextPills .cat-pill').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.context === ctx);
   });
-}
-
-function stepEstimate(delta) {
-  editingEstimate = Math.max(1, Math.min(12, editingEstimate + delta));
-  document.getElementById('editPomodoroEstimate').textContent = editingEstimate;
-  document.getElementById('editEstMinutes').textContent = editingEstimate * 25;
 }
 
 function saveTaskModal() {
@@ -610,14 +607,13 @@ function saveTaskModal() {
     task.title = title;
     task.date = dateVal;
     task.time = timeVal;
-    task.slot = dateVal ? editingSlot : null;
     task.context = editingContext;
-    task.estimate = editingEstimate;
   }
   closeEditModal();
   savePlanState();
 }
 
+// NAVIGATION
 function navigateTimeline(direction) {
   currentTimelineOffset += (direction * visibleDaysCount);
   renderPlanGrid();
@@ -666,10 +662,32 @@ function applyPinState() {
   }
 }
 
+// Défilement automatique vers l'heure actuelle au démarrage
+function scrollToNow() {
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const startMinutes = START_HOUR * 60;
+  if (currentMinutes >= startMinutes && currentMinutes <= END_HOUR * 60) {
+    const targetScroll = (((currentMinutes - startMinutes) / 60) * HOUR_HEIGHT) - 100;
+    document.querySelectorAll('.day-schedule-scroll').forEach(el => {
+      el.scrollTop = Math.max(0, targetScroll);
+    });
+  }
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   executeAutoRollover();
   setVisibleDays(visibleDaysCount);
   applyPinState();
   renderBacklogDrawer();
   updateCounters();
+
+  setTimeout(scrollToNow, 150);
+
+  // Mise à jour de la ligne rouge chaque minute
+  setInterval(() => {
+    if (currentTimelineOffset === 0) {
+      renderPlanGrid();
+    }
+  }, 60000);
 });
