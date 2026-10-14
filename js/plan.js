@@ -16,22 +16,29 @@ const tomorrow = new Date();
 tomorrow.setDate(tomorrow.getDate() + 1);
 const TOMORROW_STR = getLocalDateString(tomorrow);
 
-// Données d'exemple initiales
+// Normalisation des catégories existantes vers la triade unifiée
+function normalizePlanContext(cat) {
+  if (!cat) return 'work';
+  const c = String(cat).toLowerCase();
+  if (c === 'work' || c === 'code' || c === 'study' || c === 'write') return 'work';
+  if (c === 'home' || c === 'admin' || c === 'personal') return 'home';
+  if (c === 'fun' || c === 'health' || c === 'self') return 'fun';
+  return 'work';
+}
+
+// Extraction automatique des tags inline (#tag) du titre
+function renderTitleWithTagsHtml(titleStr) {
+  if (!titleStr) return 'Untitled task';
+  return titleStr.replace(/#([\w\-]+)/g, (match, tag) => {
+    return `<span class="task-inline-tag" onclick="event.stopPropagation(); filterByTag('${tag}')">#${tag}</span>`;
+  });
+}
+
+// Données par défaut
 const defaultInitialTasks = [
   {
-    id: 'p_yesterday_sample',
-    title: 'Finalize quarterly review notes',
-    date: YESTERDAY_STR,
-    slot: 'morning',
-    time: '14:30',
-    context: 'work',
-    estimate: 2,
-    completed: false,
-    isRollover: false
-  },
-  {
     id: 'p_sample_today_1',
-    title: 'Team standup meeting',
+    title: 'Team standup meeting #work',
     date: TODAY_STR,
     slot: 'morning',
     time: '09:30',
@@ -42,7 +49,7 @@ const defaultInitialTasks = [
   },
   {
     id: 'p_sample_today_2',
-    title: 'Grocery shopping',
+    title: 'Grocery shopping #home',
     date: TODAY_STR,
     slot: 'evening',
     time: '18:30',
@@ -53,7 +60,7 @@ const defaultInitialTasks = [
   },
   {
     id: 'p_sample_tomorrow_1',
-    title: 'Study architecture patterns',
+    title: 'Study architecture patterns #study',
     date: TOMORROW_STR,
     slot: 'morning',
     time: '',
@@ -61,21 +68,9 @@ const defaultInitialTasks = [
     estimate: 2,
     completed: false,
     isRollover: false
-  },
-  {
-    id: 'p_sample_backlog_1',
-    title: 'Refactor database indexing',
-    date: null,
-    slot: null,
-    time: '',
-    context: 'work',
-    estimate: 3,
-    completed: false,
-    isRollover: false
   }
 ];
 
-// Nettoyage et sécurisation du chargement des tâches
 let rawTasks = [];
 try {
   rawTasks = JSON.parse(localStorage.getItem('span_plan_tasks'));
@@ -86,14 +81,13 @@ try {
 if (!Array.isArray(rawTasks) || rawTasks.length === 0) {
   window.SpanPlanState.tasks = defaultInitialTasks;
 } else {
-  // Normalisation pour éviter tout champ manquant
   window.SpanPlanState.tasks = rawTasks.map(t => ({
     id: t.id || ('p_' + Math.random().toString(36).substr(2, 9)),
     title: t.title || 'Untitled task',
     date: t.date || null,
     slot: t.slot || 'morning',
     time: t.time || '',
-    context: t.context || 'work',
+    context: normalizePlanContext(t.context || t.category),
     estimate: typeof t.estimate === 'number' ? t.estimate : 1,
     completed: !!t.completed,
     isRollover: !!t.isRollover
@@ -103,6 +97,7 @@ if (!Array.isArray(rawTasks) || rawTasks.length === 0) {
 let visibleDaysCount = parseInt(localStorage.getItem('span_plan_visible_days')) || 3;
 let currentTimelineOffset = 0;
 let currentContextFilter = 'all';
+let currentTagFilter = null;
 let isDrawerPinned = localStorage.getItem('span_plan_drawer_pinned') === 'true';
 
 let editingTaskId = null;
@@ -111,7 +106,18 @@ let editingContext = 'work';
 let editingEstimate = 1;
 let popoverTargetTaskId = null;
 
-// 1. ROLLOVER AUTOMATIQUE
+// Filtre rapide au clic sur un tag
+function filterByTag(tag) {
+  if (currentTagFilter === tag) {
+    currentTagFilter = null;
+  } else {
+    currentTagFilter = tag;
+  }
+  renderPlanGrid();
+  renderBacklogDrawer();
+}
+
+// ROLLOVER AUTOMATIQUE
 function executeAutoRollover() {
   let hasChanges = false;
   window.SpanPlanState.tasks.forEach(task => {
@@ -123,9 +129,7 @@ function executeAutoRollover() {
     }
   });
 
-  if (hasChanges) {
-    savePlanState();
-  }
+  if (hasChanges) savePlanState();
 }
 
 function savePlanState() {
@@ -149,7 +153,7 @@ function calculateVisibleDates() {
   return dates;
 }
 
-// 2. RENDU EN COLONNES
+// RENDU EN COLONNES
 function renderPlanGrid() {
   const grid = document.getElementById('plannerGrid');
   if (!grid) return;
@@ -168,7 +172,8 @@ function renderPlanGrid() {
     const dayTasks = window.SpanPlanState.tasks.filter(t => {
       const dateMatch = (t.date === dateStr);
       const contextMatch = (currentContextFilter === 'all' || t.context === currentContextFilter);
-      return dateMatch && contextMatch;
+      const tagMatch = !currentTagFilter || (t.title && t.title.toLowerCase().includes(`#${currentTagFilter.toLowerCase()}`));
+      return dateMatch && contextMatch && tagMatch;
     });
 
     const totalEst = dayTasks.reduce((acc, t) => acc + (t.estimate || 1), 0);
@@ -229,10 +234,10 @@ function renderDaySlot(dateStr, slotName, slotLabel, dayTasks) {
   `;
 }
 
-// 3. CARTE DE TÂCHE
+// CARTE DE TÂCHE AVEC TITRE INLINE TAGS
 function createTaskCardHtml(task) {
   const isRollover = !!task.isRollover;
-  const contextClass = task.context ? `cat-${task.context}` : '';
+  const contextClass = task.context ? `cat-${task.context}` : 'cat-work';
   const rolloverPrefix = isRollover ? '⟳ ' : '';
 
   const detailItems = [];
@@ -256,7 +261,9 @@ function createTaskCardHtml(task) {
         <div class="checkbox" onclick="event.stopPropagation(); toggleTaskCompletion('${task.id}')">
           ${task.completed ? '✓' : ''}
         </div>
-        <span class="task-text" onclick="openEditModal('${task.id}')">${rolloverPrefix}${task.title}</span>
+        <span class="task-text" onclick="openEditModal('${task.id}')">
+          ${rolloverPrefix}${renderTitleWithTagsHtml(task.title)}
+        </span>
         <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Actions">⋮</button>
       </div>
       ${detailsHtml}
@@ -264,7 +271,7 @@ function createTaskCardHtml(task) {
   `;
 }
 
-// 4. MENU POPOVER ACTIONS (⋮)
+// MENU POPOVER ACTIONS (⋮)
 function openTaskPopover(e, id) {
   popoverTargetTaskId = id;
   const menu = document.getElementById('taskPopoverMenu');
@@ -301,12 +308,18 @@ function popoverAction(action) {
   else if (action === 'delete') deleteTask(id);
 }
 
-// 5. TIROIR BACKLOG
+// TIROIR BACKLOG
 function renderBacklogDrawer() {
   const list = document.getElementById('backlogTaskList');
   if (!list) return;
 
-  const backlogTasks = window.SpanPlanState.tasks.filter(t => !t.date && (currentContextFilter === 'all' || t.context === currentContextFilter));
+  const backlogTasks = window.SpanPlanState.tasks.filter(t => {
+    const isUnscheduled = !t.date;
+    const contextMatch = (currentContextFilter === 'all' || t.context === currentContextFilter);
+    const tagMatch = !currentTagFilter || (t.title && t.title.toLowerCase().includes(`#${currentTagFilter.toLowerCase()}`));
+    return isUnscheduled && contextMatch && tagMatch;
+  });
+
   list.innerHTML = '';
 
   if (backlogTasks.length === 0) {
@@ -322,7 +335,7 @@ function renderBacklogDrawer() {
 
     li.innerHTML = `
       <div class="task-row-main">
-        <span class="task-text" onclick="openEditModal('${task.id}')">${task.title}</span>
+        <span class="task-text" onclick="openEditModal('${task.id}')">${renderTitleWithTagsHtml(task.title)}</span>
         <button class="btn-task-action" onclick="scheduleTaskDirectly('${task.id}', '${TODAY_STR}', 'morning')" title="Schedule Today">☀️</button>
         <button class="btn-task-action" onclick="deleteTask('${task.id}')" title="Delete">✕</button>
       </div>
@@ -352,12 +365,18 @@ function updateRangeLabel(visibleDates) {
   const firstStr = first.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const lastStr = last.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-  label.textContent = (visibleDates.length === 1) 
+  let text = (visibleDates.length === 1) 
     ? `${first.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}`
     : `${firstStr} – ${lastStr}`;
+
+  if (currentTagFilter) {
+    text += ` • #${currentTagFilter} (✕)`;
+  }
+  label.textContent = text;
+  label.onclick = currentTagFilter ? () => filterByTag(currentTagFilter) : null;
+  label.style.cursor = currentTagFilter ? 'pointer' : 'default';
 }
 
-// 6. ACTIONS TÂCHES
 function toggleTaskCompletion(id) {
   const task = window.SpanPlanState.tasks.find(t => t.id === id);
   if (!task) return;
@@ -387,6 +406,7 @@ function scheduleTaskDirectly(id, targetDate, targetSlot) {
   savePlanState();
 }
 
+// ENVOI VERS SPAN FOCUS AVEC LA BONNE CATÉGORIE
 function pushToSpanFocus(id) {
   const task = window.SpanPlanState.tasks.find(t => t.id === id);
   if (!task) return;
@@ -395,7 +415,7 @@ function pushToSpanFocus(id) {
   focusTasks.unshift({
     id: 't_' + Date.now(),
     title: task.title,
-    category: task.context === 'work' ? 'Code' : 'Admin',
+    category: task.context ? (task.context.charAt(0).toUpperCase() + task.context.slice(1)) : 'Work',
     estimate: task.estimate || 1,
     completed: false,
     isFavorite: true
@@ -404,7 +424,7 @@ function pushToSpanFocus(id) {
   alert(`"${task.title}" queued into Span Focus with priority ⭐!`);
 }
 
-// 7. DRAG & DROP
+// DRAG & DROP
 let draggedTaskId = null;
 
 function handleDragStart(e, id) {
@@ -453,7 +473,7 @@ function handleDropToBacklog(e) {
   draggedTaskId = null;
 }
 
-// 8. PARSING ET AJOUT RAPIDE
+// PARSING RAPIDE AVEC SHORTCUTS & INLINE TAGS
 function submitQuickAdd() {
   const input = document.getElementById('quickTaskInput');
   const targetSelect = document.getElementById('quickTargetDate');
@@ -526,7 +546,7 @@ function addBacklogTask() {
   savePlanState();
 }
 
-// 9. MODALE D'ÉDITION
+// MODALE D'ÉDITION
 function openEditModal(id) {
   const task = window.SpanPlanState.tasks.find(t => t.id === id);
   if (!task) return;
@@ -598,7 +618,6 @@ function saveTaskModal() {
   savePlanState();
 }
 
-// 10. NAVIGATION
 function navigateTimeline(direction) {
   currentTimelineOffset += (direction * visibleDaysCount);
   renderPlanGrid();
@@ -647,7 +666,6 @@ function applyPinState() {
   }
 }
 
-// Initialisation sûre
 window.addEventListener('DOMContentLoaded', () => {
   executeAutoRollover();
   setVisibleDays(visibleDaysCount);
