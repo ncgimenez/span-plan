@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -10,12 +10,13 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Plan">
 
-  <link rel="stylesheet" href="style.css?v=1.0">
+  <link rel="stylesheet" href="style.css?v=2.0">
 </head>
 <body>
 
-  <div class="desktop-shell">
-    <!-- HEADER -->
+  <div class="desktop-shell" id="appShell">
+    
+    <!-- TOP APP HEADER -->
     <header class="app-header">
       <div class="brand">
         <div class="brand-badge">P</div>
@@ -23,179 +24,219 @@
         <span class="brand-app" id="headerTitle">Plan</span>
       </div>
       
+      <!-- SPHERE / CONTEXT SWITCHER -->
+      <div class="context-switch" id="contextSwitch">
+        <button class="context-btn active" data-context="all" onclick="setContextFilter('all')">All</button>
+        <button class="context-btn" data-context="work" onclick="setContextFilter('work')">💼 Work</button>
+        <button class="context-btn" data-context="home" onclick="setContextFilter('home')">🏠 Home</button>
+        <button class="context-btn" data-context="fun" onclick="setContextFilter('fun')">✨ Fun</button>
+      </div>
+
       <div class="header-actions">
-        <button class="icon-btn" onclick="openSettingsModal()" title="Paramètres">⚙️</button>
-        <button class="plan-bridge-btn" onclick="goToFocusApp()">Focus ↗</button>
+        <button class="icon-btn" id="btnToggleDrawer" onclick="toggleBacklogDrawer()" title="Toggle Backlog (Later)">
+          <span>Later</span>
+          <span class="backlog-counter-pill" id="globalLaterCount">0</span>
+        </button>
+        <button class="icon-btn" onclick="openSettingsModal()" title="Settings">⚙️</button>
+        <button class="plan-bridge-btn" onclick="goToFocusApp()" title="Open Span Focus">Focus ↗</button>
       </div>
     </header>
 
-    <!-- SAISIE RAPIDE D'UNE TÂCHE -->
-    <div class="quick-add-bar">
-      <input type="text" class="task-input" id="planTaskInput" placeholder="Planifier une tâche... (Entrée)" onkeydown="if(event.key==='Enter') addPlannedTask()">
-      <select class="category-select" id="planTaskBucket">
-        <option value="today">Aujourd'hui</option>
-        <option value="tomorrow">Demain</option>
-        <option value="later">Plus tard</option>
-      </select>
-      <select class="category-select" id="planTaskCategory">
-        <option value="None">Sans label</option>
-        <option value="Code" id="optCatCode">Code</option>
-        <option value="Study" id="optCatStudy">Study</option>
-        <option value="Write" id="optCatWrite">Write</option>
-        <option value="Admin" id="optCatAdmin">Admin</option>
-      </select>
-      <button class="btn-add" onclick="addPlannedTask()">Ajouter</button>
+    <!-- CALENDAR & TIMELINE CONTROL BAR -->
+    <div class="timeline-bar">
+      <div class="timeline-nav">
+        <button class="nav-arrow-btn" onclick="navigateTimeline(-1)" title="Previous period">‹</button>
+        <button class="today-jump-btn" onclick="jumpToToday()">Today</button>
+        <button class="nav-arrow-btn" onclick="navigateTimeline(1)" title="Next period">›</button>
+        <span class="current-range-label" id="currentRangeLabel">Loading...</span>
+      </div>
+
+      <div class="view-mode-controls">
+        <!-- MODE: ROLLING VS CALENDAR -->
+        <div class="pill-group">
+          <button class="pill-btn active" id="modeRollingBtn" onclick="setWeekMode('rolling')" title="Days starting from today">Rolling</button>
+          <button class="pill-btn" id="modeCalendarBtn" onclick="setWeekMode('calendar')" title="Fixed Monday-to-Sunday week">Calendar</button>
+        </div>
+
+        <!-- DAYS VISIBLE SELECTOR -->
+        <div class="pill-group" id="daysSelectorGroup">
+          <button class="pill-btn" data-days="1" onclick="setVisibleDays(1)">1D</button>
+          <button class="pill-btn" data-days="2" onclick="setVisibleDays(2)">2D</button>
+          <button class="pill-btn active" data-days="3" onclick="setVisibleDays(3)">3D</button>
+          <button class="pill-btn" data-days="5" onclick="setVisibleDays(5)">5D</button>
+          <button class="pill-btn" data-days="7" onclick="setVisibleDays(7)">7D</button>
+        </div>
+      </div>
     </div>
 
-    <!-- WORKSPACE PRINCIPAL : VUE COLONNES (PLANNER) -->
+    <!-- QUICK ADD BAR WITH SHORTCUTS (!m, !a, !e) -->
+    <div class="quick-add-container">
+      <input type="text" class="quick-input" id="quickTaskInput" 
+             placeholder="Add task... (Use !m for morning, !a for afternoon, !e for evening, e.g., 'Prep report 10:00 !m')" 
+             onkeydown="if(event.key==='Enter') submitQuickAdd()">
+      
+      <select class="quick-select" id="quickTargetDate">
+        <option value="today">Today</option>
+        <option value="tomorrow">Tomorrow</option>
+        <option value="later">Later (Backlog)</option>
+      </select>
+
+      <select class="quick-select" id="quickContextSelect">
+        <option value="work">Work</option>
+        <option value="home">Home</option>
+        <option value="fun">Fun</option>
+      </select>
+
+      <button class="btn-quick-add" onclick="submitQuickAdd()">Add</button>
+    </div>
+
+    <!-- MAIN WORKSPACE -->
     <main class="workspace-main">
-      <div class="planner-viewport">
-        <div class="planner-slider" id="plannerSlider">
-          
-          <!-- COLONNE 1 : AUJOURD'HUI -->
-          <section class="bucket-column" id="bucket-today">
-            <div class="bucket-header">
-              <div class="bucket-title-wrap">
-                <span class="bucket-dot today"></span>
-                <span class="bucket-title">Aujourd'hui</span>
-              </div>
-              <span class="bucket-badge" id="count-today">0</span>
-            </div>
-            <ul class="task-list" id="list-today"></ul>
-          </section>
-
-          <!-- COLONNE 2 : DEMAIN -->
-          <section class="bucket-column" id="bucket-tomorrow">
-            <div class="bucket-header">
-              <div class="bucket-title-wrap">
-                <span class="bucket-dot tomorrow"></span>
-                <span class="bucket-title">Demain</span>
-              </div>
-              <span class="bucket-badge" id="count-tomorrow">0</span>
-            </div>
-            <ul class="task-list" id="list-tomorrow"></ul>
-          </section>
-
-          <!-- COLONNE 3 : PLUS TARD / BACKLOG -->
-          <section class="bucket-column" id="bucket-later">
-            <div class="bucket-header">
-              <div class="bucket-title-wrap">
-                <span class="bucket-dot later"></span>
-                <span class="bucket-title">Plus tard</span>
-              </div>
-              <span class="bucket-badge" id="count-later">0</span>
-            </div>
-            <ul class="task-list" id="list-later"></ul>
-          </section>
-
+      <!-- HORIZONTAL SCROLL / SWIPEABLE GRID -->
+      <div class="planner-board-container" id="plannerBoardContainer">
+        <div class="planner-grid" id="plannerGrid">
+          <!-- Rendered dynamically by plan.js -->
         </div>
       </div>
+
+      <!-- RETRACTABLE & PINNABLE BACKLOG DRAWER -->
+      <aside class="backlog-drawer" id="backlogDrawer">
+        <div class="drawer-header">
+          <div class="drawer-title-wrap">
+            <span class="drawer-title">Backlog / Later</span>
+            <span class="backlog-counter-pill" id="drawerLaterCount">0</span>
+          </div>
+          <div class="drawer-actions">
+            <button class="icon-btn mini" id="btnPinDrawer" onclick="togglePinDrawer()" title="Pin drawer">📌</button>
+            <button class="icon-btn mini" onclick="toggleBacklogDrawer()" title="Close">✕</button>
+          </div>
+        </div>
+
+        <div class="drawer-quick-add">
+          <input type="text" id="backlogQuickInput" placeholder="Add unscheduled task..." onkeydown="if(event.key==='Enter') addBacklogTask()">
+          <button class="btn-quick-add mini" onclick="addBacklogTask()">+</button>
+        </div>
+
+        <ul class="task-list drawer-list" id="backlogTaskList" ondragover="allowDrop(event)" ondrop="handleDropToBacklog(event)">
+          <!-- Rendered dynamically -->
+        </ul>
+      </aside>
     </main>
+
+    <!-- MOBILE BOTTOM NAVIGATION -->
+    <nav class="nav-bar mobile-nav">
+      <div class="nav-items">
+        <button class="nav-btn" onclick="navigateTimeline(-1)">
+          <span>‹ Prev</span>
+        </button>
+        <button class="nav-btn active" onclick="jumpToToday()">
+          <span>Today</span>
+        </button>
+        <button class="nav-btn" onclick="navigateTimeline(1)">
+          <span>Next ›</span>
+        </button>
+        <button class="nav-btn" onclick="toggleBacklogDrawer()">
+          <span>Later (<span id="mobileLaterCount">0</span>)</span>
+        </button>
+      </div>
+    </nav>
   </div>
 
-  <!-- MODALE ÉDITION TÂCHE PLAN -->
-  <div class="modal-overlay" id="editPlanModalOverlay">
+  <!-- EDIT TASK MODAL -->
+  <div class="modal-overlay" id="editModalOverlay">
     <div class="modal-card">
       <div class="modal-header">
-        <span>Modifier la tâche</span>
-        <button class="modal-close" onclick="closePlanEditModal()">✕</button>
+        <span>Edit Task</span>
+        <button class="modal-close" onclick="closeEditModal()">✕</button>
       </div>
       <div class="modal-body">
-        <label class="modal-label">Titre</label>
-        <input type="text" class="modal-input" id="editPlanTitle">
+        <label class="modal-label">Title</label>
+        <input type="text" class="modal-input" id="editTaskTitle">
 
-        <label class="modal-label">Créneau / Bucket</label>
-        <div class="category-pills" id="modalBucketPills">
-          <button type="button" class="cat-pill" data-bucket="today" onclick="selectEditBucket('today')">Aujourd'hui</button>
-          <button type="button" class="cat-pill" data-bucket="tomorrow" onclick="selectEditBucket('tomorrow')">Demain</button>
-          <button type="button" class="cat-pill" data-bucket="later" onclick="selectEditBucket('later')">Plus tard</button>
+        <div class="form-row">
+          <div class="form-col">
+            <label class="modal-label">Date</label>
+            <input type="date" class="modal-input" id="editTaskDate">
+          </div>
+          <div class="form-col">
+            <label class="modal-label">Start Time (Optional)</label>
+            <input type="time" class="modal-input" id="editTaskTime">
+          </div>
         </div>
 
-        <label class="modal-label">Catégorie</label>
-        <div class="category-pills" id="modalPlanCategoryPills">
-          <button type="button" class="cat-pill" data-cat="Code" onclick="selectEditCategory('Code')">Code</button>
-          <button type="button" class="cat-pill" data-cat="Study" onclick="selectEditCategory('Study')">Study</button>
-          <button type="button" class="cat-pill" data-cat="Write" onclick="selectEditCategory('Write')">Write</button>
-          <button type="button" class="cat-pill" data-cat="Admin" onclick="selectEditCategory('Admin')">Admin</button>
+        <label class="modal-label">Slot</label>
+        <div class="category-pills" id="modalSlotPills">
+          <button type="button" class="cat-pill" data-slot="morning" onclick="selectEditSlot('morning')">🌅 Morning</button>
+          <button type="button" class="cat-pill" data-slot="afternoon" onclick="selectEditSlot('afternoon')">☀️ Afternoon</button>
+          <button type="button" class="cat-pill" data-slot="evening" onclick="selectEditSlot('evening')">🌙 Evening</button>
         </div>
 
-        <label class="modal-label">Estimation (Pomodoros)</label>
+        <label class="modal-label">Context</label>
+        <div class="category-pills" id="modalContextPills">
+          <button type="button" class="cat-pill" data-context="work" onclick="selectEditContext('work')">💼 Work</button>
+          <button type="button" class="cat-pill" data-context="home" onclick="selectEditContext('home')">🏠 Home</button>
+          <button type="button" class="cat-pill" data-context="fun" onclick="selectEditContext('fun')">✨ Fun</button>
+        </div>
+
+        <label class="modal-label">Estimated Pomodoros</label>
         <div class="pomodoro-stepper">
-          <button type="button" class="stepper-btn" onclick="stepPlanEstimate(-1)">−</button>
-          <span id="editPlanEstimate">1</span>
-          <button type="button" class="stepper-btn" onclick="stepPlanEstimate(1)">+</button>
-          <span style="font-size: 13px; color: var(--text-muted); margin-left: 8px;">blocs (~<span id="editPlanEstMinutes">25</span> min)</span>
+          <button type="button" class="stepper-btn" onclick="stepEstimate(-1)">−</button>
+          <span id="editPomodoroEstimate">1</span>
+          <button type="button" class="stepper-btn" onclick="stepEstimate(1)">+</button>
+          <span style="font-size: 13px; color: var(--text-muted); margin-left: 8px;">blocks (~<span id="editEstMinutes">25</span> min)</span>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn-cancel" onclick="closePlanEditModal()">Annuler</button>
-        <button class="btn-save" onclick="savePlanTaskModal()">Enregistrer</button>
+        <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+        <button class="btn-save" onclick="saveTaskModal()">Save Changes</button>
       </div>
     </div>
   </div>
 
-  <!-- MODALE SETTINGS & SYNCHRO -->
+  <!-- SETTINGS MODAL -->
   <div class="modal-overlay" id="settingsModalOverlay">
     <div class="modal-card">
       <div class="modal-header">
-        <span>Préférences Span Plan</span>
+        <span>Span Plan Settings</span>
         <button class="modal-close" onclick="closeSettingsModal()">✕</button>
       </div>
       <div class="modal-body">
         <div class="setting-item">
           <div>
-            <div style="font-size: 14px; font-weight: 500;">Thème</div>
-            <div style="font-size: 12px; color: var(--text-muted);">Mode sombre par défaut</div>
+            <div style="font-size: 14px; font-weight: 500;">Theme</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Dark mode by default</div>
           </div>
           <button class="btn-theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">Dark</button>
         </div>
 
-        <div style="margin-top: 14px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Liaison Span Suite (Supabase)</div>
+        <div style="margin-top: 14px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Multi-Device Sync (Supabase)</div>
         <div class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
           <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
             <div style="font-size: 13px; color: var(--text-muted);">
-              Clé : <strong id="displaySyncKey" style="color: var(--text-main); font-family: monospace;">...</strong>
+              Key: <strong id="displaySyncKey" style="color: var(--text-main); font-family: monospace;">...</strong>
             </div>
-            <button class="btn-theme-toggle" type="button" onclick="copyCurrentSyncKey()">Copier</button>
+            <button class="btn-theme-toggle" type="button" onclick="copyCurrentSyncKey()">Copy</button>
           </div>
           <div style="display: flex; gap: 6px; width: 100%;">
-            <input type="text" id="inputSyncKey" placeholder="Coller la clé de Span Focus..." style="flex: 1; background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-main); padding: 8px 10px; border-radius: 8px; font-size: 13px; outline: none;">
-            <button class="btn-theme-toggle" type="button" onclick="handleLinkClick()">Lier</button>
+            <input type="text" id="inputSyncKey" placeholder="Paste sync key from Span Focus..." style="flex: 1; background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-main); padding: 8px 10px; border-radius: 8px; font-size: 13px; outline: none;">
+            <button class="btn-theme-toggle" type="button" onclick="handleLinkClick()">Link</button>
           </div>
         </div>
 
         <div class="backup-section">
-          <button class="btn-backup" onclick="exportPlanData()">Exporter JSON</button>
+          <button class="btn-backup" onclick="exportData()">Download JSON</button>
           <label class="btn-backup" style="cursor: pointer;">
-            Importer JSON
-            <input type="file" id="importFileInput" style="display: none;" onchange="importPlanData(event)">
+            Import JSON
+            <input type="file" id="importFileInput" style="display: none;" onchange="importData(event)">
           </label>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- NAVIGATION MOBILE BAS D'ÉCRAN -->
-  <nav class="nav-bar mobile-nav">
-    <div class="nav-items">
-      <button class="nav-btn active" id="nav-btn-today" onclick="switchBucketView(0)">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span>Aujourd'hui</span>
-      </button>
-      <button class="nav-btn" id="nav-btn-tomorrow" onclick="switchBucketView(1)">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <span>Demain</span>
-      </button>
-      <button class="nav-btn" id="nav-btn-later" onclick="switchBucketView(2)">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-        <span>Plus tard</span>
-      </button>
-    </div>
-  </nav>
-
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=1.0"></script>
-  <script src="js/plan.js?v=1.0"></script>
-  <script src="js/app.js?v=1.0"></script>
+  <script src="js/sync.js?v=2.0"></script>
+  <script src="js/plan.js?v=2.0"></script>
+  <script src="js/app.js?v=2.0"></script>
 </body>
 </html>
