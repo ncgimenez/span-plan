@@ -1,4 +1,4 @@
-// Configuration Supabase partagée avec Span Focus
+// Supabase Configuration shared with Span Focus
 const SUPABASE_URL = 'https://xzoukiveknyuxmbrcsvb.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_8g571gv3CFOyJ0lMtaAf4w_CcITQovd';
 
@@ -26,6 +26,14 @@ function copyCurrentSyncKey() {
   });
 }
 
+// Automatic synchronization between the visible username field and hidden password field
+function syncKeychainInputs(value) {
+  const inputKey = document.getElementById('inputSyncKey');
+  const inputSecret = document.getElementById('inputSyncSecret');
+  if (inputKey && inputKey.value !== value) inputKey.value = value;
+  if (inputSecret) inputSecret.value = value;
+}
+
 async function handleLinkClick() {
   const input = document.getElementById('inputSyncKey');
   if (!input) return;
@@ -34,7 +42,11 @@ async function handleLinkClick() {
 
   SYNC_USER_ID = key;
   localStorage.setItem('span_sync_user', key);
+  
+  // Align secret password field for iOS Keychain prompt
+  syncKeychainInputs(key);
   updateSyncKeyDisplay();
+
   await loadPlanFromCloud();
   alert("Span Plan linked successfully!");
 }
@@ -42,6 +54,7 @@ async function handleLinkClick() {
 function updateSyncKeyDisplay() {
   const el = document.getElementById('displaySyncKey');
   if (el) el.textContent = SYNC_USER_ID;
+  syncKeychainInputs(SYNC_USER_ID);
 }
 
 async function syncPlanToCloud() {
@@ -90,7 +103,18 @@ async function loadPlanFromCloud() {
 
 window.addEventListener('DOMContentLoaded', () => {
   updateSyncKeyDisplay();
-  // Chargement en arrière-plan sans bloquer l'interface
+
+  // Watch for manual inputs or password manager autofills
+  const inputKey = document.getElementById('inputSyncKey');
+  if (inputKey) {
+    inputKey.addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      const inputSecret = document.getElementById('inputSyncSecret');
+      if (inputSecret) inputSecret.value = val;
+    });
+  }
+
+  // Load cloud data asynchronously without locking the UI
   setTimeout(() => {
     loadPlanFromCloud();
   }, 100);
