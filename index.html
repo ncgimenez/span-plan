@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Plan">
 
-  <link rel="stylesheet" href="style.css?v=3.1">
+  <link rel="stylesheet" href="style.css?v=3.2">
 </head>
 <body>
 
@@ -24,7 +24,7 @@
         <span class="brand-app" id="headerTitle">Plan</span>
       </div>
       
-      <!-- CATEGORY / CONTEXT SWITCHER (BOLD & BRAND COLORED) -->
+      <!-- CATEGORY / CONTEXT SWITCHER (BOLD & UNIFIED COLORS) -->
       <div class="context-switch" id="contextSwitch">
         <button class="context-btn active" data-context="all" onclick="setContextFilter('all')">All</button>
         <button class="context-btn cat-work" data-context="work" onclick="setContextFilter('work')">Work</button>
@@ -63,10 +63,10 @@
       </div>
     </div>
 
-    <!-- QUICK ADD BAR WITH SHORTCUTS (!m, !a, !e) -->
+    <!-- QUICK ADD BAR (ZERO FORCED TIMING) -->
     <div class="quick-add-container">
       <input type="text" class="quick-input" id="quickTaskInput" 
-             placeholder="Add task... (e.g. 'Prep review 10:00 !m #project')" 
+             placeholder="Add task or event (e.g. 'Team standup 10:00' or simple 'Buy groceries')" 
              onkeydown="if(event.key==='Enter') submitQuickAdd()">
       
       <select class="quick-select" id="quickTargetDate">
@@ -143,11 +143,11 @@
     <button type="button" class="popover-item danger" onclick="popoverAction('delete')">✕ Delete Task</button>
   </div>
 
-  <!-- EDIT TASK MODAL -->
-  <div class="modal-overlay" id="editModalOverlay">
-    <div class="modal-card">
+  <!-- EDIT TASK MODAL (BACKDROP CLICK AUTO-CLOSES) -->
+  <div class="modal-overlay" id="editModalOverlay" onclick="handleBackdropClick(event, 'editModalOverlay')">
+    <div class="modal-card" onclick="event.stopPropagation()">
       <div class="modal-header">
-        <span>Edit Task</span>
+        <span>Edit Item</span>
         <button class="modal-close" onclick="closeEditModal()">✕</button>
       </div>
       <div class="modal-body">
@@ -160,16 +160,9 @@
             <input type="date" class="modal-input" id="editTaskDate">
           </div>
           <div class="form-col">
-            <label class="modal-label">Start Time (Optional)</label>
+            <label class="modal-label">Time (Leave empty if unscheduled)</label>
             <input type="time" class="modal-input" id="editTaskTime">
           </div>
-        </div>
-
-        <label class="modal-label">Slot</label>
-        <div class="category-pills" id="modalSlotPills">
-          <button type="button" class="cat-pill" data-slot="morning" onclick="selectEditSlot('morning')">🌅 Morning</button>
-          <button type="button" class="cat-pill" data-slot="afternoon" onclick="selectEditSlot('afternoon')">☀️ Afternoon</button>
-          <button type="button" class="cat-pill" data-slot="evening" onclick="selectEditSlot('evening')">🌙 Evening</button>
         </div>
 
         <label class="modal-label">Context Category</label>
@@ -177,14 +170,6 @@
           <button type="button" class="cat-pill cat-work" data-context="work" onclick="selectEditContext('work')">Work</button>
           <button type="button" class="cat-pill cat-home" data-context="home" onclick="selectEditContext('home')">Home</button>
           <button type="button" class="cat-pill cat-fun" data-context="fun" onclick="selectEditContext('fun')">Fun</button>
-        </div>
-
-        <label class="modal-label">Estimated Pomodoros</label>
-        <div class="pomodoro-stepper">
-          <button type="button" class="stepper-btn" onclick="stepEstimate(-1)">−</button>
-          <span id="editPomodoroEstimate">1</span>
-          <button type="button" class="stepper-btn" onclick="stepEstimate(1)">+</button>
-          <span style="font-size: 13px; color: var(--text-muted); margin-left: 8px;">blocks (~<span id="editEstMinutes">25</span> min)</span>
         </div>
       </div>
       <div class="modal-footer">
@@ -194,9 +179,9 @@
     </div>
   </div>
 
-  <!-- SETTINGS MODAL -->
-  <div class="modal-overlay" id="settingsModalOverlay">
-    <div class="modal-card">
+  <!-- SETTINGS MODAL (BACKDROP CLICK AUTO-CLOSES) -->
+  <div class="modal-overlay" id="settingsModalOverlay" onclick="handleBackdropClick(event, 'settingsModalOverlay')">
+    <div class="modal-card" onclick="event.stopPropagation()">
       <div class="modal-header">
         <span>Span Plan Settings</span>
         <button class="modal-close" onclick="closeSettingsModal()">✕</button>
@@ -212,7 +197,6 @@
 
         <div style="margin-top: 14px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Multi-Device Sync (Supabase)</div>
         
-        <!-- SEMENTIC FORM TO TRIGGER BROWSER / KEYCHAIN PASSWORD SAVER -->
         <form id="keychainSyncForm" onsubmit="event.preventDefault(); handleLinkClick();" autocomplete="on" style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
           <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
             <div style="font-size: 13px; color: var(--text-muted);">
@@ -240,8 +224,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=3.1"></script>
-  <script src="js/plan.js?v=3.1"></script>
-  <script src="js/app.js?v=3.1"></script>
+  <script src="js/sync.js?v=3.2"></script>
+  <script src="js/plan.js?v=3.2"></script>
+  <script src="js/app.js?v=3.2"></script>
 </body>
 </html>
