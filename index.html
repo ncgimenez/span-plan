@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Plan">
 
-  <link rel="stylesheet" href="style.css?v=2.0">
+  <link rel="stylesheet" href="style.css?v=3.0">
 </head>
 <body>
 
@@ -24,12 +24,12 @@
         <span class="brand-app" id="headerTitle">Plan</span>
       </div>
       
-      <!-- SPHERE / CONTEXT SWITCHER -->
+      <!-- CATEGORY / CONTEXT SWITCHER (BOLD & BRAND COLORED) -->
       <div class="context-switch" id="contextSwitch">
         <button class="context-btn active" data-context="all" onclick="setContextFilter('all')">All</button>
-        <button class="context-btn" data-context="work" onclick="setContextFilter('work')">💼 Work</button>
-        <button class="context-btn" data-context="home" onclick="setContextFilter('home')">🏠 Home</button>
-        <button class="context-btn" data-context="fun" onclick="setContextFilter('fun')">✨ Fun</button>
+        <button class="context-btn cat-work" data-context="work" onclick="setContextFilter('work')">Work</button>
+        <button class="context-btn cat-home" data-context="home" onclick="setContextFilter('home')">Home</button>
+        <button class="context-btn cat-fun" data-context="fun" onclick="setContextFilter('fun')">Fun</button>
       </div>
 
       <div class="header-actions">
@@ -42,7 +42,7 @@
       </div>
     </header>
 
-    <!-- CALENDAR & TIMELINE CONTROL BAR -->
+    <!-- TIMELINE CONTROLS (SIMPLIFIED - ROLLING/CALENDAR REMOVED) -->
     <div class="timeline-bar">
       <div class="timeline-nav">
         <button class="nav-arrow-btn" onclick="navigateTimeline(-1)" title="Previous period">‹</button>
@@ -52,12 +52,6 @@
       </div>
 
       <div class="view-mode-controls">
-        <!-- MODE: ROLLING VS CALENDAR -->
-        <div class="pill-group">
-          <button class="pill-btn active" id="modeRollingBtn" onclick="setWeekMode('rolling')" title="Days starting from today">Rolling</button>
-          <button class="pill-btn" id="modeCalendarBtn" onclick="setWeekMode('calendar')" title="Fixed Monday-to-Sunday week">Calendar</button>
-        </div>
-
         <!-- DAYS VISIBLE SELECTOR -->
         <div class="pill-group" id="daysSelectorGroup">
           <button class="pill-btn" data-days="1" onclick="setVisibleDays(1)">1D</button>
@@ -72,7 +66,7 @@
     <!-- QUICK ADD BAR WITH SHORTCUTS (!m, !a, !e) -->
     <div class="quick-add-container">
       <input type="text" class="quick-input" id="quickTaskInput" 
-             placeholder="Add task... (Use !m for morning, !a for afternoon, !e for evening, e.g., 'Prep report 10:00 !m')" 
+             placeholder="Add task... (Use !m morning, !a afternoon, !e evening, e.g., 'Prep report 10:00 !m')" 
              onkeydown="if(event.key==='Enter') submitQuickAdd()">
       
       <select class="quick-select" id="quickTargetDate">
@@ -142,6 +136,13 @@
     </nav>
   </div>
 
+  <!-- CONTEXT MENU POPOVER FOR TASK (⋮) -->
+  <div class="task-popover-menu" id="taskPopoverMenu" style="display: none;">
+    <button type="button" class="popover-item" onclick="popoverAction('focus')">🎯 Focus in Spotlight</button>
+    <button type="button" class="popover-item" onclick="popoverAction('backlog')">📥 Move to Later</button>
+    <button type="button" class="popover-item danger" onclick="popoverAction('delete')">✕ Delete Task</button>
+  </div>
+
   <!-- EDIT TASK MODAL -->
   <div class="modal-overlay" id="editModalOverlay">
     <div class="modal-card">
@@ -171,11 +172,11 @@
           <button type="button" class="cat-pill" data-slot="evening" onclick="selectEditSlot('evening')">🌙 Evening</button>
         </div>
 
-        <label class="modal-label">Context</label>
+        <label class="modal-label">Context Category</label>
         <div class="category-pills" id="modalContextPills">
-          <button type="button" class="cat-pill" data-context="work" onclick="selectEditContext('work')">💼 Work</button>
-          <button type="button" class="cat-pill" data-context="home" onclick="selectEditContext('home')">🏠 Home</button>
-          <button type="button" class="cat-pill" data-context="fun" onclick="selectEditContext('fun')">✨ Fun</button>
+          <button type="button" class="cat-pill cat-work" data-context="work" onclick="selectEditContext('work')">Work</button>
+          <button type="button" class="cat-pill cat-home" data-context="home" onclick="selectEditContext('home')">Home</button>
+          <button type="button" class="cat-pill cat-fun" data-context="fun" onclick="selectEditContext('fun')">Fun</button>
         </div>
 
         <label class="modal-label">Estimated Pomodoros</label>
@@ -235,8 +236,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=2.0"></script>
-  <script src="js/plan.js?v=2.0"></script>
-  <script src="js/app.js?v=2.0"></script>
+  <script src="js/sync.js?v=3.0"></script>
+  <script src="js/plan.js?v=3.0"></script>
+  <script src="js/app.js?v=3.0"></script>
 </body>
 </html>
