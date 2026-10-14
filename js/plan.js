@@ -36,40 +36,8 @@ function renderTitleWithTagsHtml(titleStr) {
   });
 }
 
-// Données initiales par défaut
-const defaultInitialTasks = [
-  {
-    id: 'p_sample_today_1',
-    title: 'Team standup meeting #work',
-    date: TODAY_STR,
-    time: '09:30',
-    duration: 60,
-    context: 'work',
-    completed: false,
-    isRollover: false
-  },
-  {
-    id: 'p_sample_today_2',
-    title: 'Grocery shopping #home',
-    date: TODAY_STR,
-    time: '',
-    duration: 30,
-    context: 'home',
-    completed: false,
-    isRollover: false
-  },
-  {
-    id: 'p_sample_tomorrow_1',
-    title: 'Review quarterly report',
-    date: TOMORROW_STR,
-    time: '',
-    duration: 45,
-    context: 'work',
-    completed: false,
-    isRollover: false
-  }
-];
-
+// Initialisation blindée : on ne réinjecte pas d'exemples si l'utilisateur a déjà interagi
+const hasStoredData = localStorage.getItem('span_plan_tasks') !== null;
 let rawTasks = [];
 try {
   rawTasks = JSON.parse(localStorage.getItem('span_plan_tasks'));
@@ -77,10 +45,32 @@ try {
   rawTasks = null;
 }
 
-if (!Array.isArray(rawTasks) || rawTasks.length === 0) {
-  window.SpanPlanState.tasks = defaultInitialTasks;
+if (!hasStoredData) {
+  window.SpanPlanState.tasks = [
+    {
+      id: 'p_sample_today_1',
+      title: 'Team standup meeting #work',
+      date: TODAY_STR,
+      time: '09:30',
+      duration: 60,
+      context: 'work',
+      completed: false,
+      isRollover: false
+    },
+    {
+      id: 'p_sample_today_2',
+      title: 'Grocery shopping #home',
+      date: TODAY_STR,
+      time: '',
+      duration: 30,
+      context: 'home',
+      completed: false,
+      isRollover: false
+    }
+  ];
+  localStorage.setItem('span_plan_tasks', JSON.stringify(window.SpanPlanState.tasks));
 } else {
-  window.SpanPlanState.tasks = rawTasks.map(t => ({
+  window.SpanPlanState.tasks = Array.isArray(rawTasks) ? rawTasks.map(t => ({
     id: t.id || ('p_' + Math.random().toString(36).substr(2, 9)),
     title: t.title || 'Untitled',
     date: t.date || null,
@@ -89,7 +79,7 @@ if (!Array.isArray(rawTasks) || rawTasks.length === 0) {
     context: normalizePlanContext(t.context || t.category),
     completed: !!t.completed,
     isRollover: !!t.isRollover
-  }));
+  })) : [];
 }
 
 let visibleDaysCount = parseInt(localStorage.getItem('span_plan_visible_days')) || 3;
@@ -102,14 +92,12 @@ let editingTaskId = null;
 let editingContext = 'work';
 let popoverTargetTaskId = null;
 
-// Filtre tags
 function filterByTag(tag) {
   currentTagFilter = (currentTagFilter === tag) ? null : tag;
   renderPlanGrid();
   renderBacklogDrawer();
 }
 
-// Auto-rollover des tâches passées incomplètes vers Today (dans le dock)
 function executeAutoRollover() {
   let hasChanges = false;
   window.SpanPlanState.tasks.forEach(task => {
@@ -145,7 +133,7 @@ function calculateVisibleDates() {
   return dates;
 }
 
-// RENDU PRINCIPAL
+// RENDU DE LA GRILLE (SCHEDULE + DOCK INFÉRIEUR)
 function renderPlanGrid() {
   const grid = document.getElementById('plannerGrid');
   if (!grid) return;
@@ -252,7 +240,6 @@ function renderNowLineHtml() {
   `;
 }
 
-// RENDU BLOCS HORAIRES AVEC POIGNÉE DE REDIMENSIONNEMENT
 function renderTimedBlocks(tasks, dateStr) {
   return tasks.map(task => {
     const parts = task.time.split(':');
@@ -267,7 +254,6 @@ function renderTimedBlocks(tasks, dateStr) {
     const durationMin = task.duration || 45;
     const height = Math.max(34, (durationMin / 60) * HOUR_HEIGHT);
 
-    // Calcul de l'heure de fin
     const endTotal = totalMinutes + durationMin;
     const endH = String(Math.floor(endTotal / 60)).padStart(2, '0');
     const endM = String(endTotal % 60).padStart(2, '0');
@@ -293,7 +279,6 @@ function renderTimedBlocks(tasks, dateStr) {
         </div>
         ${height >= 48 ? `<div class="schedule-block-sub">${timeRangeStr} •${durationMin}m</div>` : ''}
         
-        <!-- POIGNÉE DE REDIMENSIONNEMENT -->
         <div class="resize-handle" 
              onmousedown="startResize(event, '${task.id}')"
              ontouchstart="startResize(event, '${task.id}')"
@@ -303,7 +288,6 @@ function renderTimedBlocks(tasks, dateStr) {
   }).join('');
 }
 
-// TÂCHES DU DOCK (EN BAS DE CHAQUE JOUR)
 function renderUnscheduledList(tasks) {
   if (tasks.length === 0) {
     return `<li style="font-size: 11px; color: rgba(255,255,255,0.2); padding: 8px 4px; text-align: center;">No unscheduled tasks</li>`;
@@ -331,9 +315,7 @@ function renderUnscheduledList(tasks) {
   }).join('');
 }
 
-// ==============================================================
-// REDIMENSIONNEMENT INTERACTIF (RESIZE)
-// ==============================================================
+// REDIMENSIONNEMENT
 let resizingTaskId = null;
 let resizeStartY = 0;
 let resizeStartHeight = 0;
@@ -380,7 +362,6 @@ function handleResizeEnd() {
     blockEl.classList.remove('is-resizing');
     const finalHeight = blockEl.offsetHeight;
     
-    // Calcul de la nouvelle durée arrondie au quart d'heure (15 min)
     let minutes = Math.round((finalHeight / HOUR_HEIGHT) * 60);
     minutes = Math.max(15, Math.round(minutes / 15) * 15);
 
@@ -398,9 +379,7 @@ function handleResizeEnd() {
   window.removeEventListener('touchend', handleResizeEnd);
 }
 
-// ==============================================================
-// GLISSER-DÉPOSER (DRAG & DROP SUR HORAIRES ET DOCKS)
-// ==============================================================
+// DRAG & DROP
 let draggedTaskId = null;
 
 function handleDragStart(e, id) {
@@ -428,7 +407,6 @@ function handleCanvasDrop(e, targetDate) {
   const rect = canvas.getBoundingClientRect();
   const offsetY = e.clientY - rect.top;
 
-  // Calcul de l'heure arrondie au quart d'heure
   const hoursFraction = offsetY / HOUR_HEIGHT;
   let totalMinutes = Math.round((START_HOUR * 60) + (hoursFraction * 60));
   totalMinutes = Math.round(totalMinutes / 15) * 15;
@@ -465,7 +443,7 @@ function handleDropToDock(e, targetDate) {
   const task = window.SpanPlanState.tasks.find(t => t.id === draggedTaskId);
   if (task) {
     task.date = targetDate;
-    task.time = ''; // Enlevée de l'agenda horaire et placée dans le dock
+    task.time = '';
     task.isRollover = false;
     savePlanState();
   }
@@ -486,7 +464,7 @@ function handleDropToBacklog(e) {
   draggedTaskId = null;
 }
 
-// POPOVER ACTIONS (⋮)
+// POPOVER
 function openTaskPopover(e, id) {
   popoverTargetTaskId = id;
   const menu = document.getElementById('taskPopoverMenu');
@@ -529,7 +507,7 @@ function popoverAction(action) {
   else if (action === 'delete') deleteTask(id);
 }
 
-// TIROIR BACKLOG (LATER)
+// DRAWER (LATER)
 function renderBacklogDrawer() {
   const list = document.getElementById('backlogTaskList');
   if (!list) return;
@@ -639,7 +617,7 @@ function pushToSpanFocus(id) {
   alert(`"${task.title}" queued into Span Focus with priority ⭐!`);
 }
 
-// AJOUT RAPIDE
+// AJOUT RAPIDE IMMÉDIAT DANS LA MÉMOIRE
 function submitQuickAdd() {
   const input = document.getElementById('quickTaskInput');
   const targetSelect = document.getElementById('quickTargetDate');
@@ -697,7 +675,7 @@ function addBacklogTask() {
   savePlanState();
 }
 
-// ÉDITION
+// MODALE D'ÉDITION
 function openEditModal(id) {
   const task = window.SpanPlanState.tasks.find(t => t.id === id);
   if (!task) return;
@@ -746,6 +724,7 @@ function saveTaskModal() {
   savePlanState();
 }
 
+// NAVIGATION
 function navigateTimeline(direction) {
   currentTimelineOffset += (direction * visibleDaysCount);
   renderPlanGrid();
@@ -810,6 +789,7 @@ window.addEventListener('DOMContentLoaded', () => {
   executeAutoRollover();
   setVisibleDays(visibleDaysCount);
   applyPinState();
+  renderPlanGrid();
   renderBacklogDrawer();
   updateCounters();
 
