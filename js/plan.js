@@ -16,7 +16,7 @@ const tomorrow = new Date();
 tomorrow.setDate(tomorrow.getDate() + 1);
 const TOMORROW_STR = getLocalDateString(tomorrow);
 
-// Données d'exemple avec la tâche d'hier (Rollover)
+// Données d'exemple initiales
 const defaultInitialTasks = [
   {
     id: 'p_yesterday_sample',
@@ -75,21 +75,43 @@ const defaultInitialTasks = [
   }
 ];
 
-window.SpanPlanState.tasks = JSON.parse(localStorage.getItem('span_plan_tasks')) || defaultInitialTasks;
+// Nettoyage et sécurisation du chargement des tâches
+let rawTasks = [];
+try {
+  rawTasks = JSON.parse(localStorage.getItem('span_plan_tasks'));
+} catch (e) {
+  rawTasks = null;
+}
+
+if (!Array.isArray(rawTasks) || rawTasks.length === 0) {
+  window.SpanPlanState.tasks = defaultInitialTasks;
+} else {
+  // Normalisation pour éviter tout champ manquant
+  window.SpanPlanState.tasks = rawTasks.map(t => ({
+    id: t.id || ('p_' + Math.random().toString(36).substr(2, 9)),
+    title: t.title || 'Untitled task',
+    date: t.date || null,
+    slot: t.slot || 'morning',
+    time: t.time || '',
+    context: t.context || 'work',
+    estimate: typeof t.estimate === 'number' ? t.estimate : 1,
+    completed: !!t.completed,
+    isRollover: !!t.isRollover
+  }));
+}
 
 let visibleDaysCount = parseInt(localStorage.getItem('span_plan_visible_days')) || 3;
-let currentTimelineOffset = 0; // Mode glissant naturel toujours actif
+let currentTimelineOffset = 0;
 let currentContextFilter = 'all';
 let isDrawerPinned = localStorage.getItem('span_plan_drawer_pinned') === 'true';
 
-// Variables modale & popover
 let editingTaskId = null;
 let editingSlot = 'morning';
 let editingContext = 'work';
 let editingEstimate = 1;
 let popoverTargetTaskId = null;
 
-// 1. ROLLOVER UNIVERSEL (Tâches antérieures non faites basculées à aujourd'hui)
+// 1. ROLLOVER AUTOMATIQUE
 function executeAutoRollover() {
   let hasChanges = false;
   window.SpanPlanState.tasks.forEach(task => {
@@ -180,9 +202,11 @@ function renderDaySlot(dateStr, slotName, slotLabel, dayTasks) {
   const slotTasks = dayTasks.filter(t => (t.slot === slotName || (!t.slot && slotName === 'morning')));
 
   slotTasks.sort((a, b) => {
-    if (a.time && b.time) return a.time.localeCompare(b.time);
-    if (a.time) return -1;
-    if (b.time) return 1;
+    const timeA = a.time || '';
+    const timeB = b.time || '';
+    if (timeA && timeB) return timeA.localeCompare(timeB);
+    if (timeA) return -1;
+    if (timeB) return 1;
     return 0;
   });
 
@@ -205,13 +229,12 @@ function renderDaySlot(dateStr, slotName, slotLabel, dayTasks) {
   `;
 }
 
-// 3. CARTE DE TÂCHE AVEC TITRE EN HAUT ET DÉTAILS EN RETRAIT
+// 3. CARTE DE TÂCHE
 function createTaskCardHtml(task) {
   const isRollover = !!task.isRollover;
   const contextClass = task.context ? `cat-${task.context}` : '';
   const rolloverPrefix = isRollover ? '⟳ ' : '';
 
-  // Construction des détails sous le titre
   const detailItems = [];
   if (task.time) {
     detailItems.push(`<span class="task-detail-item">🕒 ${task.time}</span>`);
@@ -250,7 +273,6 @@ function openTaskPopover(e, id) {
   const btnRect = e.currentTarget.getBoundingClientRect();
   menu.style.display = 'flex';
   
-  // Positionnement dynamique
   const top = btnRect.bottom + 4;
   const left = Math.min(window.innerWidth - 180, btnRect.left - 130);
   menu.style.top = `${top}px`;
@@ -443,8 +465,8 @@ function submitQuickAdd() {
   let assignedSlot = 'morning';
   let targetDate = TODAY_STR;
 
-  if (targetSelect.value === 'tomorrow') targetDate = TOMORROW_STR;
-  else if (targetSelect.value === 'later') targetDate = null;
+  if (targetSelect && targetSelect.value === 'tomorrow') targetDate = TOMORROW_STR;
+  else if (targetSelect && targetSelect.value === 'later') targetDate = null;
 
   if (rawText.includes('!m') || rawText.includes('/m') || rawText.toUpperCase().includes('AM')) {
     assignedSlot = 'morning';
@@ -625,6 +647,7 @@ function applyPinState() {
   }
 }
 
+// Initialisation sûre
 window.addEventListener('DOMContentLoaded', () => {
   executeAutoRollover();
   setVisibleDays(visibleDaysCount);
