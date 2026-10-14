@@ -36,13 +36,14 @@ function renderTitleWithTagsHtml(titleStr) {
   });
 }
 
-// Données initiales d'exemple
+// Données initiales par défaut
 const defaultInitialTasks = [
   {
     id: 'p_sample_today_1',
     title: 'Team standup meeting #work',
     date: TODAY_STR,
     time: '09:30',
+    duration: 60,
     context: 'work',
     completed: false,
     isRollover: false
@@ -52,25 +53,18 @@ const defaultInitialTasks = [
     title: 'Grocery shopping #home',
     date: TODAY_STR,
     time: '',
+    duration: 30,
     context: 'home',
     completed: false,
     isRollover: false
   },
   {
-    id: 'p_sample_today_3',
-    title: 'Review quarterly architecture notes',
-    date: TODAY_STR,
-    time: '14:30',
-    context: 'work',
-    completed: false,
-    isRollover: false
-  },
-  {
     id: 'p_sample_tomorrow_1',
-    title: 'Plan vacation itinerary #fun',
+    title: 'Review quarterly report',
     date: TOMORROW_STR,
     time: '',
-    context: 'fun',
+    duration: 45,
+    context: 'work',
     completed: false,
     isRollover: false
   }
@@ -91,6 +85,7 @@ if (!Array.isArray(rawTasks) || rawTasks.length === 0) {
     title: t.title || 'Untitled',
     date: t.date || null,
     time: t.time || '',
+    duration: typeof t.duration === 'number' ? t.duration : 45,
     context: normalizePlanContext(t.context || t.category),
     completed: !!t.completed,
     isRollover: !!t.isRollover
@@ -107,19 +102,20 @@ let editingTaskId = null;
 let editingContext = 'work';
 let popoverTargetTaskId = null;
 
-// Filtre tag
+// Filtre tags
 function filterByTag(tag) {
   currentTagFilter = (currentTagFilter === tag) ? null : tag;
   renderPlanGrid();
   renderBacklogDrawer();
 }
 
-// ROLLOVER AUTOMATIQUE SANS HEURE FORCÉE
+// Auto-rollover des tâches passées incomplètes vers Today (dans le dock)
 function executeAutoRollover() {
   let hasChanges = false;
   window.SpanPlanState.tasks.forEach(task => {
     if (task.date && task.date < TODAY_STR && !task.completed) {
       task.date = TODAY_STR;
+      task.time = '';
       task.isRollover = true;
       hasChanges = true;
     }
@@ -149,7 +145,7 @@ function calculateVisibleDates() {
   return dates;
 }
 
-// RENDU PRINCIPAL DU PLANNING (AGENDA + DOCK INFÉRIEUR)
+// RENDU PRINCIPAL
 function renderPlanGrid() {
   const grid = document.getElementById('plannerGrid');
   if (!grid) return;
@@ -190,15 +186,23 @@ function renderPlanGrid() {
 
       <!-- CANEVAS HORAIRE VERTICAL (UPPER AREA) -->
       <div class="day-schedule-scroll" id="scheduleScroll_${dateStr}">
-        <div class="schedule-grid-canvas">
+        <div class="schedule-grid-canvas" 
+             data-date="${dateStr}"
+             ondragover="allowCanvasDrop(event)" 
+             ondragleave="removeCanvasDropHighlight(event)"
+             ondrop="handleCanvasDrop(event, '${dateStr}')">
           ${renderHourLines()}
           ${isToday ? renderNowLineHtml() : ''}
-          ${renderTimedBlocks(timedTasks)}
+          ${renderTimedBlocks(timedTasks, dateStr)}
         </div>
       </div>
 
       <!-- DOCK DU BAS POUR TÂCHES NON PLANIFIÉES DU JOUR -->
-      <div class="day-dock" ondragover="allowDrop(event)" ondrop="handleDropToDock(event, '${dateStr}')">
+      <div class="day-dock" 
+           data-date="${dateStr}"
+           ondragover="allowDockDrop(event)" 
+           ondragleave="removeDockDropHighlight(event)"
+           ondrop="handleDropToDock(event, '${dateStr}')">
         <div class="dock-header">
           <span class="dock-title">📋 To-do</span>
           <span class="dock-count-pill">${unscheduledTasks.length}</span>
@@ -215,7 +219,6 @@ function renderPlanGrid() {
   updateRangeLabel(visibleDates);
 }
 
-// Lignes d'heures de 07:00 à 22:00
 function renderHourLines() {
   let html = '';
   for (let h = START_HOUR; h <= END_HOUR; h++) {
@@ -231,7 +234,6 @@ function renderHourLines() {
   return html;
 }
 
-// Ligne rouge dynamique en direct
 function renderNowLineHtml() {
   const now = new Date();
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
@@ -250,8 +252,8 @@ function renderNowLineHtml() {
   `;
 }
 
-// Blocs horaires sur le calendrier
-function renderTimedBlocks(tasks) {
+// RENDU BLOCS HORAIRES AVEC POIGNÉE DE REDIMENSIONNEMENT
+function renderTimedBlocks(tasks, dateStr) {
   return tasks.map(task => {
     const parts = task.time.split(':');
     const h = parseInt(parts[0], 10);
@@ -262,12 +264,21 @@ function renderTimedBlocks(tasks) {
     let top = ((totalMinutes - startMinutes) / 60) * HOUR_HEIGHT;
     top = Math.max(0, top);
 
-    const height = Math.max(38, (45 / 60) * HOUR_HEIGHT);
+    const durationMin = task.duration || 45;
+    const height = Math.max(34, (durationMin / 60) * HOUR_HEIGHT);
+
+    // Calcul de l'heure de fin
+    const endTotal = totalMinutes + durationMin;
+    const endH = String(Math.floor(endTotal / 60)).padStart(2, '0');
+    const endM = String(endTotal % 60).padStart(2, '0');
+    const timeRangeStr = `${task.time} - ${endH}:${endM}`;
+
     const rolloverClass = task.isRollover ? 'rollover' : '';
     const rolloverPrefix = task.isRollover ? '⟳ ' : '';
 
     return `
       <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass}" 
+           id="block_${task.id}"
            style="top: ${top}px; height: ${height}px;"
            draggable="true" 
            ondragstart="handleDragStart(event, '${task.id}')"
@@ -280,12 +291,19 @@ function renderTimedBlocks(tasks) {
           <span class="schedule-block-time">${task.time}</span>
           <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')">⋮</button>
         </div>
+        ${height >= 48 ? `<div class="schedule-block-sub">${timeRangeStr} •${durationMin}m</div>` : ''}
+        
+        <!-- POIGNÉE DE REDIMENSIONNEMENT -->
+        <div class="resize-handle" 
+             onmousedown="startResize(event, '${task.id}')"
+             ontouchstart="startResize(event, '${task.id}')"
+             onclick="event.stopPropagation()"></div>
       </div>
     `;
   }).join('');
 }
 
-// Liste de tâches non planifiées dans le Dock
+// TÂCHES DU DOCK (EN BAS DE CHAQUE JOUR)
 function renderUnscheduledList(tasks) {
   if (tasks.length === 0) {
     return `<li style="font-size: 11px; color: rgba(255,255,255,0.2); padding: 8px 4px; text-align: center;">No unscheduled tasks</li>`;
@@ -313,6 +331,161 @@ function renderUnscheduledList(tasks) {
   }).join('');
 }
 
+// ==============================================================
+// REDIMENSIONNEMENT INTERACTIF (RESIZE)
+// ==============================================================
+let resizingTaskId = null;
+let resizeStartY = 0;
+let resizeStartHeight = 0;
+
+function startResize(e, taskId) {
+  e.preventDefault();
+  e.stopPropagation();
+  resizingTaskId = taskId;
+  
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  resizeStartY = clientY;
+  
+  const blockEl = document.getElementById(`block_${taskId}`);
+  if (blockEl) {
+    resizeStartHeight = blockEl.offsetHeight;
+    blockEl.classList.add('is-resizing');
+  }
+
+  window.addEventListener('mousemove', handleResizeMove);
+  window.addEventListener('mouseup', handleResizeEnd);
+  window.addEventListener('touchmove', handleResizeMove, { passive: false });
+  window.addEventListener('touchend', handleResizeEnd);
+}
+
+function handleResizeMove(e) {
+  if (!resizingTaskId) return;
+  e.preventDefault();
+
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const deltaY = clientY - resizeStartY;
+  const newHeight = Math.max(28, resizeStartHeight + deltaY);
+
+  const blockEl = document.getElementById(`block_${resizingTaskId}`);
+  if (blockEl) {
+    blockEl.style.height = `${newHeight}px`;
+  }
+}
+
+function handleResizeEnd() {
+  if (!resizingTaskId) return;
+
+  const blockEl = document.getElementById(`block_${resizingTaskId}`);
+  if (blockEl) {
+    blockEl.classList.remove('is-resizing');
+    const finalHeight = blockEl.offsetHeight;
+    
+    // Calcul de la nouvelle durée arrondie au quart d'heure (15 min)
+    let minutes = Math.round((finalHeight / HOUR_HEIGHT) * 60);
+    minutes = Math.max(15, Math.round(minutes / 15) * 15);
+
+    const task = window.SpanPlanState.tasks.find(t => t.id === resizingTaskId);
+    if (task) {
+      task.duration = minutes;
+      savePlanState();
+    }
+  }
+
+  resizingTaskId = null;
+  window.removeEventListener('mousemove', handleResizeMove);
+  window.removeEventListener('mouseup', handleResizeEnd);
+  window.removeEventListener('touchmove', handleResizeMove);
+  window.removeEventListener('touchend', handleResizeEnd);
+}
+
+// ==============================================================
+// GLISSER-DÉPOSER (DRAG & DROP SUR HORAIRES ET DOCKS)
+// ==============================================================
+let draggedTaskId = null;
+
+function handleDragStart(e, id) {
+  draggedTaskId = id;
+  e.dataTransfer.setData('text/plain', id);
+  const blockEl = document.getElementById(`block_${id}`);
+  if (blockEl) blockEl.classList.add('dragging');
+}
+
+function allowCanvasDrop(e) {
+  e.preventDefault();
+  e.currentTarget.classList.add('drag-over');
+}
+
+function removeCanvasDropHighlight(e) {
+  e.currentTarget.classList.remove('drag-over');
+}
+
+function handleCanvasDrop(e, targetDate) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!draggedTaskId) return;
+
+  const canvas = e.currentTarget;
+  const rect = canvas.getBoundingClientRect();
+  const offsetY = e.clientY - rect.top;
+
+  // Calcul de l'heure arrondie au quart d'heure
+  const hoursFraction = offsetY / HOUR_HEIGHT;
+  let totalMinutes = Math.round((START_HOUR * 60) + (hoursFraction * 60));
+  totalMinutes = Math.round(totalMinutes / 15) * 15;
+  totalMinutes = Math.max(START_HOUR * 60, Math.min(END_HOUR * 60, totalMinutes));
+
+  const h = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
+  const m = String(totalMinutes % 60).padStart(2, '0');
+  const newTime = `${h}:${m}`;
+
+  const task = window.SpanPlanState.tasks.find(t => t.id === draggedTaskId);
+  if (task) {
+    task.date = targetDate;
+    task.time = newTime;
+    task.isRollover = false;
+    savePlanState();
+  }
+  draggedTaskId = null;
+}
+
+function allowDockDrop(e) {
+  e.preventDefault();
+  e.currentTarget.classList.add('drag-over');
+}
+
+function removeDockDropHighlight(e) {
+  e.currentTarget.classList.remove('drag-over');
+}
+
+function handleDropToDock(e, targetDate) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!draggedTaskId) return;
+
+  const task = window.SpanPlanState.tasks.find(t => t.id === draggedTaskId);
+  if (task) {
+    task.date = targetDate;
+    task.time = ''; // Enlevée de l'agenda horaire et placée dans le dock
+    task.isRollover = false;
+    savePlanState();
+  }
+  draggedTaskId = null;
+}
+
+function handleDropToBacklog(e) {
+  e.preventDefault();
+  if (!draggedTaskId) return;
+
+  const task = window.SpanPlanState.tasks.find(t => t.id === draggedTaskId);
+  if (task) {
+    task.date = null;
+    task.time = '';
+    task.isRollover = false;
+    savePlanState();
+  }
+  draggedTaskId = null;
+}
+
 // POPOVER ACTIONS (⋮)
 function openTaskPopover(e, id) {
   popoverTargetTaskId = id;
@@ -334,7 +507,6 @@ function closeTaskPopover() {
   popoverTargetTaskId = null;
 }
 
-// FERMETURE AU CLIC EXTERIEUR (BACKDROP)
 function handleBackdropClick(event, modalId) {
   if (event.target.id === modalId) {
     document.getElementById(modalId).style.display = 'none';
@@ -467,47 +639,7 @@ function pushToSpanFocus(id) {
   alert(`"${task.title}" queued into Span Focus with priority ⭐!`);
 }
 
-// DRAG & DROP
-let draggedTaskId = null;
-
-function handleDragStart(e, id) {
-  draggedTaskId = id;
-  e.dataTransfer.setData('text/plain', id);
-}
-
-function allowDrop(e) {
-  e.preventDefault();
-}
-
-function handleDropToDock(e, dateStr) {
-  e.preventDefault();
-  if (!draggedTaskId) return;
-
-  const task = window.SpanPlanState.tasks.find(t => t.id === draggedTaskId);
-  if (task) {
-    task.date = dateStr;
-    task.time = ''; // Devient une tâche non planifiée dans le dock
-    task.isRollover = false;
-    savePlanState();
-  }
-  draggedTaskId = null;
-}
-
-function handleDropToBacklog(e) {
-  e.preventDefault();
-  if (!draggedTaskId) return;
-
-  const task = window.SpanPlanState.tasks.find(t => t.id === draggedTaskId);
-  if (task) {
-    task.date = null;
-    task.time = '';
-    task.isRollover = false;
-    savePlanState();
-  }
-  draggedTaskId = null;
-}
-
-// PARSING RAPIDE : AUCUN TEMPS IMPOSÉ
+// AJOUT RAPIDE
 function submitQuickAdd() {
   const input = document.getElementById('quickTaskInput');
   const targetSelect = document.getElementById('quickTargetDate');
@@ -520,7 +652,6 @@ function submitQuickAdd() {
   if (targetSelect && targetSelect.value === 'tomorrow') targetDate = TOMORROW_STR;
   else if (targetSelect && targetSelect.value === 'later') targetDate = null;
 
-  // Extraction d'heure si l'utilisateur l'a volontairement écrite
   let extractedTime = '';
   const timeRegex = /\b([0-1]?[0-9]|2[0-3]):([0-5][0-9])\b/;
   const match = rawText.match(timeRegex);
@@ -534,6 +665,7 @@ function submitQuickAdd() {
     title: rawText,
     date: targetDate,
     time: extractedTime,
+    duration: 45,
     context: contextSelect ? contextSelect.value : 'work',
     completed: false,
     isRollover: false
@@ -554,6 +686,7 @@ function addBacklogTask() {
     title: text,
     date: null,
     time: '',
+    duration: 45,
     context: currentContextFilter === 'all' ? 'work' : currentContextFilter,
     completed: false,
     isRollover: false
@@ -564,7 +697,7 @@ function addBacklogTask() {
   savePlanState();
 }
 
-// MODALE D'ÉDITION
+// ÉDITION
 function openEditModal(id) {
   const task = window.SpanPlanState.tasks.find(t => t.id === id);
   if (!task) return;
@@ -613,7 +746,6 @@ function saveTaskModal() {
   savePlanState();
 }
 
-// NAVIGATION
 function navigateTimeline(direction) {
   currentTimelineOffset += (direction * visibleDaysCount);
   renderPlanGrid();
@@ -662,7 +794,6 @@ function applyPinState() {
   }
 }
 
-// Défilement automatique vers l'heure actuelle au démarrage
 function scrollToNow() {
   const now = new Date();
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
@@ -684,7 +815,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
   setTimeout(scrollToNow, 150);
 
-  // Mise à jour de la ligne rouge chaque minute
   setInterval(() => {
     if (currentTimelineOffset === 0) {
       renderPlanGrid();
