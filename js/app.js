@@ -96,6 +96,7 @@ window.addEventListener('keydown', (e) => {
     closeSettingsModal();
     if (typeof closeEditModal === 'function') closeEditModal();
     if (typeof closeTaskPopover === 'function') closeTaskPopover();
+    if (typeof clearSelection === 'function') clearSelection();
     const drawer = document.getElementById('backlogDrawer');
     if (drawer && drawer.classList.contains('open') && !drawer.classList.contains('pinned')) {
       drawer.classList.remove('open');
@@ -104,6 +105,14 @@ window.addEventListener('keydown', (e) => {
   }
 
   if (isEditing) return;
+
+  if (e.key === 'Backspace' || e.key === 'Delete') {
+    if (typeof deleteSelectedTasks === 'function') {
+      deleteSelectedTasks();
+      e.preventDefault();
+    }
+    return;
+  }
 
   if (e.key === 't' || e.key === 'T') {
     e.preventDefault();

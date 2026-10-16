@@ -219,6 +219,7 @@ function renderPlanGrid(forceRebuild = false) {
         canvas.innerHTML = `
           ${renderHourLines()}
           ${isToday ? renderNowLineHtml() : ''}
+          <div class="cal-marquee"></div>
           ${renderTimedBlocks(timedTasks, dateStr)}
         `;
       }
@@ -283,13 +284,14 @@ function renderPlanGrid(forceRebuild = false) {
       <div class="day-schedule-scroll" id="scheduleScroll_${dateStr}" data-date="${dateStr}">
         <div class="schedule-grid-canvas" 
              data-date="${dateStr}"
-             onclick="handleCanvasClick(event, '${dateStr}')"
+             onpointerdown="handleCanvasPointerDown(event, '${dateStr}')"
              ondragover="allowCanvasDrop(event)" 
              ondragleave="removeCanvasDropHighlight(event)"
              ondrop="handleCanvasDrop(event, '${dateStr}')"
-             title="Cliquer pour créer une tâche à cette heure">
+             title="Cliquer pour créer une tâche, ou glisser pour sélectionner plusieurs créneaux">
           ${renderHourLines()}
           ${isToday ? renderNowLineHtml() : ''}
+          <div class="cal-marquee"></div>
           ${renderTimedBlocks(timedTasks, dateStr)}
         </div>
       </div>
@@ -433,6 +435,7 @@ function renderTimedBlocks(tasks, dateStr) {
 
   return layoutItems.map(({ task, start, duration, colIndex, totalCols }) => {
     const isEvent = task.type === 'event';
+    const isSelected = selectedTaskIds.has(task.id);
     const startMinutes = START_HOUR * 60;
     let top = ((start - startMinutes) / 60) * HOUR_HEIGHT;
     top = Math.max(0, top);
@@ -442,11 +445,12 @@ function renderTimedBlocks(tasks, dateStr) {
     const endTotal = start + duration;
     const endH = String(Math.floor(endTotal / 60)).padStart(2, '0');
     const endM = String(endTotal % 60).padStart(2, '0');
-    const timeRangeStr = `${task.time} - ${endH}:${endM}`;
+    const timeRangeStr = `${task.time} – ${endH}:${endM}`;
 
     const rolloverClass = task.isRollover ? 'rollover' : '';
     const rolloverPrefix = task.isRollover ? '⟳ ' : '';
     const eventClass = isEvent ? 'is-event' : '';
+    const selectedClass = isSelected ? 'is-selected' : '';
 
     // Gestion propre des colonnes de chevauchement
     let positionStyle = `top: ${top}px; height: ${height}px;`;
@@ -455,13 +459,13 @@ function renderTimedBlocks(tasks, dateStr) {
     }
 
     return `
-      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass}" 
+      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass}" 
            id="block_${task.id}"
+           data-task-id="${task.id}"
+           data-date="${dateStr}"
            style="${positionStyle}"
-           draggable="true" 
-           ondragstart="handleDragStart(event, '${task.id}')"
-           ondragend="handleDragEnd(event)"
-           onclick="openEditModal('${task.id}')"
+           onpointerdown="handleBlockPointerDown(event, '${task.id}', '${dateStr}')"
+           onclick="event.stopPropagation()"
            title="${isEvent ? '📅 Événement: ' : '📋 Tâche: '}${task.title} (${timeRangeStr})">
         <div class="schedule-block-top">
           ${isEvent ? `
@@ -476,7 +480,7 @@ function renderTimedBlocks(tasks, dateStr) {
           <span class="schedule-block-time">${task.time}</span>
           <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
         </div>
-        ${height >= 46 ? `<div class="schedule-block-sub">${timeRangeStr} • ${duration}m</div>` : ''}
+        ${height >= 44 ? `<div class="schedule-block-sub">${timeRangeStr} · ${duration}m</div>` : ''}
         
         <div class="resize-handle" 
              onmousedown="startResize(event, '${task.id}')"
@@ -625,7 +629,357 @@ function handleResizeEnd() {
   window.removeEventListener('touchend', handleResizeEnd);
 }
 
-// DRAG & DROP
+// MULTI-SÉLECTION & DÉPLACEMENT DE GROUPE (SYSTÈME EXACT DU PORTFOLIO)
+let selectedTaskIds = new Set();
+let isPointerDragging = false;
+let dragAnchorTaskId = null;
+let dragAnchorClientY = 0;
+let dragAnchorClientX = 0;
+let dragInitialTops = new Map();
+let hasMovedBeyondThreshold = false;
+
+let marqueeCanvas = null;
+let marqueeEl = null;
+let marqueeStartX = 0;
+let marqueeStartY = 0;
+let marqueeMoved = false;
+
+function toggleTaskSelection(id) {
+  if (selectedTaskIds.has(id)) {
+    selectedTaskIds.delete(id);
+  } else {
+    selectedTaskIds.add(id);
+  }
+  updateSelectionVisuals();
+}
+
+function selectTaskExclusively(id) {
+  selectedTaskIds.clear();
+  selectedTaskIds.add(id);
+  updateSelectionVisuals();
+}
+
+function clearSelection() {
+  if (selectedTaskIds.size === 0) return;
+  selectedTaskIds.clear();
+  updateSelectionVisuals();
+}
+
+function deleteSelectedTasks() {
+  if (selectedTaskIds.size === 0) return;
+  const count = selectedTaskIds.size;
+  window.SpanPlanState.tasks = window.SpanPlanState.tasks.filter(t => !selectedTaskIds.has(t.id));
+  selectedTaskIds.clear();
+  updateSelectionVisuals();
+  savePlanState();
+  if (typeof showToast === 'function') {
+    showToast(`${count} élément${count > 1 ? 's' : ''} supprimé${count > 1 ? 's' : ''}`, 'info');
+  }
+}
+
+function updateSelectionVisuals() {
+  document.querySelectorAll('.schedule-block-item').forEach(el => {
+    const id = el.dataset.taskId;
+    el.classList.toggle('is-selected', selectedTaskIds.has(id));
+  });
+
+  const bar = document.getElementById('multiSelectActionBar');
+  const countSpan = document.getElementById('multiSelectCountText');
+  if (bar) {
+    if (selectedTaskIds.size > 0) {
+      bar.classList.add('show');
+      if (countSpan) {
+        countSpan.textContent = `${selectedTaskIds.size} sélectionné${selectedTaskIds.size > 1 ? 's' : ''}`;
+      }
+    } else {
+      bar.classList.remove('show');
+    }
+  }
+}
+
+// POINTER DOWN SUR UN BLOC (CLIC OU DÉPLACEMENT SIMPLE/GROUPE)
+function handleBlockPointerDown(e, taskId, dateStr) {
+  if (e.target.closest('.btn-task-menu') || e.target.closest('.checkbox') || e.target.closest('.resize-handle')) {
+    return;
+  }
+  if (e.button !== 0) return;
+
+  e.stopPropagation();
+
+  const isModifier = (e.metaKey || e.ctrlKey || e.shiftKey);
+
+  if (isModifier) {
+    e.preventDefault();
+    toggleTaskSelection(taskId);
+    return;
+  }
+
+  // Si non sélectionné, on le sélectionne
+  if (!selectedTaskIds.has(taskId)) {
+    selectTaskExclusively(taskId);
+  }
+
+  dragAnchorTaskId = taskId;
+  dragAnchorClientY = e.clientY;
+  dragAnchorClientX = e.clientX;
+  hasMovedBeyondThreshold = false;
+  isPointerDragging = false;
+
+  dragInitialTops.clear();
+  selectedTaskIds.forEach(id => {
+    const task = window.SpanPlanState.tasks.find(t => t.id === id);
+    const el = document.getElementById(`block_${id}`);
+    if (task && el) {
+      const parts = (task.time || '00:00').split(':');
+      const startM = parseInt(parts[0], 10) * 60 + (parseInt(parts[1], 10) || 0);
+      const currentTop = parseFloat(el.style.top) || el.offsetTop;
+      dragInitialTops.set(id, {
+        task,
+        el,
+        initialTop: currentTop,
+        initialStartMinutes: startM,
+        duration: task.duration || 45,
+        date: task.date
+      });
+    }
+  });
+
+  window.addEventListener('pointermove', handleBlockPointerMove);
+  window.addEventListener('pointerup', handleBlockPointerUp);
+  window.addEventListener('pointercancel', handleBlockPointerUp);
+}
+
+function handleBlockPointerMove(e) {
+  if (!dragAnchorTaskId) return;
+
+  const deltaY = e.clientY - dragAnchorClientY;
+  const deltaX = e.clientX - dragAnchorClientX;
+
+  if (!hasMovedBeyondThreshold) {
+    if (Math.hypot(deltaX, deltaY) > 4) {
+      hasMovedBeyondThreshold = true;
+      isPointerDragging = true;
+      dragInitialTops.forEach(info => {
+        info.el.classList.add('is-batch-dragging');
+      });
+    } else {
+      return;
+    }
+  }
+
+  if (isPointerDragging) {
+    const deltaHours = deltaY / HOUR_HEIGHT;
+    let deltaMinutes = Math.round(deltaHours * 60);
+    deltaMinutes = Math.round(deltaMinutes / 15) * 15;
+
+    dragInitialTops.forEach(info => {
+      const newStartMinutes = Math.max(0, Math.min(23 * 60 + 45, info.initialStartMinutes + deltaMinutes));
+      const newTop = ((newStartMinutes - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+      info.el.style.top = `${newTop}px`;
+
+      const endMinutes = newStartMinutes + info.duration;
+      const startH = String(Math.floor(newStartMinutes / 60)).padStart(2, '0');
+      const startM = String(newStartMinutes % 60).padStart(2, '0');
+      const endH = String(Math.floor(endMinutes / 60)).padStart(2, '0');
+      const endM = String(endMinutes % 60).padStart(2, '0');
+
+      const timeLabel = info.el.querySelector('.schedule-block-time');
+      if (timeLabel) timeLabel.textContent = `${startH}:${startM}`;
+      const subLabel = info.el.querySelector('.schedule-block-sub');
+      if (subLabel) subLabel.textContent = `${startH}:${startM} – ${endH}:${endM} · ${info.duration}m`;
+    });
+  }
+}
+
+function handleBlockPointerUp(e) {
+  window.removeEventListener('pointermove', handleBlockPointerMove);
+  window.removeEventListener('pointerup', handleBlockPointerUp);
+  window.removeEventListener('pointercancel', handleBlockPointerUp);
+
+  dragInitialTops.forEach(info => {
+    info.el.classList.remove('is-batch-dragging');
+  });
+
+  const anchorId = dragAnchorTaskId;
+  const wasDragging = isPointerDragging;
+  const moved = hasMovedBeyondThreshold;
+
+  dragAnchorTaskId = null;
+  isPointerDragging = false;
+  hasMovedBeyondThreshold = false;
+
+  if (!moved) {
+    if (anchorId) {
+      openEditModal(anchorId);
+    }
+    dragInitialTops.clear();
+    return;
+  }
+
+  if (wasDragging) {
+    const deltaY = e.clientY - dragAnchorClientY;
+    const deltaHours = deltaY / HOUR_HEIGHT;
+    let deltaMinutes = Math.round(deltaHours * 60);
+    deltaMinutes = Math.round(deltaMinutes / 15) * 15;
+
+    const targetCol = document.elementFromPoint(e.clientX, e.clientY)?.closest('.day-column');
+    const targetDateStr = targetCol ? targetCol.dataset.date : null;
+    const anchorDate = dragInitialTops.get(anchorId)?.date;
+
+    let movedCount = 0;
+    dragInitialTops.forEach(info => {
+      const newStartMinutes = Math.max(0, Math.min(23 * 60 + 45, info.initialStartMinutes + deltaMinutes));
+      const startH = String(Math.floor(newStartMinutes / 60)).padStart(2, '0');
+      const startM = String(newStartMinutes % 60).padStart(2, '0');
+
+      info.task.time = `${startH}:${startM}`;
+      if (targetDateStr && anchorDate && targetDateStr !== anchorDate) {
+        info.task.date = targetDateStr;
+      }
+      info.task.isRollover = false;
+      movedCount++;
+    });
+
+    dragInitialTops.clear();
+    savePlanState();
+
+    if (typeof showToast === 'function') {
+      const sign = deltaMinutes >= 0 ? `+${deltaMinutes}` : `${deltaMinutes}`;
+      const msg = movedCount > 1
+        ? `${movedCount} éléments déplacés ensemble (${sign} min)`
+        : `Déplacé (${sign} min)`;
+      showToast(msg, 'success');
+    }
+  }
+}
+
+// SÉLECTION MARQUEE SUR LA GRILLE VIDE (EXACTEMENT DU PORTFOLIO)
+function handleCanvasPointerDown(e, dateStr) {
+  if (e.target.closest('.schedule-block-item') || e.target.closest('.resize-handle') || e.target.closest('.now-timeline-marker')) {
+    return;
+  }
+  if (e.button !== 0) return;
+
+  const isModifier = (e.metaKey || e.ctrlKey || e.shiftKey);
+  if (!isModifier) {
+    clearSelection();
+  }
+
+  const canvas = e.currentTarget;
+  const rect = canvas.getBoundingClientRect();
+  marqueeCanvas = canvas;
+  marqueeStartX = e.clientX - rect.left;
+  marqueeStartY = e.clientY - rect.top;
+  marqueeMoved = false;
+
+  let marquee = canvas.querySelector('.cal-marquee');
+  if (!marquee) {
+    marquee = document.createElement('div');
+    marquee.className = 'cal-marquee';
+    canvas.appendChild(marquee);
+  }
+  marqueeEl = marquee;
+  marqueeEl.style.left = `${marqueeStartX}px`;
+  marqueeEl.style.top = `${marqueeStartY}px`;
+  marqueeEl.style.width = '0px';
+  marqueeEl.style.height = '0px';
+  marqueeEl.style.display = 'none';
+
+  window.addEventListener('pointermove', handleCanvasPointerMove);
+  window.addEventListener('pointerup', handleCanvasPointerUp);
+  window.addEventListener('pointercancel', handleCanvasPointerUp);
+}
+
+function handleCanvasPointerMove(e) {
+  if (!marqueeCanvas || !marqueeEl) return;
+
+  const rect = marqueeCanvas.getBoundingClientRect();
+  const currentX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+  const currentY = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+
+  const width = Math.abs(currentX - marqueeStartX);
+  const height = Math.abs(currentY - marqueeStartY);
+
+  if (!marqueeMoved) {
+    if (Math.hypot(width, height) > 5) {
+      marqueeMoved = true;
+      marqueeEl.style.display = 'block';
+    } else {
+      return;
+    }
+  }
+
+  const left = Math.min(marqueeStartX, currentX);
+  const top = Math.min(marqueeStartY, currentY);
+
+  marqueeEl.style.left = `${left}px`;
+  marqueeEl.style.top = `${top}px`;
+  marqueeEl.style.width = `${width}px`;
+  marqueeEl.style.height = `${height}px`;
+
+  const marqueeRect = { left, right: left + width, top, bottom: top + height };
+  const blocks = marqueeCanvas.querySelectorAll('.schedule-block-item');
+
+  blocks.forEach(block => {
+    const id = block.dataset.taskId;
+    const bTop = parseFloat(block.style.top) || block.offsetTop;
+    const bLeft = block.offsetLeft;
+    const bWidth = block.offsetWidth;
+    const bHeight = block.offsetHeight;
+
+    const bRect = { left: bLeft, right: bLeft + bWidth, top: bTop, bottom: bTop + bHeight };
+    const intersects = !(
+      marqueeRect.right < bRect.left ||
+      marqueeRect.left > bRect.right ||
+      marqueeRect.bottom < bRect.top ||
+      marqueeRect.top > bRect.bottom
+    );
+
+    if (intersects) {
+      selectedTaskIds.add(id);
+    } else if (!e.shiftKey && !e.metaKey && !e.ctrlKey) {
+      selectedTaskIds.delete(id);
+    }
+  });
+
+  updateSelectionVisuals();
+}
+
+function handleCanvasPointerUp(e) {
+  window.removeEventListener('pointermove', handleCanvasPointerMove);
+  window.removeEventListener('pointerup', handleCanvasPointerUp);
+  window.removeEventListener('pointercancel', handleCanvasPointerUp);
+
+  if (marqueeEl) {
+    marqueeEl.style.display = 'none';
+    marqueeEl = null;
+  }
+
+  const canvas = marqueeCanvas;
+  const wasMoved = marqueeMoved;
+  marqueeCanvas = null;
+  marqueeMoved = false;
+
+  // Si clic simple sans glissement -> Création par manipulation directe
+  if (!wasMoved && canvas) {
+    const dateStr = canvas.dataset.date;
+    const rect = canvas.getBoundingClientRect();
+    const offsetY = e.clientY - rect.top;
+
+    const hoursFraction = offsetY / HOUR_HEIGHT;
+    let totalMinutes = Math.round((START_HOUR * 60) + (hoursFraction * 60));
+    totalMinutes = Math.round(totalMinutes / 15) * 15;
+    totalMinutes = Math.max(0, Math.min(23 * 60 + 45, totalMinutes));
+
+    const h = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
+    const m = String(totalMinutes % 60).padStart(2, '0');
+    const clickedTime = `${h}:${m}`;
+
+    openCreateModalWithDefaults(dateStr, clickedTime);
+  }
+}
+
+// DRAG & DROP HTML5 POUR LE DOCK / BACKLOG
 let draggedTaskId = null;
 
 function handleDragStart(e, id) {

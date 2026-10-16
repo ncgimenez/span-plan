@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Plan">
 
-  <link rel="stylesheet" href="style.css?v=4.2">
+  <link rel="stylesheet" href="style.css?v=4.4">
 </head>
 <body>
 
@@ -261,15 +261,33 @@
           <div class="shortcut-row"><kbd>←</kbd> / <kbd>→</kbd><span>Naviguer dans les jours</span></div>
           <div class="shortcut-row"><kbd>L</kbd><span>Tiroir Backlog (Later)</span></div>
           <div class="shortcut-row"><kbd>3</kbd>, <kbd>5</kbd>, <kbd>7</kbd><span>Basculer le nombre de jours visibles</span></div>
-          <div class="shortcut-row"><kbd>Échap</kbd><span>Fermer les modales</span></div>
+          <div class="shortcut-row"><kbd>⌘ / Ctrl</kbd> + <kbd>Clic</kbd><span>Multi-sélection d'événements</span></div>
+          <div class="shortcut-row"><kbd>Glisser vide</kbd><span>Rectangle de sélection (Marquee)</span></div>
+          <div class="shortcut-row"><kbd>Suppr</kbd><span>Supprimer la sélection</span></div>
+          <div class="shortcut-row"><kbd>Échap</kbd><span>Désélectionner / Fermer</span></div>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- MULTI-SELECT FLOATING ACTION BAR -->
+  <div class="multi-select-bar" id="multiSelectActionBar">
+    <div class="multi-select-count">
+      <span>✨</span>
+      <span id="multiSelectCountText">0 sélectionné</span>
+    </div>
+    <span class="multi-select-hint">Glissez un événement pour déplacer tout le bloc</span>
+    <button type="button" class="multi-select-action-btn danger" onclick="deleteSelectedTasks()" title="Supprimer la sélection (Suppr)">
+      <span>✕ Supprimer</span>
+    </button>
+    <button type="button" class="multi-select-action-btn" onclick="clearSelection()" title="Désélectionner (Échap)">
+      <span>Désélectionner</span>
+    </button>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=4.2"></script>
-  <script src="js/plan.js?v=4.3"></script>
-  <script src="js/app.js?v=4.2"></script>
+  <script src="js/sync.js?v=4.4"></script>
+  <script src="js/plan.js?v=4.4"></script>
+  <script src="js/app.js?v=4.4"></script>
 </body>
 </html>
