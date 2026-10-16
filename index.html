@@ -10,79 +10,92 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Plan">
 
-  <link rel="stylesheet" href="style.css?v=4.0">
+  <link rel="stylesheet" href="style.css?v=4.2">
 </head>
 <body>
 
   <div class="desktop-shell" id="appShell">
     
     <!-- TOP APP HEADER -->
+    <!-- UNIFIED TOP APP HEADER (Consolidated & Compact) -->
     <header class="app-header">
-      <div class="brand">
-        <div class="brand-badge">P</div>
-        <span class="brand-name">Span</span>
-        <span class="brand-app" id="headerTitle">Plan</span>
+      <div class="header-left">
+        <div class="brand">
+          <div class="brand-badge">P</div>
+          <span class="brand-name">Span</span>
+          <span class="brand-app" id="headerTitle">Plan</span>
+        </div>
+
+        <div class="pill-group view-mode-pills" id="daysSelectorGroup">
+          <button class="pill-btn active" data-days="3" onclick="setVisibleDays(3)" title="Vue 3 Jours (3)">3D</button>
+          <button class="pill-btn" data-days="5" onclick="setVisibleDays(5)" title="Vue 5 Jours (5)">5D</button>
+          <button class="pill-btn" data-days="7" onclick="setVisibleDays(7)" title="Vue 7 Jours (7)">7D</button>
+        </div>
       </div>
 
-      <!-- CATEGORY / CONTEXT SWITCHER (WORK - LIFE - FUN) -->
-      <div class="context-switch" id="contextSwitch">
-        <button class="context-btn active" data-context="all" onclick="setContextFilter('all')"><span>All</span></button>
-        <button class="context-btn cat-work" data-context="work" onclick="setContextFilter('work')"><span>Work</span></button>
-        <button class="context-btn cat-life" data-context="life" onclick="setContextFilter('life')"><span>Life</span></button>
-        <button class="context-btn cat-fun" data-context="fun" onclick="setContextFilter('fun')"><span>Fun</span></button>
+      <!-- TIMELINE NAV (CENTER) -->
+      <div class="header-center">
+        <div class="timeline-nav">
+          <button class="nav-arrow-btn" onclick="navigateTimeline(-1)" title="Période précédente (←)">‹</button>
+          <button class="today-jump-btn" onclick="jumpToToday()" title="Aujourd'hui (T)">Today</button>
+          <button class="nav-arrow-btn" onclick="navigateTimeline(1)" title="Période suivante (→)">›</button>
+          <span class="current-range-label" id="currentRangeLabel">Loading...</span>
+        </div>
       </div>
 
-      <div class="header-actions">
-        <!-- BOUTON DE SECOURS RAPIDE -->
-        <button class="icon-btn mini" onclick="recoverMissingTasks()" title="Rapatrier automatiquement les tâches perdues">🔄 Rapatrier</button>
-        <button class="icon-btn" id="btnToggleDrawer" onclick="toggleBacklogDrawer()" title="Toggle Backlog (Later)">
-          <span>Later</span>
-          <span class="backlog-counter-pill" id="globalLaterCount">0</span>
-        </button>
-        <button class="icon-btn" onclick="openSettingsModal()" title="Settings">⚙️</button>
-        <button class="plan-bridge-btn" onclick="goToFocusApp()" title="Open Span Focus">Focus ↗</button>
+      <!-- ACTIONS & CONTEXT FILTER (RIGHT) -->
+      <div class="header-right">
+        <!-- CATEGORY / CONTEXT SWITCHER (WORK - LIFE - FUN) -->
+        <div class="context-switch" id="contextSwitch">
+          <button class="context-btn active" data-context="all" onclick="setContextFilter('all')"><span>All</span></button>
+          <button class="context-btn cat-work" data-context="work" onclick="setContextFilter('work')"><span>Work</span></button>
+          <button class="context-btn cat-life" data-context="life" onclick="setContextFilter('life')"><span>Life</span></button>
+          <button class="context-btn cat-fun" data-context="fun" onclick="setContextFilter('fun')"><span>Fun</span></button>
+        </div>
+
+        <div class="header-actions">
+          <button class="icon-btn btn-new-task" onclick="openCreateModalWithDefaults()" title="Nouvelle tâche ou événement (N)">
+            <span>+ New</span>
+          </button>
+          <button class="icon-btn" id="btnToggleDrawer" onclick="toggleBacklogDrawer()" title="Tiroir Backlog (L)">
+            <span>Later</span>
+            <span class="backlog-counter-pill" id="globalLaterCount">0</span>
+          </button>
+          <button class="icon-btn" onclick="openSettingsModal()" title="Paramètres">⚙️</button>
+          <button class="plan-bridge-btn" onclick="goToFocusApp()" title="Ouvrir Span Focus">Focus ↗</button>
+        </div>
       </div>
     </header>
 
-    <!-- TIMELINE CONTROLS -->
-    <div class="timeline-bar">
-      <div class="timeline-nav">
-        <button class="nav-arrow-btn" onclick="navigateTimeline(-1)" title="Previous period">‹</button>
-        <button class="today-jump-btn" onclick="jumpToToday()">Today</button>
-        <button class="nav-arrow-btn" onclick="navigateTimeline(1)" title="Next period">›</button>
-        <span class="current-range-label" id="currentRangeLabel">Loading...</span>
-      </div>
-
-      <div class="view-mode-controls">
-        <div class="pill-group" id="daysSelectorGroup">
-          <button class="pill-btn" data-days="1" onclick="setVisibleDays(1)">1D</button>
-          <button class="pill-btn" data-days="2" onclick="setVisibleDays(2)">2D</button>
-          <button class="pill-btn active" data-days="3" onclick="setVisibleDays(3)">3D</button>
-          <button class="pill-btn" data-days="5" onclick="setVisibleDays(5)">5D</button>
-          <button class="pill-btn" data-days="7" onclick="setVisibleDays(7)">7D</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- QUICK ADD BAR -->
+    <!-- SMART QUICK ADD BAR -->
     <div class="quick-add-container">
-      <input type="text" class="quick-input" id="quickTaskInput" 
-             placeholder="Add task or event (e.g. 'Team standup 10:00' or simple 'Buy groceries')" 
-             onkeydown="if(event.key==='Enter') submitQuickAdd()">
+      <div class="quick-input-wrap">
+        <span class="quick-icon">⚡</span>
+        <input type="text" class="quick-input" id="quickTaskInput" 
+               placeholder="Ajouter une tâche ou un événement... ex: 'Standup 10:00 #work' ou 'RDV Dr 15h #life' (N)" 
+               onkeydown="if(event.key==='Enter') submitQuickAdd()">
+      </div>
       
-      <select class="quick-select" id="quickTargetDate">
-        <option value="today">Today</option>
-        <option value="tomorrow">Tomorrow</option>
-        <option value="later">Later (Backlog)</option>
-      </select>
+      <div class="quick-selectors">
+        <select class="quick-select" id="quickTypeSelect" title="Type d'élément">
+          <option value="task">📋 Tâche</option>
+          <option value="event">📅 Événement</option>
+        </select>
 
-      <select class="quick-select" id="quickContextSelect">
-        <option value="work">Work</option>
-        <option value="life">Life</option>
-        <option value="fun">Fun</option>
-      </select>
+        <select class="quick-select" id="quickTargetDate" title="Date cible">
+          <option value="today">Aujourd'hui</option>
+          <option value="tomorrow">Demain</option>
+          <option value="later">Plus tard (Backlog)</option>
+        </select>
 
-      <button class="btn-quick-add" onclick="submitQuickAdd()">Add</button>
+        <select class="quick-select" id="quickContextSelect" title="Contexte">
+          <option value="work">Work</option>
+          <option value="life">Life</option>
+          <option value="fun">Fun</option>
+        </select>
+
+        <button class="btn-quick-add" onclick="submitQuickAdd()">Ajouter</button>
+      </div>
     </div>
 
     <!-- MAIN WORKSPACE -->
@@ -138,21 +151,28 @@
 
   <!-- CONTEXT MENU POPOVER FOR TASK (⋮) -->
   <div class="task-popover-menu" id="taskPopoverMenu" style="display: none;">
+    <button type="button" class="popover-item" onclick="popoverAction('toggle-type')">🔄 Basculer Tâche / Événement</button>
     <button type="button" class="popover-item" onclick="popoverAction('focus')">🎯 Focus in Spotlight</button>
     <button type="button" class="popover-item" onclick="popoverAction('backlog')">📥 Move to Later</button>
-    <button type="button" class="popover-item danger" onclick="popoverAction('delete')">✕ Delete Task</button>
+    <button type="button" class="popover-item danger" onclick="popoverAction('delete')">✕ Supprimer</button>
   </div>
 
   <!-- EDIT TASK MODAL -->
   <div class="modal-overlay" id="editModalOverlay" onclick="handleBackdropClick(event, 'editModalOverlay')">
     <div class="modal-card" onclick="event.stopPropagation()">
       <div class="modal-header">
-        <span>Edit Item</span>
+        <span>Édition</span>
         <button class="modal-close" onclick="closeEditModal()">✕</button>
       </div>
       <div class="modal-body">
-        <label class="modal-label">Title</label>
-        <input type="text" class="modal-input" id="editTaskTitle">
+        <label class="modal-label">Type d'élément</label>
+        <div class="type-pills" id="modalTypePills">
+          <button type="button" class="type-pill active" id="modalTypeTask" onclick="selectModalType('task')">📋 Tâche</button>
+          <button type="button" class="type-pill" id="modalTypeEvent" onclick="selectModalType('event')">📅 Événement</button>
+        </div>
+
+        <label class="modal-label">Titre</label>
+        <input type="text" class="modal-input" id="editTaskTitle" placeholder="Titre de la tâche ou de l'événement...">
 
         <div class="form-row">
           <div class="form-col">
@@ -160,12 +180,16 @@
             <input type="date" class="modal-input" id="editTaskDate">
           </div>
           <div class="form-col">
-            <label class="modal-label">Time (Leave empty if unscheduled)</label>
+            <label class="modal-label">Heure (Optionnel)</label>
             <input type="time" class="modal-input" id="editTaskTime">
+          </div>
+          <div class="form-col" style="max-width: 90px;">
+            <label class="modal-label">Durée</label>
+            <input type="number" class="modal-input" id="editTaskDuration" min="15" step="15" value="45" title="Durée en minutes">
           </div>
         </div>
 
-        <label class="modal-label">Context Category</label>
+        <label class="modal-label">Catégorie de contexte</label>
         <div class="category-pills" id="modalContextPills">
           <button type="button" class="cat-pill cat-work" data-context="work" onclick="selectEditContext('work')">Work</button>
           <button type="button" class="cat-pill cat-life" data-context="life" onclick="selectEditContext('life')">Life</button>
@@ -173,8 +197,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
-        <button class="btn-save" onclick="saveTaskModal()">Save Changes</button>
+        <button class="btn-cancel" onclick="closeEditModal()">Annuler</button>
+        <button class="btn-save" onclick="saveTaskModal()">Enregistrer</button>
       </div>
     </div>
   </div>
@@ -219,13 +243,33 @@
             <input type="file" id="importFileInput" style="display: none;" onchange="importData(event)">
           </label>
         </div>
+
+        <div style="margin-top: 14px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Maintenance & Données</div>
+        <div class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+          <div style="font-size: 12px; color: var(--text-muted);">
+            Rapatrier les tâches orphelines (anciennes dates ou non planifiées) dans le dock To-do d'Aujourd'hui :
+          </div>
+          <button class="btn-rescue" onclick="recoverMissingTasks()">
+            🔄 Rapatrier les tâches dans Aujourd'hui
+          </button>
+        </div>
+
+        <div style="margin-top: 14px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Raccourcis Clavier</div>
+        <div class="shortcuts-legend">
+          <div class="shortcut-row"><kbd>N</kbd> / <kbd>C</kbd><span>Créer / Saisir une tâche</span></div>
+          <div class="shortcut-row"><kbd>T</kbd><span>Revenir à Aujourd'hui</span></div>
+          <div class="shortcut-row"><kbd>←</kbd> / <kbd>→</kbd><span>Naviguer dans les jours</span></div>
+          <div class="shortcut-row"><kbd>L</kbd><span>Tiroir Backlog (Later)</span></div>
+          <div class="shortcut-row"><kbd>3</kbd>, <kbd>5</kbd>, <kbd>7</kbd><span>Basculer le nombre de jours visibles</span></div>
+          <div class="shortcut-row"><kbd>Échap</kbd><span>Fermer les modales</span></div>
+        </div>
       </div>
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=4.0"></script>
-  <script src="js/plan.js?v=4.0"></script>
-  <script src="js/app.js?v=4.0"></script>
+  <script src="js/sync.js?v=4.2"></script>
+  <script src="js/plan.js?v=4.3"></script>
+  <script src="js/app.js?v=4.2"></script>
 </body>
 </html>

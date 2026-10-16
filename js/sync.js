@@ -21,9 +21,11 @@ let realtimeSubscription = null;
 
 function copyCurrentSyncKey() {
   navigator.clipboard.writeText(SYNC_USER_ID).then(() => {
-    alert("Sync key copied to clipboard!");
+    if (typeof showToast === 'function') showToast("Clé de synchronisation copiée !", 'success');
+    else alert("Sync key copied to clipboard!");
   }).catch(() => {
-    alert("Failed to copy sync key.");
+    if (typeof showToast === 'function') showToast("Échec de la copie de la clé.", 'danger');
+    else alert("Failed to copy sync key.");
   });
 }
 
@@ -48,7 +50,8 @@ async function handleLinkClick() {
 
   setupRealtimeSubscription();
   await loadPlanFromCloud();
-  alert("Span Plan linked successfully!");
+  if (typeof showToast === 'function') showToast("Span Plan synchronisé avec succès !", 'success');
+  else alert("Span Plan linked successfully!");
 }
 
 function updateSyncKeyDisplay() {

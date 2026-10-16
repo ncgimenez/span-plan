@@ -10,6 +10,8 @@ function toggleTheme() {
   
   const meta = document.getElementById('themeMetaColor');
   if (meta) meta.setAttribute('content', next === 'dark' ? '#0d0d0f' : '#f8f8fa');
+
+  showToast(`Thème basculé en mode ${next}`);
 }
 
 function openSettingsModal() {
@@ -36,6 +38,7 @@ function exportData() {
   a.download = `span-plan-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
+  showToast('Sauvegarde exportée avec succès (JSON)');
 }
 
 function importData(event) {
@@ -48,18 +51,58 @@ function importData(event) {
       if (Array.isArray(data)) {
         window.SpanPlanState.tasks = data;
         if (typeof savePlanState === 'function') savePlanState();
-        alert('Tasks imported successfully!');
+        showToast(`${data.length} tâches importées avec succès !`, 'success');
       }
     } catch {
-      alert('Invalid JSON file format.');
+      showToast('Format de fichier JSON invalide.', 'danger');
     }
   };
   reader.readAsText(file);
 }
 
-// Raccourcis clavier globaux
+// Système de notifications Toast non bloquantes (remplace alert())
+function showToast(message, type = 'info', duration = 3000) {
+  let container = document.getElementById('toastContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = `toast-item toast-${type}`;
+  toast.innerHTML = `<span>${message}</span>`;
+  container.appendChild(toast);
+
+  // Animation d'apparition
+  requestAnimationFrame(() => {
+    toast.classList.add('visible');
+  });
+
+  setTimeout(() => {
+    toast.classList.remove('visible');
+    setTimeout(() => {
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 300);
+  }, duration);
+}
+
+// Raccourcis clavier globaux ergonomiques
 window.addEventListener('keydown', (e) => {
   const isEditing = ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName);
+  
+  if (e.key === 'Escape') {
+    closeSettingsModal();
+    if (typeof closeEditModal === 'function') closeEditModal();
+    if (typeof closeTaskPopover === 'function') closeTaskPopover();
+    const drawer = document.getElementById('backlogDrawer');
+    if (drawer && drawer.classList.contains('open') && !drawer.classList.contains('pinned')) {
+      drawer.classList.remove('open');
+    }
+    return;
+  }
+
   if (isEditing) return;
 
   if (e.key === 't' || e.key === 'T') {
@@ -74,6 +117,17 @@ window.addEventListener('keydown', (e) => {
   } else if (e.key === 'l' || e.key === 'L') {
     e.preventDefault();
     if (typeof toggleBacklogDrawer === 'function') toggleBacklogDrawer();
+  } else if (e.key === 'n' || e.key === 'N' || e.key === 'c' || e.key === 'C') {
+    e.preventDefault();
+    const quickInput = document.getElementById('quickTaskInput');
+    if (quickInput) {
+      quickInput.focus();
+      quickInput.select();
+    }
+  } else if (['3', '5', '7'].includes(e.key)) {
+    if (typeof setVisibleDays === 'function') {
+      setVisibleDays(parseInt(e.key, 10));
+    }
   }
 });
 
