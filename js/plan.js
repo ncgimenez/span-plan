@@ -797,10 +797,17 @@ function renderTimedBlocks(tasks, dateStr) {
       : '';
 
     let subtasksHtml = '';
-    if (childSubtasks.length > 0 && height >= 46) {
-      const maxFit = Math.max(1, Math.floor((height - 24) / 18));
+    const hasSubtasksRendered = childSubtasks.length > 0 && height >= 50;
+    if (hasSubtasksRendered) {
+      let maxFit = 1;
+      if (height >= 95) {
+        maxFit = Math.max(1, Math.floor((height - 28) / 18));
+      } else if (height >= 70) {
+        maxFit = 2;
+      } else {
+        maxFit = 1;
+      }
       const visibleSubtasks = childSubtasks.slice(0, maxFit);
-      const remainingCount = childSubtasks.length - visibleSubtasks.length;
 
       subtasksHtml = `
         <div class="block-subtasks-container">
@@ -815,21 +822,15 @@ function renderTimedBlocks(tasks, dateStr) {
               <span class="subtask-row-title">${renderTitleWithTagsHtml(sub.title)}</span>
             </div>
           `).join('')}
-          ${remainingCount > 0 ? `
-            <div class="block-subtasks-more" 
-                 onclick="event.stopPropagation(); openSubtasksModal('${task.id}')"
-                 title="View all ${childSubtasks.length} subtasks">
-              +${remainingCount} more
-            </div>
-          ` : ''}
         </div>
       `;
     }
 
     const shortClass = height < 44 ? 'is-short' : '';
+    const subtaskClass = hasSubtasksRendered ? 'has-subtasks' : '';
 
     return `
-      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass} ${shortClass}" 
+      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass} ${shortClass} ${subtaskClass}" 
            id="block_${task.id}"
            data-task-id="${task.id}"
            data-date="${dateStr}"
