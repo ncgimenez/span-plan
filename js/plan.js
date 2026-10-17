@@ -109,35 +109,63 @@ function syncFocusTasksToPlanBacklog(shouldSave = true, customFocusTasks = null)
   if (!window.SpanPlanState.tasks) window.SpanPlanState.tasks = [];
   const planTasks = window.SpanPlanState.tasks;
 
-  focusTasks.forEach(ft => {
+  // 1. Séparer les tâches racines des sous-tâches (child subtasks)
+  const childSubtasks = focusTasks.filter(ft => ft && !!ft.parentEventId);
+  const rootFocusTasks = focusTasks.filter(ft => ft && !ft.parentEventId);
+
+  // Nettoyer les éventuelles sous-tâches qui auraient été importées comme tâches racines isolées
+  if (childSubtasks.length > 0) {
+    const prevCount = planTasks.length;
+    window.SpanPlanState.tasks = planTasks.filter(pt => {
+      const isAChildSubtask = childSubtasks.some(st => String(st.id) === String(pt.id) || String(st.id) === String(pt.focusId));
+      return !isAChildSubtask;
+    });
+    if (window.SpanPlanState.tasks.length !== prevCount) {
+      hasChanges = true;
+    }
+  }
+
+  rootFocusTasks.forEach(ft => {
     if (!ft || !ft.title) return;
     if (ft.id && dismissedFocusIds.includes(ft.id)) return;
     
-    // Rechercher si cette tâche existe déjà dans Span Plan (soit par son ID Focus, soit par son titre sans date)
-    let existing = planTasks.find(pt => pt.id === ft.id || pt.focusId === ft.id);
+    // Rechercher si cette tâche existe déjà dans Span Plan
+    let existing = window.SpanPlanState.tasks.find(pt => pt.id === ft.id || pt.focusId === ft.id);
     if (!existing) {
-      existing = planTasks.find(pt => pt.title && pt.title.trim().toLowerCase() === ft.title.trim().toLowerCase() && !pt.date);
+      existing = window.SpanPlanState.tasks.find(pt => pt.title && pt.title.trim().toLowerCase() === ft.title.trim().toLowerCase() && !pt.date);
     }
 
+    // Récupérer et formater les sous-tâches associées à cette tâche/événement
+    const mySubtasks = childSubtasks.filter(st => String(st.parentEventId) === String(ft.id) || (ft.planId && String(st.parentEventId) === String(ft.planId)));
+    const formattedSubtasks = mySubtasks.map(st => ({
+      id: st.id,
+      title: st.title,
+      context: normalizePlanContext(st.category),
+      completed: !!st.completed,
+      parentEventId: ft.id
+    }));
+
     if (!existing) {
-      // Nouvelle tâche provenant de Span Focus -> Intégration directe au Backlog
+      // Nouvelle tâche provenant de Span Focus -> Intégration directe
       const cat = ft.category ? String(ft.category).toLowerCase() : 'work';
       const normalizedContext = normalizePlanContext(cat);
+      const isEv = !!ft.isEvent || ft.type === 'event';
       
       const newBacklogTask = {
         id: ft.id || ('t_' + Date.now() + Math.random().toString(36).substr(2, 4)),
         focusId: ft.id || null,
         title: ft.title,
-        type: 'task',
-        date: null, // PLACÉE DANS LE BACKLOG (LATER)
-        time: '',
-        duration: 45,
+        type: isEv ? 'event' : 'task',
+        date: ft.scheduledDate || null,
+        time: ft.scheduledTime || '',
+        duration: ft.duration || (ft.estimate ? ft.estimate * 25 : 45),
         context: normalizedContext,
         completed: !!ft.completed,
         isRollover: false,
-        fromFocus: true
+        fromFocus: true,
+        subtasks: formattedSubtasks
       };
-      planTasks.unshift(newBacklogTask);
+      window.SpanPlanState.tasks.unshift(newBacklogTask);
       hasChanges = true;
     } else {
       // Conserver le lien de provenance Focus
@@ -146,9 +174,20 @@ function syncFocusTasksToPlanBacklog(shouldSave = true, customFocusTasks = null)
       }
       existing.fromFocus = true;
 
+      if (ft.isEvent && existing.type !== 'event') {
+        existing.type = 'event';
+        hasChanges = true;
+      }
+
       // Synchronisation du statut de complétion
       if (ft.completed && !existing.completed) {
         existing.completed = true;
+        hasChanges = true;
+      }
+
+      // Synchronisation des sous-tâches
+      if (formattedSubtasks.length > 0 || (existing.subtasks && existing.subtasks.length > 0)) {
+        existing.subtasks = formattedSubtasks;
         hasChanges = true;
       }
     }
@@ -158,6 +197,48 @@ function syncFocusTasksToPlanBacklog(shouldSave = true, customFocusTasks = null)
     savePlanState();
   }
   return hasChanges;
+}
+
+function toggleSubtaskCompletion(parentTaskId, subtaskId) {
+  const parentTask = window.SpanPlanState.tasks.find(t => t.id === parentTaskId);
+  if (!parentTask || !parentTask.subtasks) return;
+  const sub = parentTask.subtasks.find(s => s.id === subtaskId);
+  if (!sub) return;
+  sub.completed = !sub.completed;
+
+  // Sync to Focus
+  syncPlanSubtaskUpdateToFocus(subtaskId, sub.completed);
+
+  savePlanState();
+}
+
+function syncPlanSubtaskUpdateToFocus(subtaskId, isCompleted) {
+  try {
+    let focusTasks = JSON.parse(localStorage.getItem('span_tasks'));
+    if (!Array.isArray(focusTasks)) return;
+
+    let modified = false;
+    focusTasks.forEach(ft => {
+      if (ft.id === subtaskId) {
+        if (ft.completed !== isCompleted) {
+          ft.completed = isCompleted;
+          modified = true;
+        }
+      }
+    });
+
+    if (modified) {
+      localStorage.setItem('span_tasks', JSON.stringify(focusTasks));
+      if (typeof supabaseClient !== 'undefined' && supabaseClient && typeof SYNC_USER_ID !== 'undefined') {
+        supabaseClient.from('user_state').update({
+          focus_tasks: focusTasks,
+          updated_at: new Date().toISOString()
+        }).eq('id', SYNC_USER_ID).then(() => {}).catch(() => {});
+      }
+    }
+  } catch (e) {
+    // Non bloquant
+  }
 }
 
 function syncPlanTaskUpdateToFocus(taskId, isCompleted, title) {
@@ -205,9 +286,7 @@ if (visibleDaysCount < 3) visibleDaysCount = 3;
 let currentTimelineOffset = 0;
 let currentContextFilter = 'all';
 let currentTagFilter = null;
-let isDrawerPinned = localStorage.getItem('span_plan_drawer_pinned') !== null
-  ? (localStorage.getItem('span_plan_drawer_pinned') === 'true')
-  : (window.innerWidth >= 1100);
+let isDrawerPinned = localStorage.getItem('span_plan_drawer_pinned') !== 'false';
 
 let editingTaskId = null;
 let editingContext = 'work';
@@ -674,6 +753,31 @@ function renderTimedBlocks(tasks, dateStr) {
       positionStyle += ` left: calc(52px + (100% - 60px) * ${colIndex} / ${totalCols}); width: calc((100% - 60px) / ${totalCols} - 4px);`;
     }
 
+    const childSubtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
+    const doneSubCount = childSubtasks.filter(s => s.completed).length;
+    const progressPillHtml = childSubtasks.length > 0 
+      ? `<span class="event-progress-pill" title="Sous-tâches terminées">${doneSubCount}/${childSubtasks.length}</span>` 
+      : '';
+
+    let subtasksHtml = '';
+    if (childSubtasks.length > 0 && height >= 58) {
+      subtasksHtml = `
+        <div class="block-subtasks-container">
+          ${childSubtasks.map(sub => `
+            <div class="block-subtask-row ${sub.completed ? 'completed' : ''}" 
+                 onclick="event.stopPropagation(); toggleSubtaskCompletion('${task.id}', '${sub.id}')"
+                 title="${sub.completed ? 'Marquer non terminée' : 'Marquer terminée'}">
+              <span class="subtask-cat-indicator cat-${sub.context || 'work'}"></span>
+              <div class="subtask-mini-checkbox">
+                ${sub.completed ? '✓' : ''}
+              </div>
+              <span class="subtask-row-title">${renderTitleWithTagsHtml(sub.title)}</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
     return `
       <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass}" 
            id="block_${task.id}"
@@ -692,12 +796,13 @@ function renderTimedBlocks(tasks, dateStr) {
             </div>
           `}
           <span class="schedule-block-title">${rolloverPrefix}${renderTitleWithTagsHtml(task.title)}</span>
+          ${progressPillHtml}
           ${isLiveNow ? '<span class="live-pulse-badge">● LIVE</span>' : ''}
-          ${isEvent ? '<span class="event-badge">Event</span>' : ''}
           <span class="schedule-block-time">${task.time}</span>
           <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
         </div>
         ${height >= 44 ? `<div class="schedule-block-sub">${timeRangeStr} · ${duration}m</div>` : ''}
+        ${subtasksHtml}
         
         <div class="resize-handle" 
              onmousedown="startResize(event, '${task.id}')"
@@ -719,6 +824,11 @@ function renderUnscheduledList(tasks) {
     const rolloverClass = task.isRollover ? 'rollover' : '';
     const rolloverPrefix = task.isRollover ? '⟳ ' : '';
     const eventClass = isEvent ? 'is-event' : '';
+    const childSubtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
+    const doneSubCount = childSubtasks.filter(s => s.completed).length;
+    const progressPillHtml = childSubtasks.length > 0 
+      ? `<span class="event-progress-pill" title="Sous-tâches terminées">${doneSubCount}/${childSubtasks.length}</span>` 
+      : '';
 
     return `
       <li class="task-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass}"
@@ -736,7 +846,7 @@ function renderUnscheduledList(tasks) {
           <span class="task-text" onclick="openEditModal('${task.id}')">
             ${rolloverPrefix}${renderTitleWithTagsHtml(task.title)}
           </span>
-          ${isEvent ? '<span class="event-badge">Event</span>' : ''}
+          ${progressPillHtml}
           <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
         </div>
       </li>
@@ -1497,6 +1607,12 @@ function renderBacklogDrawer() {
     const isEvent = task.type === 'event';
     const isFromFocus = !!task.fromFocus || !!task.focusId;
     const completedClass = task.completed ? 'completed' : '';
+    const childSubtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
+    const doneSubCount = childSubtasks.filter(s => s.completed).length;
+    const progressPillHtml = childSubtasks.length > 0 
+      ? `<span class="event-progress-pill" title="Sous-tâches terminées">${doneSubCount}/${childSubtasks.length}</span>` 
+      : '';
+
     const li = document.createElement('li');
     li.className = `task-item cat-${task.context || 'work'} ${isEvent ? 'is-event' : ''} ${completedClass}`;
     li.draggable = true;
@@ -1513,8 +1629,8 @@ function renderBacklogDrawer() {
           </div>
         `}
         <span class="task-text ${completedClass}" onclick="openEditModal('${task.id}')">${renderTitleWithTagsHtml(task.title)}</span>
+        ${progressPillHtml}
         ${isFromFocus ? '<span class="badge-from-focus" title="Synchronisé depuis Span Focus">Focus</span>' : ''}
-        ${isEvent ? '<span class="event-badge">Event</span>' : ''}
         <button class="btn-task-action" onclick="scheduleTaskDirectly('${task.id}', '${TODAY_STR}')" title="Planifier aujourd'hui">☀️</button>
         <button class="btn-task-action" onclick="deleteTask('${task.id}')" title="Supprimer">✕</button>
       </div>
@@ -1963,9 +2079,13 @@ function setContextFilter(ctx) {
 
 function toggleBacklogDrawer() {
   const drawer = document.getElementById('backlogDrawer');
+  const toggleBtn = document.getElementById('btnToggleDrawer');
   if (drawer) {
     const isOpening = !drawer.classList.contains('open');
     drawer.classList.toggle('open');
+    if (toggleBtn) {
+      toggleBtn.classList.toggle('active', drawer.classList.contains('open') || isDrawerPinned);
+    }
     if (isOpening) {
       syncFocusTasksToPlanBacklog(true);
       renderBacklogDrawer();
@@ -1983,10 +2103,19 @@ function togglePinDrawer() {
 function applyPinState() {
   const drawer = document.getElementById('backlogDrawer');
   const btn = document.getElementById('btnPinDrawer');
-  if (drawer && btn) {
+  const toggleBtn = document.getElementById('btnToggleDrawer');
+  if (drawer) {
     drawer.classList.toggle('pinned', isDrawerPinned);
+    if (isDrawerPinned) {
+      drawer.classList.add('open');
+    }
+  }
+  if (btn) {
     btn.style.background = isDrawerPinned ? 'rgba(255, 255, 255, 0.15)' : '';
     btn.style.borderColor = isDrawerPinned ? 'var(--streak)' : 'var(--card-border)';
+  }
+  if (toggleBtn) {
+    toggleBtn.classList.toggle('active', isDrawerPinned || (drawer && drawer.classList.contains('open')));
   }
 }
 
