@@ -1977,8 +1977,10 @@ body {
   .header-actions .btn-new-task,
   .header-actions #btnToggleDrawer,
   .header-actions .plan-bridge-btn,
-  .plan-bridge-btn {
-    display: none !important; /* Masqués sur mobile pour libérer l'écran et éviter doublon avec barre basse */
+  .plan-bridge-btn,
+  .btn-shortcuts,
+  .shortcuts-section-settings {
+    display: none !important; /* Masqués sur mobile pour libérer l'écran et éviter encombrement inutile */
   }
 
   .header-actions {

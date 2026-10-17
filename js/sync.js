@@ -116,7 +116,34 @@ async function loadPlanFromCloud() {
         planTasks = data.tasks.plan_items || [];
       }
 
-      // 1. Synchronisation des tâches Focus distantes vers le backlog Plan
+      // 1. D'ABORD : Restaurer le calendrier complet Plan depuis le cloud (plan_items)
+      if (planTasks && Array.isArray(planTasks)) {
+        isCloudSyncInProgress = true;
+
+        // Éliminer définitivement toute fausse tâche de test (p_sample_)
+        const cleanRemoteTasks = planTasks.filter(t => t && t.id && !String(t.id).startsWith('p_sample_') && t.title !== 'Team standup meeting #work' && t.title !== 'Grocery shopping #life');
+        const localTasks = ((window.SpanPlanState && window.SpanPlanState.tasks) || []).filter(t => t && t.id && !String(t.id).startsWith('p_sample_') && t.title !== 'Team standup meeting #work' && t.title !== 'Grocery shopping #life');
+
+        const mergedMap = new Map();
+
+        // 1. Tâches du cloud (source de vérité)
+        cleanRemoteTasks.forEach(task => {
+          if (task && task.id) mergedMap.set(task.id, task);
+        });
+
+        // 2. Fusionner les tâches créées localement qui ne sont pas encore sur le cloud
+        localTasks.forEach(task => {
+          if (task && task.id && !mergedMap.has(task.id)) {
+            mergedMap.set(task.id, task);
+          }
+        });
+
+        const mergedList = Array.from(mergedMap.values());
+        window.SpanPlanState.tasks = mergedList;
+        localStorage.setItem('span_plan_tasks', JSON.stringify(mergedList));
+      }
+
+      // 2. ENSUITE : Rapprocher les tâches Span Focus sans créer de doublons
       if (focusTasks && focusTasks.length > 0) {
         try {
           const currentFocus = localStorage.getItem('span_tasks');
@@ -130,55 +157,18 @@ async function loadPlanFromCloud() {
         }
       }
 
-      // 2. Fusion des tâches Plan
-      if (planTasks && Array.isArray(planTasks)) {
-        isCloudSyncInProgress = true;
+      // Mettre à jour le stockage local propre
+      localStorage.setItem('span_plan_tasks', JSON.stringify(window.SpanPlanState.tasks));
 
-        const localTasks = (window.SpanPlanState && window.SpanPlanState.tasks) || [];
-        const remoteTasks = planTasks;
-
-        // Fusion par ID : respecte les nouveautés distantes et conserve les ajouts récents
-        const mergedMap = new Map();
-
-        // On insère d'abord les tâches distantes
-        remoteTasks.forEach(task => {
-          if (task && task.id) mergedMap.set(task.id, task);
-        });
-
-        // On fusionne avec les tâches locales
-        localTasks.forEach(task => {
-          if (task && task.id) {
-            // Si la tâche n'existait pas sur le cloud, on la préserve
-            if (!mergedMap.has(task.id)) {
-              mergedMap.set(task.id, task);
-            }
-          }
-        });
-
-        const mergedList = Array.from(mergedMap.values());
-
-        window.SpanPlanState.tasks = mergedList;
-        localStorage.setItem('span_plan_tasks', JSON.stringify(mergedList));
-        
-        if (typeof executeAutoRollover === 'function') executeAutoRollover();
-        if (typeof renderPlanGrid === 'function') renderPlanGrid();
-        if (typeof renderBacklogDrawer === 'function') renderBacklogDrawer();
-        if (typeof updateCounters === 'function') updateCounters();
-
-        isCloudSyncInProgress = false;
-
-        // Si le local avait des éléments non encore présents sur le cloud, on synchronise
-        if (mergedList.length > remoteTasks.length) {
-          syncPlanToCloud();
-        }
-      } else {
-        // Même s'il n'y a pas de plan_tasks, rafraîchir le drawer si des focus_tasks ont été importées
-        if (typeof renderBacklogDrawer === 'function') renderBacklogDrawer();
-        if (typeof updateCounters === 'function') updateCounters();
-      }
+      if (typeof executeAutoRollover === 'function') executeAutoRollover();
+      if (typeof renderPlanGrid === 'function') renderPlanGrid(true);
+      if (typeof renderDateStrip === 'function') renderDateStrip();
+      if (typeof renderBacklogDrawer === 'function') renderBacklogDrawer();
+      if (typeof updateCounters === 'function') updateCounters();
     }
   } catch (err) {
     console.warn('Cloud sync merge bypass:', err.message);
+  } finally {
     isCloudSyncInProgress = false;
   }
 }

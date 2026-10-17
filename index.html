@@ -13,7 +13,7 @@
   <link rel="icon" type="image/png" href="span-logo.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
-  <link rel="stylesheet" href="style.css?v=5.5">
+  <link rel="stylesheet" href="style.css?v=6.1">
 </head>
 <body>
 
@@ -64,7 +64,7 @@
             <span>📋 Backlog</span>
             <span class="backlog-counter-pill" id="globalLaterCount">0</span>
           </button>
-          <button class="icon-btn" onclick="openShortcutsModal()" title="Keyboard Shortcuts (?)">⌨️</button>
+          <button class="icon-btn btn-shortcuts" onclick="openShortcutsModal()" title="Keyboard Shortcuts (?)">⌨️</button>
           <button class="icon-btn" onclick="openSettingsModal()" title="Settings">⚙️</button>
           <button class="plan-bridge-btn" onclick="goToFocusApp()" title="Open Span Focus">Focus ↗</button>
         </div>
@@ -345,17 +345,19 @@
           </button>
         </div>
 
-        <div style="margin-top: 14px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Keyboard Shortcuts</div>
-        <div class="shortcuts-legend">
-          <div class="shortcut-row"><kbd>⌘/Ctrl</kbd> + <kbd>K</kbd><span>Focus Quick Add bar</span></div>
-          <div class="shortcut-row"><kbd>N</kbd> / <kbd>C</kbd><span>Create new task or event</span></div>
-          <div class="shortcut-row"><kbd>T</kbd><span>Jump to Today</span></div>
-          <div class="shortcut-row"><kbd>←</kbd> / <kbd>→</kbd><span>Navigate days</span></div>
-          <div class="shortcut-row"><kbd>B</kbd> / <kbd>L</kbd><span>Toggle Backlog drawer</span></div>
-          <div class="shortcut-row"><kbd>3</kbd>, <kbd>5</kbd>, <kbd>7</kbd><span>Switch visible days count</span></div>
-          <div class="shortcut-row"><kbd>Del</kbd> / <kbd>Backspace</kbd><span>Delete selected item(s)</span></div>
-          <div class="shortcut-row"><kbd>Esc</kbd><span>Deselect / Close modals</span></div>
-          <div class="shortcut-row"><kbd>?</kbd><span>Open full cheat sheet</span></div>
+        <div class="shortcuts-section-settings">
+          <div style="margin-top: 14px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Keyboard Shortcuts</div>
+          <div class="shortcuts-legend">
+            <div class="shortcut-row"><kbd>⌘/Ctrl</kbd> + <kbd>K</kbd><span>Focus Quick Add bar</span></div>
+            <div class="shortcut-row"><kbd>N</kbd> / <kbd>C</kbd><span>Create new task or event</span></div>
+            <div class="shortcut-row"><kbd>T</kbd><span>Jump to Today</span></div>
+            <div class="shortcut-row"><kbd>←</kbd> / <kbd>→</kbd><span>Navigate days</span></div>
+            <div class="shortcut-row"><kbd>B</kbd> / <kbd>L</kbd><span>Toggle Backlog drawer</span></div>
+            <div class="shortcut-row"><kbd>3</kbd>, <kbd>5</kbd>, <kbd>7</kbd><span>Switch visible days count</span></div>
+            <div class="shortcut-row"><kbd>Del</kbd> / <kbd>Backspace</kbd><span>Delete selected item(s)</span></div>
+            <div class="shortcut-row"><kbd>Esc</kbd><span>Deselect / Close modals</span></div>
+            <div class="shortcut-row"><kbd>?</kbd><span>Open full cheat sheet</span></div>
+          </div>
         </div>
       </div>
     </div>
@@ -377,8 +379,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=6.0"></script>
-  <script src="js/plan.js?v=6.0"></script>
-  <script src="js/app.js?v=6.0"></script>
+  <script src="js/sync.js?v=6.1"></script>
+  <script src="js/plan.js?v=6.1"></script>
+  <script src="js/app.js?v=6.1"></script>
 </body>
 </html>

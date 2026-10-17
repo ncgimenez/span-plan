@@ -46,31 +46,12 @@ try {
 }
 
 if (!hasStoredData) {
-  window.SpanPlanState.tasks = [
-    {
-      id: 'p_sample_today_1',
-      title: 'Team standup meeting #work',
-      date: TODAY_STR,
-      time: '09:30',
-      duration: 60,
-      context: 'work',
-      completed: false,
-      isRollover: false
-    },
-    {
-      id: 'p_sample_today_2',
-      title: 'Grocery shopping #life',
-      date: TODAY_STR,
-      time: '',
-      duration: 30,
-      context: 'life',
-      completed: false,
-      isRollover: false
-    }
-  ];
-  localStorage.setItem('span_plan_tasks', JSON.stringify(window.SpanPlanState.tasks));
+  window.SpanPlanState.tasks = [];
 } else {
-  window.SpanPlanState.tasks = Array.isArray(rawTasks) ? rawTasks.map(t => ({
+  const cleanTasks = Array.isArray(rawTasks)
+    ? rawTasks.filter(t => t && t.id && !String(t.id).startsWith('p_sample_') && t.title !== 'Team standup meeting #work' && t.title !== 'Grocery shopping #life')
+    : [];
+  window.SpanPlanState.tasks = cleanTasks.map(t => ({
     id: t.id || ('p_' + Math.random().toString(36).substr(2, 9)),
     title: t.title || 'Untitled',
     type: t.type === 'event' ? 'event' : 'task',
@@ -79,8 +60,11 @@ if (!hasStoredData) {
     duration: typeof t.duration === 'number' ? t.duration : 45,
     context: normalizePlanContext(t.context || t.category),
     completed: !!t.completed,
-    isRollover: !!t.isRollover
-  })) : [];
+    isRollover: !!t.isRollover,
+    fromFocus: !!t.fromFocus,
+    focusId: t.focusId || null,
+    subtasks: Array.isArray(t.subtasks) ? t.subtasks : []
+  }));
 }
 
 // ==============================================================
@@ -129,11 +113,12 @@ function syncFocusTasksToPlanBacklog(shouldSave = true, customFocusTasks = null)
     if (!ft || !ft.title) return;
     if (ft.id && dismissedFocusIds.includes(ft.id)) return;
     
-    // Rechercher si cette tâche existe déjà dans Span Plan
-    let existing = window.SpanPlanState.tasks.find(pt => pt.id === ft.id || pt.focusId === ft.id);
-    if (!existing) {
-      existing = window.SpanPlanState.tasks.find(pt => pt.title && pt.title.trim().toLowerCase() === ft.title.trim().toLowerCase() && !pt.date);
-    }
+    // Rechercher si cette tâche existe déjà dans Span Plan (qu'elle soit planifiée sur un jour ou en backlog)
+    let existing = window.SpanPlanState.tasks.find(pt => 
+      pt.id === ft.id || 
+      pt.focusId === ft.id ||
+      (pt.title && ft.title && pt.title.trim().toLowerCase() === ft.title.trim().toLowerCase())
+    );
 
     // Récupérer et formater les sous-tâches associées à cette tâche/événement
     const mySubtasks = childSubtasks.filter(st => String(st.parentEventId) === String(ft.id) || (ft.planId && String(st.parentEventId) === String(ft.planId)));
