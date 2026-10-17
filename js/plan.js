@@ -205,7 +205,9 @@ if (visibleDaysCount < 3) visibleDaysCount = 3;
 let currentTimelineOffset = 0;
 let currentContextFilter = 'all';
 let currentTagFilter = null;
-let isDrawerPinned = localStorage.getItem('span_plan_drawer_pinned') === 'true';
+let isDrawerPinned = localStorage.getItem('span_plan_drawer_pinned') !== null
+  ? (localStorage.getItem('span_plan_drawer_pinned') === 'true')
+  : (window.innerWidth >= 1100);
 
 let editingTaskId = null;
 let editingContext = 'work';
@@ -1983,6 +1985,7 @@ function applyPinState() {
   const btn = document.getElementById('btnPinDrawer');
   if (drawer && btn) {
     drawer.classList.toggle('pinned', isDrawerPinned);
+    btn.style.background = isDrawerPinned ? 'rgba(255, 255, 255, 0.15)' : '';
     btn.style.borderColor = isDrawerPinned ? 'var(--streak)' : 'var(--card-border)';
   }
 }
