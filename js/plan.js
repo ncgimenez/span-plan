@@ -444,12 +444,18 @@ function handleCanvasHoverLeave(e) {
   if (slot) slot.remove();
 }
 
+function isMobileScreen() {
+  return window.innerWidth <= 768;
+}
+
 function calculateVisibleDates() {
   const dates = [];
   const baseDate = new Date();
   baseDate.setDate(baseDate.getDate() + currentTimelineOffset);
 
-  for (let i = 0; i < visibleDaysCount; i++) {
+  const count = isMobileScreen() ? 1 : visibleDaysCount;
+
+  for (let i = 0; i < count; i++) {
     const d = new Date(baseDate);
     d.setDate(baseDate.getDate() + i);
     dates.push(d);
@@ -522,6 +528,7 @@ function renderPlanGrid(forceRebuild = false) {
     });
 
     updateRangeLabel(visibleDates);
+    if (typeof renderDateStrip === 'function') renderDateStrip();
     return;
   }
 
@@ -617,6 +624,7 @@ function renderPlanGrid(forceRebuild = false) {
   });
 
   updateRangeLabel(visibleDates);
+  if (typeof renderDateStrip === 'function') renderDateStrip();
 }
 
 // ALGORITHME DE RÉSOLUTION DES CHEVAUCHEMENTS D'HORAIRES (MULTI-COLONNES STYLE GOOGLE/APPLE CALENDAR)
@@ -2046,14 +2054,17 @@ function saveTaskModal() {
 
 // NAVIGATION
 function navigateTimeline(direction) {
-  currentTimelineOffset += (direction * visibleDaysCount);
-  renderPlanGrid();
+  const step = isMobileScreen() ? 1 : visibleDaysCount;
+  currentTimelineOffset += (direction * step);
+  renderPlanGrid(true);
+  if (typeof renderDateStrip === 'function') renderDateStrip();
   applyDynamicScroll();
 }
 
 function jumpToToday() {
   currentTimelineOffset = 0;
-  renderPlanGrid();
+  renderPlanGrid(true);
+  if (typeof renderDateStrip === 'function') renderDateStrip();
   applyDynamicScroll();
 }
 
@@ -2064,7 +2075,7 @@ function setVisibleDays(num) {
   document.querySelectorAll('#daysSelectorGroup .pill-btn').forEach(btn => {
     btn.classList.toggle('active', parseInt(btn.dataset.days, 10) === num);
   });
-  renderPlanGrid();
+  renderPlanGrid(true);
   applyDynamicScroll();
 }
 
@@ -2073,7 +2084,7 @@ function setContextFilter(ctx) {
   document.querySelectorAll('#contextSwitch .context-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.context === ctx);
   });
-  renderPlanGrid();
+  renderPlanGrid(true);
   renderBacklogDrawer();
 }
 
@@ -2106,7 +2117,7 @@ function applyPinState() {
   const toggleBtn = document.getElementById('btnToggleDrawer');
   if (drawer) {
     drawer.classList.toggle('pinned', isDrawerPinned);
-    if (isDrawerPinned) {
+    if (isDrawerPinned && !isMobileScreen()) {
       drawer.classList.add('open');
     }
   }
@@ -2119,14 +2130,137 @@ function applyPinState() {
   }
 }
 
+// ==============================================================
+// EXPÉRIENCE MOBILE-FIRST (IPHONE 13 MINI & SMARTPHONES)
+// ==============================================================
+let currentMobileDayView = 'agenda'; // 'agenda' | 'todo'
+
+function setMobileDayView(mode) {
+  currentMobileDayView = mode;
+  const shell = document.getElementById('appShell');
+  if (shell) {
+    shell.classList.toggle('mobile-mode-agenda', mode === 'agenda');
+    shell.classList.toggle('mobile-mode-todo', mode === 'todo');
+  }
+  const btnA = document.getElementById('segBtnAgenda');
+  const btnT = document.getElementById('segBtnTodo');
+  if (btnA) btnA.classList.toggle('active', mode === 'agenda');
+  if (btnT) btnT.classList.toggle('active', mode === 'todo');
+}
+
+function renderDateStrip() {
+  const strip = document.getElementById('mobileDateStrip');
+  if (!strip) return;
+
+  const centerOffset = currentTimelineOffset;
+  let html = '';
+
+  for (let i = -3; i <= 3; i++) {
+    const offset = centerOffset + i;
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    const dateStr = getLocalDateString(d);
+    const isToday = (dateStr === TODAY_STR);
+    const isSelected = (offset === currentTimelineOffset);
+
+    const dayName = d.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '');
+    const dayNum = d.getDate();
+
+    const dayTasks = (window.SpanPlanState && window.SpanPlanState.tasks) 
+      ? window.SpanPlanState.tasks.filter(t => t.date === dateStr) 
+      : [];
+    const hasTasks = dayTasks.length > 0;
+
+    html += `
+      <button type="button" 
+              class="date-strip-item ${isToday ? 'is-today' : ''} ${isSelected ? 'active' : ''}" 
+              onclick="selectDateFromStrip(${offset})"
+              title="${dateStr}">
+        <span class="strip-day-name">${dayName}</span>
+        <span class="strip-day-num">${dayNum}</span>
+        ${hasTasks ? '<span class="strip-task-dot"></span>' : ''}
+      </button>
+    `;
+  }
+
+  strip.innerHTML = html;
+
+  // Mise à jour du compteur To-do dans le switch segmenté
+  const visibleDates = calculateVisibleDates();
+  if (visibleDates.length > 0) {
+    const currentDateStr = getLocalDateString(visibleDates[0]);
+    const unscheduledCount = (window.SpanPlanState && window.SpanPlanState.tasks)
+      ? window.SpanPlanState.tasks.filter(t => t.date === currentDateStr && !t.time).length
+      : 0;
+    const todoCountEl = document.getElementById('mobileTodoCount');
+    if (todoCountEl) todoCountEl.textContent = unscheduledCount;
+  }
+
+  // Mise à jour de l'état actif dans la barre inférieure
+  const navBtnToday = document.getElementById('mobileNavToday');
+  if (navBtnToday) {
+    navBtnToday.classList.toggle('active', currentTimelineOffset === 0);
+  }
+}
+
+function selectDateFromStrip(targetOffset) {
+  currentTimelineOffset = targetOffset;
+  renderPlanGrid(true);
+  renderDateStrip();
+  applyDynamicScroll();
+}
+
+// SWIPE TACTILE FLUIDE ENTRE LES JOURS SUR MOBILE
+let touchStartX = 0;
+let touchStartY = 0;
+
+window.addEventListener('touchstart', (e) => {
+  if (window.innerWidth > 768) return;
+  if (e.target.closest('#backlogDrawer') || e.target.closest('.modal-card')) return;
+  const touch = e.touches[0];
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
+}, { passive: true });
+
+window.addEventListener('touchend', (e) => {
+  if (window.innerWidth > 768) return;
+  if (!touchStartX) return;
+  const touch = e.changedTouches[0];
+  const diffX = touch.clientX - touchStartX;
+  const diffY = touch.clientY - touchStartY;
+
+  // Seuil horizontal de 50px
+  if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY) * 1.4) {
+    if (diffX < 0) {
+      navigateTimeline(1);
+    } else {
+      navigateTimeline(-1);
+    }
+  }
+  touchStartX = 0;
+  touchStartY = 0;
+}, { passive: true });
+
+let lastIsMobile = isMobileScreen();
+window.addEventListener('resize', () => {
+  const nowMobile = isMobileScreen();
+  if (nowMobile !== lastIsMobile) {
+    lastIsMobile = nowMobile;
+    renderPlanGrid(true);
+    renderDateStrip();
+  }
+});
+
 // INITIALISATION AU DÉMARRAGE
 window.addEventListener('DOMContentLoaded', () => {
   autoRecoverTodayTasks();
   executeAutoRollover();
   setVisibleDays(visibleDaysCount);
+  setMobileDayView('agenda');
   applyPinState();
   renderBacklogDrawer();
   updateCounters();
+  renderDateStrip();
 
   setTimeout(applyDynamicScroll, 120);
 

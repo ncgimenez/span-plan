@@ -1895,62 +1895,360 @@ body {
 
 .nav-btn.active { color: var(--text-main); }
 
-@media (min-width: 768px) {
-  .mobile-nav { display: none !important; }
+@media (min-width: 769px) {
+  .mobile-nav,
+  .mobile-date-strip-container,
+  .mobile-day-segmented {
+    display: none !important;
+  }
 }
 
 /* ==============================================================
-   RESPONSIVE MOBILE (SMARTPHONES / IPHONE)
+   RESPONSIVE MOBILE (SMARTPHONES / IPHONE 13 MINI)
    ============================================================== */
 @media (max-width: 768px) {
   .desktop-shell {
-    padding: calc(env(safe-area-inset-top, 14px) + 4px) 10px calc(52px + env(safe-area-inset-bottom, 10px)) 10px !important;
+    padding: calc(env(safe-area-inset-top, 14px) + 2px) 8px calc(64px + env(safe-area-inset-bottom, 12px)) 8px !important;
+    overflow: hidden !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
   }
 
+  /* Header compact 1 seule ligne */
   .app-header {
-    flex-wrap: wrap;
-    gap: 8px;
+    height: 44px !important;
+    padding: 0 4px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    gap: 0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    margin-bottom: 2px !important;
   }
 
-  .planner-board-container {
-    justify-content: flex-start !important;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .planner-grid {
-    max-width: none !important;
+  .header-left {
     width: auto !important;
+    display: flex;
+    align-items: center;
   }
 
-  .day-column {
-    min-width: calc(100vw - 20px) !important;
-    max-width: calc(100vw - 20px) !important;
-    flex: 0 0 calc(100vw - 20px) !important;
-    scroll-snap-align: center;
+  .header-left .brand-name {
+    font-size: 15px !important;
   }
-
-  .quick-add-container {
-    max-width: 100% !important;
-    margin-bottom: 8px !important;
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .quick-selectors {
-    justify-content: space-between;
-  }
-
-  .header-left, .header-center, .header-right {
-    flex-wrap: wrap;
-    justify-content: space-between;
-    width: 100%;
+  .header-left .brand-app {
+    font-size: 11px !important;
   }
 
   .header-center {
-    order: 3;
-    padding: 4px 0;
+    display: none !important; /* Pas de timeline-nav lourd sur mobile */
+  }
+
+  .header-right {
+    width: auto !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    justify-content: flex-end !important;
+  }
+
+  .view-mode-pills,
+  .quick-add-container,
+  .context-switch,
+  .header-actions .btn-new-task,
+  .header-actions #btnToggleDrawer {
+    display: none !important; /* Masqués sur mobile pour libérer l'écran */
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .plan-bridge-btn {
+    padding: 4px 9px !important;
+    font-size: 11px !important;
+  }
+
+  /* BANDEAU DE DATES HORIZONTAL (DATE STRIP) */
+  .mobile-date-strip-container {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 4px 0 2px 0;
+  }
+
+  .mobile-date-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 4px;
+  }
+
+  .date-strip-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 2px 4px 2px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .date-strip-item.is-today .strip-day-name {
+    color: var(--streak);
+    font-weight: 750;
+  }
+
+  .date-strip-item.active {
+    background: rgba(255, 255, 255, 0.14) !important;
+    border-color: rgba(255, 255, 255, 0.35) !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  }
+
+  .date-strip-item.active .strip-day-num {
+    font-weight: 750;
+    color: #ffffff;
+  }
+
+  .strip-day-name {
+    font-size: 9.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    line-height: 1;
+    margin-bottom: 2px;
+  }
+
+  .strip-day-num {
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .strip-task-dot {
+    width: 3.5px;
+    height: 3.5px;
+    border-radius: 50%;
+    background: var(--streak);
+    position: absolute;
+    bottom: 2px;
+  }
+
+  /* CONTRÔLE SEGMENTÉ (AGENDA VS TO-DO DU JOUR) */
+  .mobile-day-segmented {
+    display: flex !important;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 9px;
+    padding: 2.5px;
+    margin: 3px 0 6px 0;
+    gap: 3px;
+  }
+
+  .mobile-day-segmented .seg-btn {
+    flex: 1;
+    padding: 5.5px 8px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-day-segmented .seg-btn.active {
+    background: #27272a;
+    color: #ffffff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  }
+
+  /* GRILLE ET COLONNE JOUR EN PLEIN ÉCRAN */
+  .workspace-main {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden !important;
+    width: 100% !important;
+  }
+
+  .planner-board-container {
+    justify-content: center !important;
+    width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  .planner-grid {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+  }
+
+  .day-column {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    flex: 1 0 100% !important;
+    border-radius: 14px !important;
+    height: 100% !important;
+    margin: 0 !important;
+  }
+
+  /* Mode Agenda : Agenda prend tout, Dock masqué */
+  .mobile-mode-agenda .day-dock {
+    display: none !important;
+  }
+  .mobile-mode-agenda .day-schedule-scroll {
+    display: block !important;
+    flex: 1 !important;
+    height: auto !important;
+  }
+
+  /* Mode To-do : Grille masquée, Dock prend tout */
+  .mobile-mode-todo .day-schedule-scroll {
+    display: none !important;
+  }
+  .mobile-mode-todo .day-dock {
+    display: flex !important;
+    flex: 1 !important;
+    height: 100% !important;
+    border-top: none !important;
+    padding: 12px 10px !important;
+    overflow-y: auto !important;
+  }
+  .mobile-mode-todo .dock-task-list {
+    max-height: none !important;
+    flex: 1 !important;
+    overflow-y: auto !important;
+  }
+
+  /* TIROIR BACKLOG EN PLEIN ÉCRAN FLUIDE (BOTTOM SHEET NATIVE) */
+  .backlog-drawer {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    z-index: 9999 !important;
+    background: #0d0d0f !important;
+    transform: translateY(100%) !important;
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    box-shadow: none !important;
+    border-left: none !important;
+    border-radius: 0 !important;
+    padding-top: calc(env(safe-area-inset-top, 14px) + 8px) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 14px) + 12px) !important;
+  }
+
+  .backlog-drawer.open {
+    transform: translateY(0) !important;
+  }
+
+  .backlog-drawer .drawer-header {
+    padding: 12px 16px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
+  .backlog-drawer .drawer-title {
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+  }
+  #btnPinDrawer {
+    display: none !important;
+  }
+
+  /* BARRE DE NAVIGATION INFÉRIEURE MODERNE */
+  .mobile-nav {
+    display: flex !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: calc(54px + env(safe-area-inset-bottom, 10px)) !important;
+    padding-bottom: env(safe-area-inset-bottom, 10px) !important;
+    background: rgba(18, 18, 20, 0.94) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+    z-index: 200 !important;
+  }
+
+  .mobile-nav .nav-items {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    width: 100%;
+    height: 54px;
+    padding: 0 8px;
+  }
+
+  .mobile-nav .nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 9.5px;
+    font-weight: 600;
+    gap: 3px;
+    cursor: pointer;
+    flex: 1;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-nav .nav-btn.active {
+    color: #ffffff !important;
+  }
+
+  .mobile-nav .nav-icon {
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  .mobile-nav .nav-btn-add {
+    flex: 0 0 52px;
+  }
+
+  .nav-fab-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--streak) 0%, #d97706 100%);
+    color: #ffffff;
+    font-size: 22px;
+    font-weight: 350;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 12px rgba(245, 158, 11, 0.38);
+    margin-top: -12px;
+    transition: transform 0.15s ease;
+  }
+
+  .mobile-nav .nav-btn-add:active .nav-fab-circle {
+    transform: scale(0.92);
   }
 }
 
