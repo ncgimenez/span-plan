@@ -11,7 +11,7 @@ function toggleTheme() {
   const meta = document.getElementById('themeMetaColor');
   if (meta) meta.setAttribute('content', next === 'dark' ? '#0d0d0f' : '#f8f8fa');
 
-  showToast(`Thème basculé en mode ${next}`);
+  showToast(`Theme switched to ${next} mode`);
 }
 
 function openSettingsModal() {
@@ -47,7 +47,7 @@ function exportData() {
   a.download = `span-plan-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
-  showToast('Sauvegarde exportée avec succès (JSON)');
+  showToast('Backup exported successfully (JSON)');
 }
 
 function importData(event) {
@@ -60,10 +60,10 @@ function importData(event) {
       if (Array.isArray(data)) {
         window.SpanPlanState.tasks = data;
         if (typeof savePlanState === 'function') savePlanState();
-        showToast(`${data.length} tâches importées avec succès !`, 'success');
+        showToast(`${data.length} tasks imported successfully!`, 'success');
       }
     } catch {
-      showToast('Format de fichier JSON invalide.', 'danger');
+      showToast('Invalid JSON file format.', 'danger');
     }
   };
   reader.readAsText(file);
@@ -97,19 +97,34 @@ function showToast(message, type = 'info', duration = 3000) {
   }, duration);
 }
 
-// Raccourcis clavier globaux ergonomiques
+// Raccourcis clavier universels et ergonomiques (Mac: ⌘, Win/Linux: Ctrl)
 window.addEventListener('keydown', (e) => {
-  const isEditing = ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName);
+  const isEditing = ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName) || e.target.isContentEditable;
+  const hasModifier = (e.metaKey || e.ctrlKey);
+
+  // ⌘K ou Ctrl+K : Focus barre d'ajout rapide (fonctionne même si déjà en saisie)
+  if (hasModifier && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    const quickInput = document.getElementById('quickTaskInput');
+    if (quickInput) {
+      quickInput.focus();
+      quickInput.select();
+    }
+    return;
+  }
   
   if (e.key === 'Escape') {
     closeSettingsModal();
     if (typeof closeEditModal === 'function') closeEditModal();
+    if (typeof closeSubtasksModal === 'function') closeSubtasksModal();
+    if (typeof closeShortcutsModal === 'function') closeShortcutsModal();
     if (typeof closeTaskPopover === 'function') closeTaskPopover();
     if (typeof clearSelection === 'function') clearSelection();
     const drawer = document.getElementById('backlogDrawer');
     if (drawer && drawer.classList.contains('open') && !drawer.classList.contains('pinned')) {
       drawer.classList.remove('open');
     }
+    if (isEditing) e.target.blur();
     return;
   }
 
@@ -123,6 +138,23 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
+  if (e.key === 'Enter') {
+    if (typeof selectedTaskIds !== 'undefined' && selectedTaskIds.size === 1) {
+      const selectedId = Array.from(selectedTaskIds)[0];
+      if (typeof openEditModal === 'function') {
+        openEditModal(selectedId);
+        e.preventDefault();
+      }
+    }
+    return;
+  }
+
+  if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+    e.preventDefault();
+    if (typeof openShortcutsModal === 'function') openShortcutsModal();
+    return;
+  }
+
   if (e.key === 't' || e.key === 'T') {
     e.preventDefault();
     if (typeof jumpToToday === 'function') jumpToToday();
@@ -132,17 +164,15 @@ window.addEventListener('keydown', (e) => {
   } else if (e.key === 'ArrowLeft') {
     e.preventDefault();
     if (typeof navigateTimeline === 'function') navigateTimeline(-1);
-  } else if (e.key === 'l' || e.key === 'L') {
+  } else if (e.key === 'l' || e.key === 'L' || e.key === 'b' || e.key === 'B') {
     e.preventDefault();
     if (typeof toggleBacklogDrawer === 'function') toggleBacklogDrawer();
   } else if (e.key === 'n' || e.key === 'N' || e.key === 'c' || e.key === 'C') {
     e.preventDefault();
-    const quickInput = document.getElementById('quickTaskInput');
-    if (quickInput) {
-      quickInput.focus();
-      quickInput.select();
+    if (typeof openCreateModalWithDefaults === 'function') {
+      openCreateModalWithDefaults();
     }
-  } else if (['3', '5', '7'].includes(e.key)) {
+  } else if (['1', '3', '5', '7'].includes(e.key)) {
     if (typeof setVisibleDays === 'function') {
       setVisibleDays(parseInt(e.key, 10));
     }

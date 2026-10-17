@@ -324,9 +324,9 @@ function recoverMissingTasks() {
   renderBacklogDrawer();
   if (typeof closeSettingsModal === 'function') closeSettingsModal();
   if (typeof showToast === 'function') {
-    showToast(`${count} tâche(s) rapatriée(s) directement dans Aujourd'hui`, 'info');
+    showToast(`${count} task${count > 1 ? 's' : ''} recovered to Today's To-do dock`, 'info');
   } else {
-    alert(`${count} tâche(s) rapatriée(s) directement dans le dock To-do d'aujourd'hui !`);
+    alert(`${count} task${count > 1 ? 's' : ''} recovered to Today's To-do dock!`);
   }
 }
 
@@ -378,7 +378,7 @@ function renderDayCapacityHtml(timedTasks) {
   const pctFun  = Math.min(100, (funM  / maxBudget) * 100);
 
   const breakdownTitle = `Work: ${formatMinutesDuration(workM)} · Life: ${formatMinutesDuration(lifeM)} · Fun: ${formatMinutesDuration(funM)}`;
-  const countLabel = `${timedTasks.length} bloc${timedTasks.length > 1 ? 's' : ''}`;
+  const countLabel = `${timedTasks.length} item${timedTasks.length > 1 ? 's' : ''}`;
 
   return `
     <div class="day-capacity-tracker" title="${breakdownTitle}">
@@ -388,7 +388,7 @@ function renderDayCapacityHtml(timedTasks) {
         <div class="day-capacity-seg seg-fun"  style="width: ${pctFun}%;"></div>
       </div>
       <div class="day-capacity-meta">
-        <span class="day-capacity-total">${totalM > 0 ? formatMinutesDuration(totalM) : '0h planifié'}</span>
+        <span class="day-capacity-total">${totalM > 0 ? formatMinutesDuration(totalM) : '0h scheduled'}</span>
         <div class="day-capacity-dots">
           ${workM > 0 ? `<span class="cap-dot dot-work" title="Work: ${formatMinutesDuration(workM)}"></span>` : ''}
           ${lifeM > 0 ? `<span class="cap-dot dot-life" title="Life: ${formatMinutesDuration(lifeM)}"></span>` : ''}
@@ -582,7 +582,6 @@ function renderPlanGrid(forceRebuild = false) {
             <span class="day-name">${isToday ? 'Today' : dayName}</span>
             <span class="day-date">${dayNum}</span>
           </div>
-          ${isToday ? '<span class="today-badge-chip">Aujourd\'hui</span>' : ''}
         </div>
         ${renderDayCapacityHtml(timedTasks)}
       </div>
@@ -597,7 +596,7 @@ function renderPlanGrid(forceRebuild = false) {
              ondragover="allowCanvasDrop(event)" 
              ondragleave="removeCanvasDropHighlight(event)"
              ondrop="handleCanvasDrop(event, '${dateStr}')"
-             title="Cliquer pour créer une tâche ou un événement à cet horaire">
+             title="Click to create task or event at this time">
           ${renderHourLines()}
           ${isToday ? renderNowLineHtml() : ''}
           <div class="cal-marquee"></div>
@@ -617,7 +616,7 @@ function renderPlanGrid(forceRebuild = false) {
         <div class="dock-inline-add">
           <input type="text" 
                  class="dock-add-input" 
-                 placeholder="+ Ajouter à faire..." 
+                 placeholder="+ Add to-do..." 
                  onkeydown="if(event.key==='Enter') submitDockInlineAdd(event, '${dateStr}')">
         </div>
         <ul class="dock-task-list">
@@ -791,7 +790,7 @@ function renderTimedBlocks(tasks, dateStr) {
     const childSubtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
     const doneSubCount = childSubtasks.filter(s => s.completed).length;
     const progressPillHtml = childSubtasks.length > 0 
-      ? `<span class="event-progress-pill" title="Sous-tâches terminées">${doneSubCount}/${childSubtasks.length}</span>` 
+      ? `<span class="event-progress-pill" onclick="event.stopPropagation(); openSubtasksModal('${task.id}')" title="Subtasks (${doneSubCount}/${childSubtasks.length})">${doneSubCount}/${childSubtasks.length}</span>` 
       : '';
 
     let subtasksHtml = '';
@@ -801,7 +800,7 @@ function renderTimedBlocks(tasks, dateStr) {
           ${childSubtasks.map(sub => `
             <div class="block-subtask-row ${sub.completed ? 'completed' : ''}" 
                  onclick="event.stopPropagation(); toggleSubtaskCompletion('${task.id}', '${sub.id}')"
-                 title="${sub.completed ? 'Marquer non terminée' : 'Marquer terminée'}">
+                 title="${sub.completed ? 'Mark incomplete' : 'Mark completed'}">
               <span class="subtask-cat-indicator cat-${sub.context || 'work'}"></span>
               <div class="subtask-mini-checkbox">
                 ${sub.completed ? '✓' : ''}
@@ -820,13 +819,14 @@ function renderTimedBlocks(tasks, dateStr) {
            data-date="${dateStr}"
            style="${positionStyle}"
            onpointerdown="handleBlockPointerDown(event, '${task.id}', '${dateStr}')"
+           ondblclick="event.stopPropagation(); openEditModal('${task.id}')"
            onclick="event.stopPropagation()"
-           title="${isEvent ? '📅 Événement: ' : '📋 Tâche: '}${task.title} (${timeRangeStr})">
+           title="${isEvent ? '📅 Event: ' : '📋 Task: '}${task.title} (${timeRangeStr})">
         <div class="schedule-block-top">
           ${isEvent ? `
-            <span class="event-icon" title="Événement (non cochable)">📅</span>
+            <span class="event-icon" title="Event (non-checkable)">📅</span>
           ` : `
-            <div class="checkbox" onclick="event.stopPropagation(); toggleTaskCompletion('${task.id}')" title="Marquer comme terminé">
+            <div class="checkbox" onclick="event.stopPropagation(); toggleTaskCompletion('${task.id}')" title="Toggle completion">
               ${task.completed ? '✓' : ''}
             </div>
           `}
@@ -843,10 +843,23 @@ function renderTimedBlocks(tasks, dateStr) {
              onmousedown="startResize(event, '${task.id}')"
              ontouchstart="startResize(event, '${task.id}')"
              onclick="event.stopPropagation()"
-             title="Redimensionner la durée"></div>
+             title="Drag to resize duration"></div>
       </div>
     `;
   }).join('');
+}
+
+function handleTaskRowClick(e, id) {
+  e.stopPropagation();
+  if (e.metaKey || e.ctrlKey || e.shiftKey) {
+    toggleTaskSelection(id);
+    return;
+  }
+  if (selectedTaskIds.has(id)) {
+    clearSelection();
+  } else {
+    selectTaskExclusively(id);
+  }
 }
 
 function renderUnscheduledList(tasks) {
@@ -859,26 +872,27 @@ function renderUnscheduledList(tasks) {
     const rolloverClass = task.isRollover ? 'rollover' : '';
     const rolloverPrefix = task.isRollover ? '⟳ ' : '';
     const eventClass = isEvent ? 'is-event' : '';
+    const isSelected = selectedTaskIds.has(task.id);
     const childSubtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
     const doneSubCount = childSubtasks.filter(s => s.completed).length;
     const progressPillHtml = childSubtasks.length > 0 
-      ? `<span class="event-progress-pill" title="Sous-tâches terminées">${doneSubCount}/${childSubtasks.length}</span>` 
+      ? `<span class="event-progress-pill" onclick="event.stopPropagation(); openSubtasksModal('${task.id}')" title="Subtasks (${doneSubCount}/${childSubtasks.length})">${doneSubCount}/${childSubtasks.length}</span>` 
       : '';
 
     return `
-      <li class="task-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass}"
+      <li class="task-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${isSelected ? 'is-selected' : ''}"
           draggable="true"
           ondragstart="handleDragStart(event, '${task.id}')"
           ondragend="handleDragEnd(event)">
-        <div class="task-row-main">
+        <div class="task-row-main" onclick="handleTaskRowClick(event, '${task.id}')" ondblclick="openEditModal('${task.id}')">
           ${isEvent ? `
-            <span class="event-icon" title="Événement (non cochable)">📅</span>
+            <span class="event-icon" title="Event (non-checkable)">📅</span>
           ` : `
-            <div class="checkbox" onclick="event.stopPropagation(); toggleTaskCompletion('${task.id}')" title="Marquer comme terminé">
+            <div class="checkbox" onclick="event.stopPropagation(); toggleTaskCompletion('${task.id}')" title="Toggle completion">
               ${task.completed ? '✓' : ''}
             </div>
           `}
-          <span class="task-text" onclick="openEditModal('${task.id}')">
+          <span class="task-text">
             ${rolloverPrefix}${renderTitleWithTagsHtml(task.title)}
           </span>
           ${progressPillHtml}
@@ -999,6 +1013,7 @@ let dragAnchorClientY = 0;
 let dragAnchorClientX = 0;
 let dragInitialTops = new Map();
 let hasMovedBeyondThreshold = false;
+let dragWasAlreadySelected = false;
 
 let marqueeCanvas = null;
 let marqueeEl = null;
@@ -1035,7 +1050,7 @@ function deleteSelectedTasks() {
   updateSelectionVisuals();
   savePlanState();
   if (typeof showToast === 'function') {
-    showToast(`${count} élément${count > 1 ? 's' : ''} supprimé${count > 1 ? 's' : ''}`, 'info');
+    showToast(`${count} item${count > 1 ? 's' : ''} deleted`, 'info');
   }
 }
 
@@ -1045,13 +1060,17 @@ function updateSelectionVisuals() {
     el.classList.toggle('is-selected', selectedTaskIds.has(id));
   });
 
+  document.querySelectorAll('.task-item').forEach(el => {
+    const id = el.getAttribute('data-task-id') || el.querySelector('.task-row-main')?.getAttribute('data-task-id');
+  });
+
   const bar = document.getElementById('multiSelectActionBar');
   const countSpan = document.getElementById('multiSelectCountText');
   if (bar) {
     if (selectedTaskIds.size > 0) {
       bar.classList.add('show');
       if (countSpan) {
-        countSpan.textContent = `${selectedTaskIds.size} sélectionné${selectedTaskIds.size > 1 ? 's' : ''}`;
+        countSpan.textContent = `${selectedTaskIds.size} selected`;
       }
     } else {
       bar.classList.remove('show');
@@ -1061,7 +1080,7 @@ function updateSelectionVisuals() {
 
 // POINTER DOWN SUR UN BLOC (CLIC OU DÉPLACEMENT SIMPLE/GROUPE)
 function handleBlockPointerDown(e, taskId, dateStr) {
-  if (e.target.closest('.btn-task-menu') || e.target.closest('.checkbox') || e.target.closest('.resize-handle')) {
+  if (e.target.closest('.btn-task-menu') || e.target.closest('.checkbox') || e.target.closest('.resize-handle') || e.target.closest('.event-progress-pill')) {
     return;
   }
   if (e.button !== 0) return;
@@ -1076,8 +1095,10 @@ function handleBlockPointerDown(e, taskId, dateStr) {
     return;
   }
 
-  // Si non sélectionné, on le sélectionne
-  if (!selectedTaskIds.has(taskId)) {
+  const wasAlreadySelected = selectedTaskIds.has(taskId);
+  dragWasAlreadySelected = wasAlreadySelected;
+
+  if (!wasAlreadySelected) {
     selectTaskExclusively(taskId);
   }
 
@@ -1207,7 +1228,11 @@ function handleBlockPointerUp(e) {
 
   if (!moved) {
     if (anchorId) {
-      openEditModal(anchorId);
+      if (dragWasAlreadySelected) {
+        clearSelection();
+      } else {
+        selectTaskExclusively(anchorId);
+      }
     }
     dragInitialTops.clear();
     return;
@@ -1600,13 +1625,20 @@ function popoverAction(action) {
   closeTaskPopover();
   if (!id) return;
 
-  if (action === 'toggle-type') {
+  if (action === 'edit') {
+    openEditModal(id);
+  } else if (action === 'today') {
+    scheduleTaskDirectly(id, TODAY_STR);
+    if (typeof showToast === 'function') {
+      showToast('Scheduled for Today', 'success');
+    }
+  } else if (action === 'toggle-type') {
     const task = window.SpanPlanState.tasks.find(t => t.id === id);
     if (task) {
       task.type = (task.type === 'event') ? 'task' : 'event';
       savePlanState();
       if (typeof showToast === 'function') {
-        const label = task.type === 'event' ? 'Converti en Événement 📅' : 'Converti en Tâche 📋';
+        const label = task.type === 'event' ? 'Converted to Event 📅' : 'Converted to Task 📋';
         showToast(label, 'info');
       }
     }
@@ -1614,8 +1646,14 @@ function popoverAction(action) {
     pushToSpanFocus(id);
   } else if (action === 'backlog') {
     moveToBacklog(id);
+    if (typeof showToast === 'function') {
+      showToast('Moved to Backlog', 'info');
+    }
   } else if (action === 'delete') {
     deleteTask(id);
+    if (typeof showToast === 'function') {
+      showToast('Item deleted', 'info');
+    }
   }
 }
 
@@ -1640,34 +1678,33 @@ function renderBacklogDrawer() {
 
   backlogTasks.forEach(task => {
     const isEvent = task.type === 'event';
-    const isFromFocus = !!task.fromFocus || !!task.focusId;
+    const isSelected = selectedTaskIds.has(task.id);
     const completedClass = task.completed ? 'completed' : '';
     const childSubtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
     const doneSubCount = childSubtasks.filter(s => s.completed).length;
     const progressPillHtml = childSubtasks.length > 0 
-      ? `<span class="event-progress-pill" title="Sous-tâches terminées">${doneSubCount}/${childSubtasks.length}</span>` 
+      ? `<span class="event-progress-pill" onclick="event.stopPropagation(); openSubtasksModal('${task.id}')" title="Subtasks (${doneSubCount}/${childSubtasks.length})">${doneSubCount}/${childSubtasks.length}</span>` 
       : '';
 
     const li = document.createElement('li');
-    li.className = `task-item cat-${task.context || 'work'} ${isEvent ? 'is-event' : ''} ${completedClass}`;
+    li.className = `task-item cat-${task.context || 'work'} ${isEvent ? 'is-event' : ''} ${completedClass} ${isSelected ? 'is-selected' : ''}`;
     li.draggable = true;
     li.ondragstart = (e) => handleDragStart(e, task.id);
     li.ondragend = (e) => handleDragEnd(e);
 
     li.innerHTML = `
-      <div class="task-row-main">
+      <div class="task-row-main" onclick="handleTaskRowClick(event, '${task.id}')" ondblclick="openEditModal('${task.id}')">
         ${isEvent ? `
-          <span class="event-icon" title="Événement (non cochable)">📅</span>
+          <span class="event-icon" title="Event (non-checkable)">📅</span>
         ` : `
-          <div class="checkbox" onclick="event.stopPropagation(); toggleTaskCompletion('${task.id}')" title="Marquer comme terminé">
+          <div class="checkbox" onclick="event.stopPropagation(); toggleTaskCompletion('${task.id}')" title="Toggle completion">
             ${task.completed ? '✓' : ''}
           </div>
         `}
-        <span class="task-text ${completedClass}" onclick="openEditModal('${task.id}')">${renderTitleWithTagsHtml(task.title)}</span>
+        <span class="task-text ${completedClass}">${renderTitleWithTagsHtml(task.title)}</span>
         ${progressPillHtml}
-        ${isFromFocus ? '<span class="badge-from-focus" title="Synchronisé depuis Span Focus">Focus</span>' : ''}
-        <button class="btn-task-action" onclick="scheduleTaskDirectly('${task.id}', '${TODAY_STR}')" title="Planifier aujourd'hui">☀️</button>
-        <button class="btn-task-action" onclick="deleteTask('${task.id}')" title="Supprimer">✕</button>
+        <button type="button" class="btn-backlog-today" onclick="event.stopPropagation(); scheduleTaskDirectly('${task.id}', '${TODAY_STR}')" title="Schedule for Today">+ Today</button>
+        <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
       </div>
     `;
     list.appendChild(li);
@@ -1944,11 +1981,125 @@ function addBacklogTask() {
   if (input) input.value = '';
   savePlanState();
   if (typeof showToast === 'function') {
-    showToast(`Ajouté au Backlog : "${newTask.title}"`, 'info');
+    showToast(`Added to Backlog: "${newTask.title}"`, 'info');
   }
 }
 
+// ==============================================================
+// MODALE INTERACTIVE D'APERÇU DES SOUS-TÂCHES
+// ==============================================================
+let currentSubtasksParentId = null;
+
+function openSubtasksModal(taskId) {
+  const task = window.SpanPlanState.tasks.find(t => t.id === taskId);
+  if (!task) return;
+
+  currentSubtasksParentId = taskId;
+  const overlay = document.getElementById('subtasksModalOverlay');
+  const typeBadge = document.getElementById('subtasksTypeBadge');
+  const titleText = document.getElementById('subtasksTitleText');
+
+  if (typeBadge) typeBadge.textContent = task.type === 'event' ? 'Event' : 'Task';
+  if (titleText) titleText.textContent = task.title;
+
+  renderSubtasksModalList();
+  if (overlay) overlay.style.display = 'flex';
+}
+
+function closeSubtasksModal() {
+  const overlay = document.getElementById('subtasksModalOverlay');
+  if (overlay) overlay.style.display = 'none';
+  currentSubtasksParentId = null;
+}
+
+function renderSubtasksModalList() {
+  const listEl = document.getElementById('subtasksChecklistItems');
+  const textEl = document.getElementById('subtasksProgressText');
+  const pctEl = document.getElementById('subtasksProgressPercent');
+  const fillEl = document.getElementById('subtasksProgressFill');
+  if (!listEl || !currentSubtasksParentId) return;
+
+  const parent = window.SpanPlanState.tasks.find(t => t.id === currentSubtasksParentId);
+  if (!parent) return;
+
+  const subtasks = Array.isArray(parent.subtasks) ? parent.subtasks : [];
+  const completedCount = subtasks.filter(s => s.completed).length;
+  const totalCount = subtasks.length;
+  const pct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+  if (textEl) textEl.textContent = `${completedCount} of ${totalCount} completed`;
+  if (pctEl) pctEl.textContent = `${pct}%`;
+  if (fillEl) fillEl.style.width = `${pct}%`;
+
+  if (subtasks.length === 0) {
+    listEl.innerHTML = `<div style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 18px 0;">No subtasks yet</div>`;
+    return;
+  }
+
+  listEl.innerHTML = subtasks.map(sub => `
+    <div class="subtask-interactive-row ${sub.completed ? 'completed' : ''}" 
+         onclick="handleSubtaskModalToggle('${sub.id}')">
+      <div class="subtask-checkbox ${sub.completed ? 'checked' : ''}">
+        ${sub.completed ? '✓' : ''}
+      </div>
+      <span class="subtask-row-title">${renderTitleWithTagsHtml(sub.title)}</span>
+      <span class="subtask-cat-indicator cat-${sub.context || parent.context || 'work'}"></span>
+    </div>
+  `).join('');
+}
+
+function handleSubtaskModalToggle(subtaskId) {
+  if (!currentSubtasksParentId) return;
+  toggleSubtaskCompletion(currentSubtasksParentId, subtaskId);
+  renderSubtasksModalList();
+}
+
+function submitSubtaskInlineAdd() {
+  const input = document.getElementById('subtasksInlineAddInput');
+  if (!input || !currentSubtasksParentId) return;
+  const title = input.value.trim();
+  if (!title) return;
+
+  const parent = window.SpanPlanState.tasks.find(t => t.id === currentSubtasksParentId);
+  if (!parent) return;
+
+  if (!Array.isArray(parent.subtasks)) parent.subtasks = [];
+  const newSub = {
+    id: 'sub_' + Date.now(),
+    title: title,
+    completed: false,
+    context: parent.context || 'work'
+  };
+  parent.subtasks.push(newSub);
+  input.value = '';
+  savePlanState();
+  renderSubtasksModalList();
+}
+
+function editParentFromSubtasksModal() {
+  const parentId = currentSubtasksParentId;
+  closeSubtasksModal();
+  if (parentId) {
+    openEditModal(parentId);
+  }
+}
+
+// ==============================================================
+// MODALE RACCOURCIS CLAVIER (?)
+// ==============================================================
+function openShortcutsModal() {
+  const modal = document.getElementById('shortcutsModalOverlay');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeShortcutsModal() {
+  const modal = document.getElementById('shortcutsModalOverlay');
+  if (modal) modal.style.display = 'none';
+}
+
+// ==============================================================
 // CRÉATION ET ÉDITION VIA MODALE UNIFIÉE
+// ==============================================================
 function selectModalType(type) {
   editingItemType = (type === 'event') ? 'event' : 'task';
   const taskPill = document.getElementById('modalTypeTask');
@@ -1956,12 +2107,12 @@ function selectModalType(type) {
   if (taskPill) taskPill.classList.toggle('active', editingItemType === 'task');
   if (eventPill) eventPill.classList.toggle('active', editingItemType === 'event');
 
-  const headerSpan = document.querySelector('#editModalOverlay .modal-header span');
+  const headerSpan = document.getElementById('modalHeaderTitle') || document.querySelector('#editModalOverlay .modal-header span');
   if (headerSpan) {
     if (editingTaskId) {
-      headerSpan.textContent = editingItemType === 'event' ? "Modifier l'Événement" : 'Modifier la Tâche';
+      headerSpan.textContent = editingItemType === 'event' ? "Edit Event" : 'Edit Task';
     } else {
-      headerSpan.textContent = editingItemType === 'event' ? "Nouvel Événement" : 'Nouvelle Tâche';
+      headerSpan.textContent = editingItemType === 'event' ? "New Event" : 'New Task';
     }
   }
 }
@@ -1981,8 +2132,11 @@ function openCreateModalWithDefaults(dateStr = TODAY_STR, timeStr = '') {
   const durEl = document.getElementById('editTaskDuration');
   if (durEl) durEl.value = 45;
 
-  const headerSpan = document.querySelector('#editModalOverlay .modal-header span');
-  if (headerSpan) headerSpan.textContent = timeStr ? `Nouveau créneau (${timeStr})` : 'Nouvelle Tâche';
+  const headerSpan = document.getElementById('modalHeaderTitle') || document.querySelector('#editModalOverlay .modal-header span');
+  if (headerSpan) headerSpan.textContent = timeStr ? `New Event (${timeStr})` : 'New Task';
+
+  const deleteBtn = document.getElementById('btnModalDeleteTask');
+  if (deleteBtn) deleteBtn.style.display = 'none';
 
   document.querySelectorAll('#modalContextPills .cat-pill').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.context === editingContext);
@@ -2013,6 +2167,9 @@ function openEditModal(id) {
   const durEl = document.getElementById('editTaskDuration');
   if (durEl) durEl.value = task.duration || 45;
 
+  const deleteBtn = document.getElementById('btnModalDeleteTask');
+  if (deleteBtn) deleteBtn.style.display = 'inline-block';
+
   document.querySelectorAll('#modalContextPills .cat-pill').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.context === editingContext);
   });
@@ -2023,6 +2180,18 @@ function openEditModal(id) {
 function closeEditModal() {
   document.getElementById('editModalOverlay').style.display = 'none';
   editingTaskId = null;
+}
+
+function deleteCurrentEditingTask() {
+  if (!editingTaskId) return;
+  const idToDelete = editingTaskId;
+  const task = window.SpanPlanState.tasks.find(t => t.id === idToDelete);
+  const typeLabel = (task && task.type === 'event') ? 'Event' : 'Task';
+  deleteTask(idToDelete);
+  closeEditModal();
+  if (typeof showToast === 'function') {
+    showToast(`${typeLabel} deleted`, 'info');
+  }
 }
 
 function selectEditContext(ctx) {
@@ -2052,7 +2221,7 @@ function saveTaskModal() {
       task.context = editingContext;
     }
     if (typeof showToast === 'function') {
-      const label = editingItemType === 'event' ? 'Événement mis à jour' : 'Tâche mise à jour';
+      const label = editingItemType === 'event' ? 'Event updated' : 'Task updated';
       showToast(label, 'info');
     }
   } else {
@@ -2069,9 +2238,9 @@ function saveTaskModal() {
     };
     window.SpanPlanState.tasks.unshift(newTask);
     if (typeof showToast === 'function') {
-      const timeTxt = timeVal ? ` à ${timeVal}` : '';
-      const label = editingItemType === 'event' ? 'Événement créé' : 'Tâche créée';
-      showToast(`${label} : "${newTask.title}"${timeTxt}`, 'success');
+      const timeTxt = timeVal ? ` at ${timeVal}` : '';
+      const label = editingItemType === 'event' ? 'Event created' : 'Task created';
+      showToast(`${label}: "${newTask.title}"${timeTxt}`, 'success');
     }
   }
 
@@ -2214,7 +2383,7 @@ function renderDateStrip() {
     const isToday = (dateStr === TODAY_STR);
     const isSelected = (offset === currentTimelineOffset);
 
-    const dayName = d.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '');
+    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
     const dayNum = d.getDate();
 
     const dayTasks = (window.SpanPlanState && window.SpanPlanState.tasks) 

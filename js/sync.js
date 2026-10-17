@@ -64,9 +64,24 @@ function updateSyncKeyDisplay() {
 async function syncPlanToCloud() {
   if (isCloudSyncInProgress || !supabaseClient) return;
   try {
+    const { data: existingData } = await supabaseClient
+      .from('user_state')
+      .select('tasks')
+      .eq('id', SYNC_USER_ID)
+      .maybeSingle();
+
+    const existingTasksObj = (existingData && existingData.tasks && typeof existingData.tasks === 'object' && !Array.isArray(existingData.tasks))
+      ? existingData.tasks
+      : {};
+
+    const updatedTasksObj = {
+      ...existingTasksObj,
+      plan_items: (window.SpanPlanState && window.SpanPlanState.tasks) || []
+    };
+
     const payload = {
       id: SYNC_USER_ID,
-      plan_tasks: (window.SpanPlanState && window.SpanPlanState.tasks) || [],
+      tasks: updatedTasksObj,
       updated_at: new Date().toISOString()
     };
     await supabaseClient.from('user_state').upsert(payload);
@@ -81,36 +96,46 @@ async function loadPlanFromCloud() {
   try {
     const { data, error } = await supabaseClient
       .from('user_state')
-      .select('plan_tasks, focus_tasks')
+      .select('tasks')
       .eq('id', SYNC_USER_ID)
-      .single();
+      .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
       console.warn('Cloud sync read warning:', error.message);
       return;
     }
 
-    if (data) {
+    if (data && data.tasks) {
+      let focusTasks = [];
+      let planTasks = [];
+
+      if (Array.isArray(data.tasks)) {
+        focusTasks = data.tasks;
+      } else if (data.tasks && typeof data.tasks === 'object') {
+        focusTasks = data.tasks.items || [];
+        planTasks = data.tasks.plan_items || [];
+      }
+
       // 1. Synchronisation des tâches Focus distantes vers le backlog Plan
-      if (data.focus_tasks && Array.isArray(data.focus_tasks)) {
+      if (focusTasks && focusTasks.length > 0) {
         try {
           const currentFocus = localStorage.getItem('span_tasks');
           if (!currentFocus || currentFocus === '[]') {
-            localStorage.setItem('span_tasks', JSON.stringify(data.focus_tasks));
+            localStorage.setItem('span_tasks', JSON.stringify(focusTasks));
           }
         } catch (e) {}
 
         if (typeof syncFocusTasksToPlanBacklog === 'function') {
-          syncFocusTasksToPlanBacklog(false, data.focus_tasks);
+          syncFocusTasksToPlanBacklog(false, focusTasks);
         }
       }
 
       // 2. Fusion des tâches Plan
-      if (data.plan_tasks && Array.isArray(data.plan_tasks)) {
+      if (planTasks && Array.isArray(planTasks)) {
         isCloudSyncInProgress = true;
 
         const localTasks = (window.SpanPlanState && window.SpanPlanState.tasks) || [];
-        const remoteTasks = data.plan_tasks;
+        const remoteTasks = planTasks;
 
         // Fusion par ID : respecte les nouveautés distantes et conserve les ajouts récents
         const mergedMap = new Map();
@@ -177,7 +202,7 @@ function setupRealtimeSubscription() {
         filter: `id=eq.${SYNC_USER_ID}`
       },
       (payload) => {
-        if (payload.new && (payload.new.plan_tasks || payload.new.focus_tasks)) {
+        if (payload.new && payload.new.tasks) {
           // Évite une boucle si c'est cet appareil qui vient d'écrire
           if (!isCloudSyncInProgress) {
             loadPlanFromCloud();
