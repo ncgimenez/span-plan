@@ -801,7 +801,7 @@ function renderTimedBlocks(tasks, dateStr) {
     if (hasSubtasksRendered) {
       let maxFit = 1;
       if (height >= 95) {
-        maxFit = Math.max(1, Math.floor((height - 28) / 18));
+        maxFit = 3; // Capped at 3 maximum for clean, uncluttered cards
       } else if (height >= 70) {
         maxFit = 2;
       } else {

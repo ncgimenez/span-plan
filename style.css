@@ -1039,10 +1039,10 @@ body {
 
 /* LISTE DE SOUS-TÂCHES IMBRIQUÉES DANS LE BLOC */
 .block-subtasks-container {
-  margin-top: 2px;
+  margin-top: 4px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -1050,15 +1050,15 @@ body {
 .block-subtask-row {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 1.5px 2px;
+  gap: 8px;
+  padding: 1.5px 3px;
   border-radius: 5px;
   background: transparent;
   border: none;
   cursor: pointer;
   transition: background 0.12s ease, opacity 0.12s ease;
-  min-height: 16px;
-  height: 16px;
+  min-height: 17px;
+  height: 17px;
   box-sizing: border-box;
 }
 
@@ -1071,8 +1071,8 @@ body {
 }
 
 .subtask-cat-indicator {
-  width: 3px;
-  height: 12px;
+  width: 3.5px;
+  height: 12.5px;
   border-radius: 999px;
   flex-shrink: 0;
   background: #818cf8;
@@ -1125,7 +1125,7 @@ body {
   text-overflow: ellipsis;
   flex: 1;
   letter-spacing: -0.01em;
-  line-height: 14px;
+  line-height: 15px;
 }
 
 .block-subtask-row.completed .subtask-row-title {
