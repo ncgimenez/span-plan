@@ -119,7 +119,10 @@ function syncFocusTasksToPlanBacklog(shouldSave = true, customFocusTasks = null)
 
   rootFocusTasks.forEach(ft => {
     if (!ft || !ft.title) return;
+    const titleKey = 'title:' + ft.title.trim().toLowerCase();
     if (ft.id && dismissedFocusIds.includes(ft.id)) return;
+    if (ft.focusId && dismissedFocusIds.includes(ft.focusId)) return;
+    if (dismissedFocusIds.includes(titleKey)) return;
     
     // Rechercher si cette tâche existe déjà dans Span Plan (qu'elle soit planifiée sur un jour ou en backlog)
     let existing = window.SpanPlanState.tasks.find(pt => 
@@ -1038,10 +1041,10 @@ function clearSelection() {
 function deleteSelectedTasks() {
   if (selectedTaskIds.size === 0) return;
   const count = selectedTaskIds.size;
-  window.SpanPlanState.tasks = window.SpanPlanState.tasks.filter(t => !selectedTaskIds.has(t.id));
+  const idsToDelete = Array.from(selectedTaskIds);
   selectedTaskIds.clear();
   updateSelectionVisuals();
-  savePlanState();
+  deleteTasks(idsToDelete);
   if (typeof showToast === 'function') {
     showToast(`${count} item${count > 1 ? 's' : ''} deleted`, 'info');
   }
@@ -1742,20 +1745,68 @@ function toggleTaskCompletion(id) {
   savePlanState();
 }
 
-function deleteTask(id) {
-  const task = window.SpanPlanState.tasks.find(t => t.id === id);
-  if (task && (task.focusId || task.fromFocus)) {
-    try {
-      let dismissed = JSON.parse(localStorage.getItem('span_plan_dismissed_focus_ids')) || [];
-      const focusKey = task.focusId || task.id;
-      if (!dismissed.includes(focusKey)) {
-        dismissed.push(focusKey);
-        localStorage.setItem('span_plan_dismissed_focus_ids', JSON.stringify(dismissed));
-      }
-    } catch (e) {}
+function getDismissedTaskIds() {
+  try {
+    const list = JSON.parse(localStorage.getItem('span_plan_dismissed_focus_ids')) || [];
+    return Array.isArray(list) ? list : [];
+  } catch (e) {
+    return [];
   }
-  window.SpanPlanState.tasks = window.SpanPlanState.tasks.filter(t => t.id !== id);
+}
+
+function addDismissedTaskIds(newIds) {
+  if (!Array.isArray(newIds) || newIds.length === 0) return;
+  try {
+    const current = getDismissedTaskIds();
+    const set = new Set(current);
+    newIds.forEach(id => { if (id) set.add(id); });
+    localStorage.setItem('span_plan_dismissed_focus_ids', JSON.stringify(Array.from(set)));
+  } catch (e) {}
+}
+
+function deleteTasks(ids) {
+  if (!Array.isArray(ids) || ids.length === 0) return;
+  const idSet = new Set(ids);
+  
+  // 1. Extraire toutes les clés et identifiants des tâches à supprimer
+  const keysToDismiss = [];
+  (window.SpanPlanState.tasks || []).forEach(t => {
+    if (idSet.has(t.id)) {
+      if (t.id) keysToDismiss.push(t.id);
+      if (t.focusId) keysToDismiss.push(t.focusId);
+      if (t.title) keysToDismiss.push('title:' + t.title.trim().toLowerCase());
+    }
+  });
+  ids.forEach(id => {
+    if (!keysToDismiss.includes(id)) keysToDismiss.push(id);
+  });
+
+  addDismissedTaskIds(keysToDismiss);
+
+  // 2. Supprimer de l'état local Plan
+  window.SpanPlanState.tasks = (window.SpanPlanState.tasks || []).filter(t => !idSet.has(t.id));
+
+  // 3. Purger immédiatement du cache local Focus (span_tasks)
+  try {
+    let focusTasks = JSON.parse(localStorage.getItem('span_tasks'));
+    if (Array.isArray(focusTasks)) {
+      const dismissed = getDismissedTaskIds();
+      const updatedFocus = focusTasks.filter(ft => {
+        if (!ft) return false;
+        if (idSet.has(ft.id) || dismissed.includes(ft.id)) return false;
+        if (ft.title && dismissed.includes('title:' + ft.title.trim().toLowerCase())) return false;
+        if (ft.parentEventId && (idSet.has(ft.parentEventId) || dismissed.includes(ft.parentEventId))) return false;
+        return true;
+      });
+      localStorage.setItem('span_tasks', JSON.stringify(updatedFocus));
+    }
+  } catch (e) {}
+
   savePlanState();
+}
+
+function deleteTask(id) {
+  deleteTasks([id]);
 }
 
 function moveToBacklog(id) {

@@ -60,10 +60,15 @@ function updateSyncKeyDisplay() {
   syncKeychainInputs(SYNC_USER_ID);
 }
 
+let lastPlanCloudWriteTime = 0;
+
 // ENVOI VERS SUPABASE
 async function syncPlanToCloud() {
-  if (isCloudSyncInProgress || !supabaseClient) return;
+  if (!supabaseClient) return;
   try {
+    lastPlanCloudWriteTime = Date.now();
+    isCloudSyncInProgress = true;
+
     const { data: existingData } = await supabaseClient
       .from('user_state')
       .select('tasks')
@@ -74,9 +79,32 @@ async function syncPlanToCloud() {
       ? existingData.tasks
       : {};
 
+    // Récupérer les identifiants supprimés (locaux + distants)
+    let localDismissed = [];
+    try {
+      localDismissed = JSON.parse(localStorage.getItem('span_plan_dismissed_focus_ids')) || [];
+    } catch (e) {}
+    const remoteDismissed = Array.isArray(existingTasksObj.dismissed_ids) ? existingTasksObj.dismissed_ids : [];
+    const allDismissed = Array.from(new Set([...localDismissed, ...remoteDismissed]));
+    localStorage.setItem('span_plan_dismissed_focus_ids', JSON.stringify(allDismissed));
+
+    // Filtrer les tâches Focus existantes pour purger définitivement celles supprimées
+    let cleanedFocusItems = Array.isArray(existingTasksObj.items) ? existingTasksObj.items : [];
+    if (allDismissed.length > 0) {
+      cleanedFocusItems = cleanedFocusItems.filter(ft => {
+        if (!ft) return false;
+        if (allDismissed.includes(ft.id)) return false;
+        if (ft.title && allDismissed.includes('title:' + ft.title.trim().toLowerCase())) return false;
+        if (ft.parentEventId && allDismissed.includes(ft.parentEventId)) return false;
+        return true;
+      });
+    }
+
     const updatedTasksObj = {
       ...existingTasksObj,
-      plan_items: (window.SpanPlanState && window.SpanPlanState.tasks) || []
+      items: cleanedFocusItems,
+      plan_items: (window.SpanPlanState && window.SpanPlanState.tasks) || [],
+      dismissed_ids: allDismissed
     };
 
     const payload = {
@@ -87,6 +115,10 @@ async function syncPlanToCloud() {
     await supabaseClient.from('user_state').upsert(payload);
   } catch (err) {
     console.warn('Cloud sync write warning:', err.message);
+  } finally {
+    setTimeout(() => {
+      isCloudSyncInProgress = false;
+    }, 1200);
   }
 }
 
@@ -116,21 +148,38 @@ async function loadPlanFromCloud() {
         planTasks = data.tasks.plan_items || [];
       }
 
+      // Fusionner les listes de tâches supprimées / ignorées
+      let localDismissed = [];
+      try {
+        localDismissed = JSON.parse(localStorage.getItem('span_plan_dismissed_focus_ids')) || [];
+      } catch (e) {}
+      const remoteDismissed = Array.isArray(data.tasks.dismissed_ids) ? data.tasks.dismissed_ids : [];
+      const allDismissed = new Set([...localDismissed, ...remoteDismissed]);
+      localStorage.setItem('span_plan_dismissed_focus_ids', JSON.stringify(Array.from(allDismissed)));
+
+      const isDismissed = (t) => {
+        if (!t) return true;
+        if (t.id && allDismissed.has(t.id)) return true;
+        if (t.focusId && allDismissed.has(t.focusId)) return true;
+        if (t.title && allDismissed.has('title:' + t.title.trim().toLowerCase())) return true;
+        return false;
+      };
+
+      const isMockSampleTask = (t) => {
+        if (!t || !t.id) return true;
+        const title = (t.title || '').trim().toLowerCase();
+        if (t.id === 'p_sample_today_1' || t.id === 'p_sample_today_2' || t.id === 'sub_standup_1') return true;
+        if (title === 'team standup meeting #work' || title === 'grocery shopping #life' || title === 'grocery shopping #home' || title === 'préparer mes 3 points clés #work') return true;
+        return false;
+      };
+
       // 1. D'ABORD : Restaurer le calendrier complet Plan depuis le cloud (plan_items)
       if (planTasks && Array.isArray(planTasks)) {
         isCloudSyncInProgress = true;
 
-        const isMockSampleTask = (t) => {
-          if (!t || !t.id) return true;
-          const title = (t.title || '').trim().toLowerCase();
-          if (t.id === 'p_sample_today_1' || t.id === 'p_sample_today_2' || t.id === 'sub_standup_1') return true;
-          if (title === 'team standup meeting #work' || title === 'grocery shopping #life' || title === 'grocery shopping #home' || title === 'préparer mes 3 points clés #work') return true;
-          return false;
-        };
-
-        // Éliminer définitivement toute fausse tâche de test (p_sample_today_1, p_sample_today_2, mock standup)
-        const cleanRemoteTasks = planTasks.filter(t => !isMockSampleTask(t));
-        const localTasks = ((window.SpanPlanState && window.SpanPlanState.tasks) || []).filter(t => !isMockSampleTask(t));
+        // Éliminer les tâches tests mock ET les tâches supprimées
+        const cleanRemoteTasks = planTasks.filter(t => !isMockSampleTask(t) && !isDismissed(t));
+        const localTasks = ((window.SpanPlanState && window.SpanPlanState.tasks) || []).filter(t => !isMockSampleTask(t) && !isDismissed(t));
 
         const mergedMap = new Map();
 
@@ -151,17 +200,15 @@ async function loadPlanFromCloud() {
         localStorage.setItem('span_plan_tasks', JSON.stringify(mergedList));
       }
 
-      // 2. ENSUITE : Rapprocher les tâches Span Focus sans créer de doublons
+      // 2. ENSUITE : Rapprocher les tâches Span Focus sans créer de doublons ni réinsérer les supprimées
       if (focusTasks && focusTasks.length > 0) {
+        const cleanFocusTasks = focusTasks.filter(ft => !isMockSampleTask(ft) && !isDismissed(ft));
         try {
-          const currentFocus = localStorage.getItem('span_tasks');
-          if (!currentFocus || currentFocus === '[]') {
-            localStorage.setItem('span_tasks', JSON.stringify(focusTasks));
-          }
+          localStorage.setItem('span_tasks', JSON.stringify(cleanFocusTasks));
         } catch (e) {}
 
         if (typeof syncFocusTasksToPlanBacklog === 'function') {
-          syncFocusTasksToPlanBacklog(false, focusTasks);
+          syncFocusTasksToPlanBacklog(false, cleanFocusTasks);
         }
       }
 
@@ -200,8 +247,11 @@ function setupRealtimeSubscription() {
         filter: `id=eq.${SYNC_USER_ID}`
       },
       (payload) => {
+        // Ignorer l'écho immédiat de notre propre écriture (moins de 1.5s)
+        if (Date.now() - lastPlanCloudWriteTime < 1500) {
+          return;
+        }
         if (payload.new && payload.new.tasks) {
-          // Évite une boucle si c'est cet appareil qui vient d'écrire
           if (!isCloudSyncInProgress) {
             loadPlanFromCloud();
           }
