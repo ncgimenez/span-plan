@@ -321,13 +321,8 @@ function recoverMissingTasks() {
     }
   });
   savePlanState();
-  currentContextFilter = 'all';
   currentTagFilter = null;
-  document.querySelectorAll('#contextSwitch .context-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.context === 'all');
-  });
-  renderPlanGrid();
-  renderBacklogDrawer();
+  setContextFilter('all');
   if (typeof closeSettingsModal === 'function') closeSettingsModal();
   if (typeof showToast === 'function') {
     showToast(`${count} task${count > 1 ? 's' : ''} recovered to Today's To-do dock`, 'info');
@@ -2454,12 +2449,47 @@ function setVisibleDays(num) {
 
 function setContextFilter(ctx) {
   currentContextFilter = ctx;
-  document.querySelectorAll('#contextSwitch .context-btn').forEach(btn => {
+  document.querySelectorAll('.context-menu-item, #contextSwitch .context-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.context === ctx);
   });
+  
+  const labelEl = document.getElementById('activeContextText');
+  const indEl = document.getElementById('activeContextIndicator');
+  const triggerBtn = document.getElementById('contextFilterTrigger');
+  
+  if (labelEl) labelEl.textContent = ctx === 'all' ? 'All' : (ctx.charAt(0).toUpperCase() + ctx.slice(1));
+  if (indEl) {
+    indEl.className = `context-indicator dot-${ctx}`;
+  }
+  if (triggerBtn) {
+    triggerBtn.setAttribute('data-active-context', ctx);
+  }
+  
+  closeContextDropdown();
   renderPlanGrid(true);
   renderBacklogDrawer();
 }
+
+function toggleContextDropdown(e) {
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+  const wrap = document.getElementById('contextDropdownWrap');
+  if (wrap) wrap.classList.toggle('open');
+}
+
+function closeContextDropdown() {
+  const wrap = document.getElementById('contextDropdownWrap');
+  if (wrap) wrap.classList.remove('open');
+}
+
+// Close context dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#contextDropdownWrap')) {
+    closeContextDropdown();
+  }
+});
 
 function toggleBacklogDrawer() {
   if (isMobileScreen()) {

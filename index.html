@@ -13,14 +13,13 @@
   <link rel="icon" type="image/png" href="span-logo.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
-  <link rel="stylesheet" href="style.css?v=6.8">
+  <link rel="stylesheet" href="style.css?v=6.9">
 </head>
 <body>
 
   <div class="desktop-shell" id="appShell">
     
-    <!-- TOP APP HEADER -->
-    <!-- UNIFIED TOP APP HEADER (Consolidated & Compact) -->
+    <!-- TOP APP HEADER (Streamlined & Minimalist) -->
     <header class="app-header">
       <div class="header-left">
         <div class="brand">
@@ -38,35 +37,56 @@
 
       <!-- TIMELINE NAV (CENTER) -->
       <div class="header-center">
-        <div class="timeline-nav">
-          <button class="nav-arrow-btn" onclick="navigateTimeline(-1)" title="Previous period (←)">‹</button>
-          <button class="today-jump-btn" onclick="jumpToToday()" title="Today (T)">Today</button>
-          <button class="nav-arrow-btn" onclick="navigateTimeline(1)" title="Next period (→)">›</button>
+        <div class="timeline-nav" id="timelineNav">
+          <div class="nav-arrows-capsule">
+            <button class="nav-arrow-btn nav-prev" onclick="navigateTimeline(-1)" title="Previous period (←)">‹</button>
+            <button class="today-jump-btn" onclick="jumpToToday()" title="Today (T)">Today</button>
+            <button class="nav-arrow-btn nav-next" onclick="navigateTimeline(1)" title="Next period (→)">›</button>
+          </div>
           <span class="current-range-label" id="currentRangeLabel">Loading...</span>
         </div>
       </div>
 
       <!-- ACTIONS & CONTEXT FILTER (RIGHT) -->
       <div class="header-right">
-        <!-- CATEGORY / CONTEXT SWITCHER (WORK - LIFE - FUN) -->
-        <div class="context-switch" id="contextSwitch">
-          <button class="context-btn active" data-context="all" onclick="setContextFilter('all')"><span>All</span></button>
-          <button class="context-btn cat-work" data-context="work" onclick="setContextFilter('work')"><span>Work</span></button>
-          <button class="context-btn cat-life" data-context="life" onclick="setContextFilter('life')"><span>Life</span></button>
-          <button class="context-btn cat-fun" data-context="fun" onclick="setContextFilter('fun')"><span>Fun</span></button>
+        <!-- COMPACT CONTEXT FILTER DROPDOWN -->
+        <div class="context-dropdown-wrap" id="contextDropdownWrap">
+          <button class="context-filter-trigger" id="contextFilterTrigger" onclick="toggleContextDropdown(event)" title="Filter tasks by context" data-active-context="all">
+            <span class="context-indicator dot-all" id="activeContextIndicator"></span>
+            <span class="context-filter-text" id="activeContextText">All</span>
+            <svg class="dropdown-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="context-dropdown-menu" id="contextDropdownMenu" onclick="event.stopPropagation()">
+            <div class="context-menu-title">Filter context</div>
+            <button class="context-menu-item active" data-context="all" onclick="setContextFilter('all')">
+              <span class="context-indicator dot-all"></span>
+              <span>All</span>
+            </button>
+            <button class="context-menu-item" data-context="work" onclick="setContextFilter('work')">
+              <span class="context-indicator dot-work"></span>
+              <span>Work</span>
+            </button>
+            <button class="context-menu-item" data-context="life" onclick="setContextFilter('life')">
+              <span class="context-indicator dot-life"></span>
+              <span>Life</span>
+            </button>
+            <button class="context-menu-item" data-context="fun" onclick="setContextFilter('fun')">
+              <span class="context-indicator dot-fun"></span>
+              <span>Fun</span>
+            </button>
+          </div>
         </div>
 
         <div class="header-actions">
           <button class="icon-btn btn-new-task" onclick="toggleQuickAddBar()" title="New task or event (N / C)">
             <span>+ New</span>
           </button>
-          <button class="icon-btn" id="btnToggleDrawer" onclick="toggleBacklogDrawer()" title="Backlog Drawer (B / L)">
+          <button class="icon-btn btn-backlog-toggle" id="btnToggleDrawer" onclick="toggleBacklogDrawer()" title="Backlog Drawer (B / L)">
             <span>📋 Backlog</span>
             <span class="backlog-counter-pill" id="globalLaterCount">0</span>
           </button>
-          <button class="icon-btn btn-shortcuts" onclick="openShortcutsModal()" title="Keyboard Shortcuts (?)">⌨️</button>
-          <button class="icon-btn" onclick="openSettingsModal()" title="Settings">⚙️</button>
           <button class="plan-bridge-btn" onclick="goToFocusApp()" title="Open Span Focus">Focus ↗</button>
+          <button class="icon-btn btn-settings" onclick="openSettingsModal()" title="Settings">⚙️</button>
         </div>
       </div>
     </header>
@@ -380,8 +400,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=6.8"></script>
-  <script src="js/plan.js?v=6.8"></script>
-  <script src="js/app.js?v=6.8"></script>
+  <script src="js/sync.js?v=6.9"></script>
+  <script src="js/plan.js?v=6.9"></script>
+  <script src="js/app.js?v=6.9"></script>
 </body>
 </html>

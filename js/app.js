@@ -124,6 +124,7 @@ window.addEventListener('keydown', (e) => {
     if (typeof closeSubtasksModal === 'function') closeSubtasksModal();
     if (typeof closeShortcutsModal === 'function') closeShortcutsModal();
     if (typeof closeTaskPopover === 'function') closeTaskPopover();
+    if (typeof closeContextDropdown === 'function') closeContextDropdown();
     if (typeof clearSelection === 'function') clearSelection();
     const drawer = document.getElementById('backlogDrawer');
     if (drawer && drawer.classList.contains('open') && !drawer.classList.contains('pinned')) {
