@@ -826,11 +826,8 @@ function renderTimedBlocks(tasks, dateStr) {
       `;
     }
 
-    const shortClass = height < 44 ? 'is-short' : '';
-    const subtaskClass = hasSubtasksRendered ? 'has-subtasks' : '';
-
     return `
-      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass} ${shortClass} ${subtaskClass}" 
+      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass}" 
            id="block_${task.id}"
            data-task-id="${task.id}"
            data-date="${dateStr}"
