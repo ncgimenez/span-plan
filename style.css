@@ -872,13 +872,14 @@ body {
   left: 52px;
   right: 8px;
   border-radius: 12px;
-  padding: 7px 10px;
+  padding: 6px 9px;
   cursor: grab;
   user-select: none;
   z-index: 5;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+  gap: 2px;
   box-sizing: border-box;
   color: #ffffff;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
@@ -1007,87 +1008,146 @@ body {
   line-height: 1.2;
 }
 
-/* LISTE DE SOUS-TÂCHES IMBRIQUÉES DANS LE BLOC */
-.block-subtasks-container {
-  margin-top: 6px;
+/* BADGE HORAIRE EMPILÉ (AMBRE / GOLD) */
+.block-time-badge {
   display: flex;
   flex-direction: column;
-  gap: 3.5px;
+  align-items: center;
+  justify-content: center;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  border-radius: 6px;
+  padding: 1.5px 4.5px;
+  line-height: 1.15;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+}
+
+.block-time-badge .badge-start {
+  font-size: 9px;
+  font-weight: 750;
+  color: #fbbf24;
+}
+
+.block-time-badge .badge-end {
+  font-size: 8px;
+  font-weight: 600;
+  color: rgba(251, 191, 36, 0.65);
+}
+
+.schedule-block-item.is-short .block-time-badge {
+  flex-direction: row;
+  padding: 1px 4px;
+  gap: 3px;
+}
+
+.schedule-block-item.is-short .block-time-badge .badge-end {
+  display: none;
+}
+
+/* LISTE DE SOUS-TÂCHES IMBRIQUÉES DANS LE BLOC */
+.block-subtasks-container {
+  margin-top: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5px;
   overflow: hidden;
 }
 
 .block-subtask-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 6px;
+  gap: 8px;
+  padding: 2px 4px;
   border-radius: 6px;
-  background: rgba(0, 0, 0, 0.28);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: transparent;
+  border: none;
   cursor: pointer;
-  transition: background 0.12s ease;
+  transition: background 0.12s ease, opacity 0.12s ease;
 }
 
 .block-subtask-row:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .block-subtask-row.completed {
-  opacity: 0.55;
+  opacity: 0.5;
 }
 
 .subtask-cat-indicator {
-  width: 2.5px;
-  height: 10px;
-  border-radius: 1.5px;
+  width: 3.5px;
+  height: 14px;
+  border-radius: 999px;
   flex-shrink: 0;
-  background: var(--color-work);
+  background: #818cf8;
 }
 
 .subtask-cat-indicator.cat-work {
-  background: var(--color-work);
+  background: #818cf8;
 }
 
 .subtask-cat-indicator.cat-life {
-  background: var(--color-life);
+  background: #10b981;
 }
 
 .subtask-cat-indicator.cat-fun {
-  background: var(--color-fun);
+  background: #fb7185;
 }
 
 .subtask-mini-checkbox {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  border: 1.2px solid rgba(255, 255, 255, 0.35);
+  width: 15px;
+  height: 15px;
+  border-radius: 4.5px;
+  border: 1.5px solid rgba(255, 255, 255, 0.38);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 8.5px;
+  font-size: 9.5px;
   color: #fff;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.03);
+  background: transparent;
   transition: all 0.12s ease;
 }
 
+.subtask-mini-checkbox:hover {
+  border-color: #fff;
+}
+
+.subtask-mini-checkbox.checked,
 .block-subtask-row.completed .subtask-mini-checkbox {
   background: var(--streak);
   border-color: var(--streak);
+  color: #fff;
 }
 
 .subtask-row-title {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.9);
+  font-size: 12.5px;
+  font-weight: 550;
+  color: #f4f4f5;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   flex: 1;
+  letter-spacing: -0.01em;
 }
 
 .block-subtask-row.completed .subtask-row-title {
   text-decoration: line-through;
   color: rgba(255, 255, 255, 0.45);
+}
+
+.block-subtasks-more {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.45);
+  padding: 1px 4px 1px 28px;
+  cursor: pointer;
+  transition: color 0.12s ease;
+}
+
+.block-subtasks-more:hover {
+  color: #fff;
 }
 
 .badge-from-focus {
@@ -2699,43 +2759,65 @@ body {
 .subtask-interactive-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 8px;
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  gap: 10px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
   transition: all 0.12s ease;
   position: relative;
 }
 
 .subtask-interactive-row:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .subtask-interactive-row.completed {
-  opacity: 0.65;
-  background: rgba(255, 255, 255, 0.02);
+  opacity: 0.55;
+  background: rgba(255, 255, 255, 0.015);
 }
 
+.subtask-cat-btn {
+  width: 3.5px;
+  height: 16px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+  opacity: 0.9;
+}
+
+.subtask-cat-btn:hover {
+  transform: scaleY(1.15) scaleX(1.3);
+  opacity: 1;
+}
+
+.subtask-cat-btn.cat-work { background: #818cf8; }
+.subtask-cat-btn.cat-life { background: #10b981; }
+.subtask-cat-btn.cat-fun  { background: #fb7185; }
+
 .subtask-checkbox {
-  width: 18px;
-  height: 18px;
-  border-radius: 5px;
-  border: 1.5px solid var(--text-muted);
+  width: 16px;
+  height: 16px;
+  border-radius: 4.5px;
+  border: 1.5px solid rgba(255, 255, 255, 0.38);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 10px;
   color: #fff;
   flex-shrink: 0;
   cursor: pointer;
   transition: all 0.12s ease;
+  background: transparent;
 }
 
 .subtask-checkbox:hover {
-  border-color: var(--text-main);
-  background: rgba(255, 255, 255, 0.08);
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .subtask-checkbox.checked {
@@ -2749,10 +2831,11 @@ body {
   background: transparent;
   border: 1px solid transparent;
   border-radius: 6px;
-  padding: 5px 8px;
-  color: var(--text-main);
+  padding: 4px 6px;
+  color: #f4f4f5;
   font-size: 13.5px;
-  font-weight: 450;
+  font-weight: 550;
+  letter-spacing: -0.01em;
   outline: none;
   transition: all 0.15s ease;
   min-width: 0;
@@ -2765,36 +2848,15 @@ body {
 }
 
 .subtask-title-input:focus {
-  border-color: rgba(255, 255, 255, 0.28);
-  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.06);
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
 }
 
 .subtask-title-input.completed {
   text-decoration: line-through;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.45);
 }
-
-.subtask-cat-btn {
-  width: 9px;
-  height: 18px;
-  border-radius: 3px;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  flex-shrink: 0;
-  transition: transform 0.15s ease, opacity 0.15s ease;
-  opacity: 0.8;
-}
-
-.subtask-cat-btn:hover {
-  transform: scale(1.18);
-  opacity: 1;
-}
-
-.subtask-cat-btn.cat-work { background: var(--color-work); }
-.subtask-cat-btn.cat-life { background: var(--color-life); }
-.subtask-cat-btn.cat-fun  { background: var(--color-fun); }
 
 .subtask-delete-btn {
   background: transparent;

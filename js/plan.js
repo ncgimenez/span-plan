@@ -749,11 +749,11 @@ function renderEmptyDayGuidanceHtml(dateStr) {
       <div class="empty-guidance-content">
         <span class="empty-guidance-icon">✨</span>
         <div class="empty-guidance-text">
-          <span class="empty-guidance-title">Journée libre</span>
-          <span class="empty-guidance-desc">Touchez une heure ou le bouton + pour planifier</span>
+          <span class="empty-guidance-title">Free day</span>
+          <span class="empty-guidance-desc">Click any hour or + to schedule</span>
         </div>
       </div>
-      <button type="button" class="btn-empty-guidance-add">+ Planifier</button>
+      <button type="button" class="btn-empty-guidance-add">+ Schedule</button>
     </div>
   `;
 }
@@ -797,26 +797,39 @@ function renderTimedBlocks(tasks, dateStr) {
       : '';
 
     let subtasksHtml = '';
-    if (childSubtasks.length > 0 && height >= 58) {
+    if (childSubtasks.length > 0 && height >= 46) {
+      const maxFit = Math.max(1, Math.floor((height - 24) / 18));
+      const visibleSubtasks = childSubtasks.slice(0, maxFit);
+      const remainingCount = childSubtasks.length - visibleSubtasks.length;
+
       subtasksHtml = `
         <div class="block-subtasks-container">
-          ${childSubtasks.map(sub => `
+          ${visibleSubtasks.map(sub => `
             <div class="block-subtask-row ${sub.completed ? 'completed' : ''}" 
                  onclick="event.stopPropagation(); toggleSubtaskCompletion('${task.id}', '${sub.id}')"
                  title="${sub.completed ? 'Mark incomplete' : 'Mark completed'}">
-              <span class="subtask-cat-indicator cat-${sub.context || 'work'}"></span>
-              <div class="subtask-mini-checkbox">
+              <span class="subtask-cat-indicator cat-${sub.context || task.context || 'work'}"></span>
+              <div class="subtask-mini-checkbox ${sub.completed ? 'checked' : ''}">
                 ${sub.completed ? '✓' : ''}
               </div>
               <span class="subtask-row-title">${renderTitleWithTagsHtml(sub.title)}</span>
             </div>
           `).join('')}
+          ${remainingCount > 0 ? `
+            <div class="block-subtasks-more" 
+                 onclick="event.stopPropagation(); openSubtasksModal('${task.id}')"
+                 title="View all ${childSubtasks.length} subtasks">
+              +${remainingCount} more
+            </div>
+          ` : ''}
         </div>
       `;
     }
 
+    const shortClass = height < 44 ? 'is-short' : '';
+
     return `
-      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass}" 
+      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass} ${shortClass}" 
            id="block_${task.id}"
            data-task-id="${task.id}"
            data-date="${dateStr}"
@@ -826,6 +839,10 @@ function renderTimedBlocks(tasks, dateStr) {
            onclick="event.stopPropagation()"
            title="${isEvent ? '📅 Event: ' : '📋 Task: '}${task.title} (${timeRangeStr})">
         <div class="schedule-block-top">
+          <div class="block-time-badge" title="${timeRangeStr}">
+            <span class="badge-start">${task.time}</span>
+            <span class="badge-end">${endH}:${endM}</span>
+          </div>
           ${isEvent ? `
             <span class="event-icon" title="Event (non-checkable)">📅</span>
           ` : `
@@ -836,10 +853,8 @@ function renderTimedBlocks(tasks, dateStr) {
           <span class="schedule-block-title">${rolloverPrefix}${renderTitleWithTagsHtml(task.title)}</span>
           ${progressPillHtml}
           ${isLiveNow ? '<span class="live-pulse-badge">● LIVE</span>' : ''}
-          ${height < 44 ? `<span class="schedule-block-time">${task.time}</span>` : ''}
           <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
         </div>
-        ${height >= 44 ? `<div class="schedule-block-sub">${timeRangeStr}</div>` : ''}
         ${subtasksHtml}
         
         <div class="resize-handle" 
@@ -1528,8 +1543,8 @@ function handleCanvasDrop(e, targetDate) {
     task.isRollover = false;
     savePlanState();
     if (typeof showToast === 'function') {
-      const typeLabel = task.type === 'event' ? 'Événement replacé' : 'Tâche planifiée';
-      showToast(`${typeLabel} : ${newTime} (${targetDate})`, 'success');
+      const typeLabel = task.type === 'event' ? 'Event scheduled' : 'Task scheduled';
+      showToast(`${typeLabel}: ${newTime} (${targetDate})`, 'success');
     }
   }
   draggedTaskId = null;
@@ -1563,8 +1578,8 @@ function handleDropToDock(e, targetDate) {
     task.isRollover = false;
     savePlanState();
     if (typeof showToast === 'function') {
-      const typeLabel = task.type === 'event' ? 'Événement déplacé' : 'Tâche déplacée';
-      showToast(`${typeLabel} dans la to-do du jour (${targetDate})`, 'info');
+      const typeLabel = task.type === 'event' ? 'Event moved' : 'Task moved';
+      showToast(`${typeLabel} to day's to-do dock (${targetDate})`, 'info');
     }
   }
   draggedTaskId = null;
@@ -1846,7 +1861,7 @@ function pushToSpanFocus(id) {
   });
   localStorage.setItem('span_tasks', JSON.stringify(focusTasks));
   if (typeof showToast === 'function') {
-    showToast(`"${task.title}" priorisée vers Span Focus ⭐`, 'success');
+    showToast(`"${task.title}" prioritized to Span Focus ⭐`, 'success');
   } else {
     alert(`"${task.title}" queued into Span Focus with priority ⭐!`);
   }
@@ -1986,7 +2001,7 @@ function submitQuickAdd() {
   }
 
   rawText = rawText.replace(/\s+/g, ' ').trim();
-  if (!rawText) rawText = extractedType === 'event' ? 'Événement sans titre' : 'Tâche sans titre';
+  if (!rawText) rawText = extractedType === 'event' ? 'Untitled Event' : 'Untitled Task';
 
   const newTask = {
     id: 'p_' + Date.now(),
@@ -2006,8 +2021,8 @@ function submitQuickAdd() {
 
   if (typeof showToast === 'function') {
     const timeLabel = extractedTime ? ` (${extractedTime})` : '';
-    const typeLabel = extractedType === 'event' ? 'Événement ajouté' : 'Tâche ajoutée';
-    showToast(`${typeLabel} : "${newTask.title}"${timeLabel}`, 'success');
+    const typeLabel = extractedType === 'event' ? 'Event added' : 'Task added';
+    showToast(`${typeLabel}: "${newTask.title}"${timeLabel}`, 'success');
   }
 }
 
@@ -2089,6 +2104,11 @@ function renderSubtasksModalList() {
 
   listEl.innerHTML = subtasks.map(sub => `
     <div class="subtask-interactive-row ${sub.completed ? 'completed' : ''}" data-subtask-id="${sub.id}">
+      <button type="button" 
+              class="subtask-cat-btn cat-${sub.context || parent.context || 'work'}" 
+              onclick="event.stopPropagation(); cycleSubtaskContext('${sub.id}')" 
+              title="Category: ${sub.context || parent.context || 'work'} (click to change)">
+      </button>
       <div class="subtask-checkbox ${sub.completed ? 'checked' : ''}" 
            onclick="event.stopPropagation(); handleSubtaskModalToggle('${sub.id}')"
            title="Toggle completed">
@@ -2101,11 +2121,6 @@ function renderSubtasksModalList() {
              onclick="event.stopPropagation()"
              onchange="updateSubtaskTitle('${sub.id}', this.value)"
              onkeydown="if(event.key==='Enter') { this.blur(); }">
-      <button type="button" 
-              class="subtask-cat-btn cat-${sub.context || parent.context || 'work'}" 
-              onclick="event.stopPropagation(); cycleSubtaskContext('${sub.id}')" 
-              title="Category: ${sub.context || parent.context || 'work'} (click to change)">
-      </button>
       <button type="button" 
               class="subtask-delete-btn" 
               onclick="event.stopPropagation(); deleteSubtask('${sub.id}')" 
