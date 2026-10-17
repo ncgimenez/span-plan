@@ -1004,6 +1004,8 @@ let isPointerDragging = false;
 let dragAnchorTaskId = null;
 let dragAnchorClientY = 0;
 let dragAnchorClientX = 0;
+let dragGrabOffsetX = 0;
+let dragGrabOffsetY = 0;
 let dragInitialTops = new Map();
 let hasMovedBeyondThreshold = false;
 let dragWasAlreadySelected = false;
@@ -1088,6 +1090,11 @@ function handleBlockPointerDown(e, taskId, dateStr) {
     return;
   }
 
+  // Empêcher la sélection de texte intempestive du navigateur
+  if (e.pointerType === 'mouse') {
+    e.preventDefault();
+  }
+
   const wasAlreadySelected = selectedTaskIds.has(taskId);
   dragWasAlreadySelected = wasAlreadySelected;
 
@@ -1100,6 +1107,16 @@ function handleBlockPointerDown(e, taskId, dateStr) {
   dragAnchorClientX = e.clientX;
   hasMovedBeyondThreshold = false;
   isPointerDragging = false;
+
+  const anchorEl = document.getElementById(`block_${taskId}`);
+  if (anchorEl) {
+    const rect = anchorEl.getBoundingClientRect();
+    dragGrabOffsetX = Math.max(10, Math.min(rect.width - 10, e.clientX - rect.left));
+    dragGrabOffsetY = Math.max(10, Math.min(rect.height - 10, e.clientY - rect.top));
+  } else {
+    dragGrabOffsetX = 20;
+    dragGrabOffsetY = 20;
+  }
 
   dragInitialTops.clear();
   selectedTaskIds.forEach(id => {
@@ -1132,11 +1149,35 @@ function handleBlockPointerMove(e) {
   const deltaX = e.clientX - dragAnchorClientX;
 
   if (!hasMovedBeyondThreshold) {
-    if (Math.hypot(deltaX, deltaY) > 4) {
+    if (Math.hypot(deltaX, deltaY) > 5) {
       hasMovedBeyondThreshold = true;
       isPointerDragging = true;
+      document.body.classList.add('is-card-dragging');
+      if (window.getSelection) {
+        const sel = window.getSelection();
+        if (sel) sel.removeAllRanges();
+      }
+
+      // Créer la carte flottante directement accrochée au curseur
+      const anchorEl = document.getElementById(`block_${dragAnchorTaskId}`);
+      if (anchorEl) {
+        const rect = anchorEl.getBoundingClientRect();
+        let avatar = document.getElementById('activeFloatingDragAvatar');
+        if (!avatar) {
+          avatar = anchorEl.cloneNode(true);
+          avatar.id = 'activeFloatingDragAvatar';
+          avatar.className = anchorEl.className + ' is-floating-drag-avatar';
+          avatar.style.width = `${rect.width}px`;
+          avatar.style.height = `${rect.height}px`;
+          avatar.style.left = `${e.clientX - dragGrabOffsetX}px`;
+          avatar.style.top = `${e.clientY - dragGrabOffsetY}px`;
+          document.body.appendChild(avatar);
+        }
+      }
+
       dragInitialTops.forEach(info => {
         info.el.classList.add('is-batch-dragging');
+        info.el.style.pointerEvents = 'none';
       });
     } else {
       return;
@@ -1144,57 +1185,78 @@ function handleBlockPointerMove(e) {
   }
 
   if (isPointerDragging) {
-    const deltaHours = deltaY / HOUR_HEIGHT;
-    let deltaMinutes = Math.round(deltaHours * 60);
-    deltaMinutes = Math.round(deltaMinutes / 15) * 15;
+    e.preventDefault();
 
-    // Colonne cible sous le curseur
+    // Suivi au pixel près du curseur de la souris (partout à travers l'écran)
+    const avatar = document.getElementById('activeFloatingDragAvatar');
+    if (avatar) {
+      avatar.style.left = `${e.clientX - dragGrabOffsetX}px`;
+      avatar.style.top = `${e.clientY - dragGrabOffsetY}px`;
+    }
+
+    // Détection de la colonne ou du dock sous le curseur
+    const targetDock = document.elementFromPoint(e.clientX, e.clientY)?.closest('.day-dock');
     const targetCol = document.elementFromPoint(e.clientX, e.clientY)?.closest('.day-column');
-    const targetCanvas = targetCol ? targetCol.querySelector('.schedule-grid-canvas') : null;
 
-    dragInitialTops.forEach(info => {
-      // Déplacement fluide 60fps de la carte sous le curseur
-      info.el.style.top = `${info.initialTop + deltaY}px`;
-      info.el.style.pointerEvents = 'none';
-
-      const newStartMinutes = Math.max(0, Math.min(23 * 60 + 45, info.initialStartMinutes + deltaMinutes));
-      const snappedTop = ((newStartMinutes - START_HOUR * 60) / 60) * HOUR_HEIGHT;
-      const height = Math.max(34, (info.duration / 60) * HOUR_HEIGHT);
-
-      const endMinutes = newStartMinutes + info.duration;
-      const startH = String(Math.floor(newStartMinutes / 60)).padStart(2, '0');
-      const startM = String(newStartMinutes % 60).padStart(2, '0');
-      const endH = String(Math.floor(endMinutes / 60)).padStart(2, '0');
-      const endM = String(endMinutes % 60).padStart(2, '0');
-
-      const timeLabel = info.el.querySelector('.schedule-block-time');
-      if (timeLabel) timeLabel.textContent = `${startH}:${startM}`;
-      const subLabel = info.el.querySelector('.schedule-block-sub');
-      if (subLabel) subLabel.textContent = `${startH}:${startM} – ${endH}:${endM} · ${info.duration}m`;
-
-      // Ghost slot montrant l'emplacement exact d'atterrissage (fit)
-      const ghostId = `pointerDragGhost_${info.task.id}`;
-      let ghost = document.getElementById(ghostId);
-      const hostCanvas = targetCanvas || info.el.closest('.schedule-grid-canvas');
-      if (hostCanvas) {
-        if (!ghost) {
-          ghost = document.createElement('div');
-          ghost.id = ghostId;
-          hostCanvas.appendChild(ghost);
-        } else if (ghost.parentElement !== hostCanvas) {
-          ghost.remove();
-          hostCanvas.appendChild(ghost);
-        }
-        const isEvent = (info.task.type === 'event');
-        ghost.className = `drag-preview-slot cat-${info.task.context || 'work'}`;
-        ghost.style.top = `${snappedTop}px`;
-        ghost.style.height = `${height}px`;
-        ghost.innerHTML = `
-          <div class="ghost-time-label">${isEvent ? '📅 ' : '⏱ '}${startH}:${startM} – ${endH}:${endM} (${info.duration}m)</div>
-          <div class="ghost-title-label">${info.task.title}</div>
-        `;
-      }
+    document.querySelectorAll('.day-dock.dock-drop-hover').forEach(d => {
+      if (d !== targetDock) d.classList.remove('dock-drop-hover');
     });
+
+    if (targetDock) {
+      targetDock.classList.add('dock-drop-hover');
+      document.querySelectorAll('[id^="pointerDragGhost_"]').forEach(g => g.remove());
+      return;
+    }
+
+    if (targetCol) {
+      const targetCanvas = targetCol.querySelector('.schedule-grid-canvas');
+      if (targetCanvas) {
+        const cRect = targetCanvas.getBoundingClientRect();
+        const relY = Math.max(0, (e.clientY - dragGrabOffsetY) - cRect.top);
+        let targetStartM = Math.round((relY / HOUR_HEIGHT) * 60);
+        targetStartM = Math.round(targetStartM / 15) * 15;
+        targetStartM = Math.max(0, Math.min(23 * 60 + 45, targetStartM));
+
+        const anchorInfo = dragInitialTops.get(dragAnchorTaskId);
+        const anchorStartM = anchorInfo ? anchorInfo.initialStartMinutes : 0;
+        const diffM = targetStartM - anchorStartM;
+
+        dragInitialTops.forEach(info => {
+          const itemStartM = Math.max(0, Math.min(23 * 60 + 45, info.initialStartMinutes + diffM));
+          const itemEndM = itemStartM + info.duration;
+          const snappedTop = ((itemStartM - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+          const height = Math.max(34, (info.duration / 60) * HOUR_HEIGHT);
+
+          const startH = String(Math.floor(itemStartM / 60)).padStart(2, '0');
+          const startM = String(itemStartM % 60).padStart(2, '0');
+          const endH = String(Math.floor(itemEndM / 60)).padStart(2, '0');
+          const endM = String(itemEndM % 60).padStart(2, '0');
+
+          const ghostId = `pointerDragGhost_${info.task.id}`;
+          let ghost = document.getElementById(ghostId);
+          if (!ghost) {
+            ghost = document.createElement('div');
+            ghost.id = ghostId;
+            targetCanvas.appendChild(ghost);
+          } else if (ghost.parentElement !== targetCanvas) {
+            ghost.remove();
+            targetCanvas.appendChild(ghost);
+          }
+          ghost.className = `drag-preview-slot cat-${info.task.context || 'work'}`;
+          ghost.style.top = `${snappedTop}px`;
+          ghost.style.height = `${height}px`;
+          ghost.style.left = '52px';
+          ghost.style.right = '8px';
+          const isEvent = (info.task.type === 'event');
+          ghost.innerHTML = `
+            <div class="ghost-time-label">${isEvent ? '📅 ' : '⏱ '}${startH}:${startM} – ${endH}:${endM} (${info.duration}m)</div>
+            <div class="ghost-title-label">${info.task.title}</div>
+          `;
+        });
+      }
+    } else {
+      document.querySelectorAll('[id^="pointerDragGhost_"]').forEach(g => g.remove());
+    }
   }
 }
 
@@ -1203,8 +1265,12 @@ function handleBlockPointerUp(e) {
   window.removeEventListener('pointerup', handleBlockPointerUp);
   window.removeEventListener('pointercancel', handleBlockPointerUp);
 
-  // Retirer tous les ghost slots de déplacement
+  document.body.classList.remove('is-card-dragging');
+  const avatar = document.getElementById('activeFloatingDragAvatar');
+  if (avatar) avatar.remove();
+
   document.querySelectorAll('[id^="pointerDragGhost_"]').forEach(g => g.remove());
+  document.querySelectorAll('.day-dock.dock-drop-hover').forEach(d => d.classList.remove('dock-drop-hover'));
 
   dragInitialTops.forEach(info => {
     info.el.classList.remove('is-batch-dragging');
@@ -1232,45 +1298,67 @@ function handleBlockPointerUp(e) {
   }
 
   if (wasDragging) {
-    const deltaY = e.clientY - dragAnchorClientY;
-    const deltaHours = deltaY / HOUR_HEIGHT;
-    let deltaMinutes = Math.round(deltaHours * 60);
-    deltaMinutes = Math.round(deltaMinutes / 15) * 15;
-
-    const targetCol = document.elementFromPoint(e.clientX, e.clientY)?.closest('.day-column');
     const targetDock = document.elementFromPoint(e.clientX, e.clientY)?.closest('.day-dock');
-    const targetDateStr = targetDock ? targetDock.dataset.date : (targetCol ? targetCol.dataset.date : null);
-    const anchorDate = dragInitialTops.get(anchorId)?.date;
+    const targetCol = document.elementFromPoint(e.clientX, e.clientY)?.closest('.day-column');
+    const anchorInfo = dragInitialTops.get(anchorId);
+    const anchorDate = anchorInfo?.date;
 
-    let movedCount = 0;
-    dragInitialTops.forEach(info => {
-      if (targetDock) {
+    if (targetDock) {
+      const targetDate = targetDock.dataset.date || anchorDate;
+      let movedCount = 0;
+      dragInitialTops.forEach(info => {
+        info.task.date = targetDate;
         info.task.time = '';
-        info.task.date = targetDateStr || anchorDate;
-      } else {
-        const newStartMinutes = Math.max(0, Math.min(23 * 60 + 45, info.initialStartMinutes + deltaMinutes));
-        const startH = String(Math.floor(newStartMinutes / 60)).padStart(2, '0');
-        const startM = String(newStartMinutes % 60).padStart(2, '0');
-
-        info.task.time = `${startH}:${startM}`;
-        if (targetDateStr && anchorDate && targetDateStr !== anchorDate) {
-          info.task.date = targetDateStr;
-        }
+        info.task.isRollover = false;
+        movedCount++;
+      });
+      dragInitialTops.clear();
+      savePlanState();
+      if (typeof showToast === 'function') {
+        showToast(`${movedCount} item${movedCount > 1 ? 's' : ''} moved to To-do dock`, 'success');
       }
-      info.task.isRollover = false;
-      movedCount++;
-    });
-
-    dragInitialTops.clear();
-    savePlanState();
-
-    if (typeof showToast === 'function') {
-      const sign = deltaMinutes >= 0 ? `+${deltaMinutes}` : `${deltaMinutes}`;
-      const msg = movedCount > 1
-        ? `${movedCount} éléments déplacés ensemble (${sign} min)`
-        : `Déplacé (${sign} min)`;
-      showToast(msg, 'success');
+      return;
     }
+
+    if (targetCol) {
+      const targetCanvas = targetCol.querySelector('.schedule-grid-canvas');
+      if (targetCanvas) {
+        const cRect = targetCanvas.getBoundingClientRect();
+        const relY = Math.max(0, (e.clientY - dragGrabOffsetY) - cRect.top);
+        let targetStartM = Math.round((relY / HOUR_HEIGHT) * 60);
+        targetStartM = Math.round(targetStartM / 15) * 15;
+        targetStartM = Math.max(0, Math.min(23 * 60 + 45, targetStartM));
+
+        const anchorStartM = anchorInfo ? anchorInfo.initialStartMinutes : 0;
+        const diffM = targetStartM - anchorStartM;
+        const targetDateStr = targetCol.dataset.date;
+
+        let movedCount = 0;
+        dragInitialTops.forEach(info => {
+          const itemStartM = Math.max(0, Math.min(23 * 60 + 45, info.initialStartMinutes + diffM));
+          const startH = String(Math.floor(itemStartM / 60)).padStart(2, '0');
+          const startM = String(itemStartM % 60).padStart(2, '0');
+          info.task.time = `${startH}:${startM}`;
+          info.task.date = targetDateStr || info.task.date;
+          info.task.isRollover = false;
+          movedCount++;
+        });
+
+        dragInitialTops.clear();
+        savePlanState();
+
+        if (typeof showToast === 'function') {
+          const dateObj = new Date(targetDateStr + 'T00:00:00');
+          const dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          showToast(`${movedCount} item${movedCount > 1 ? 's' : ''} moved to ${dateLabel} (${targetStartM ? `${String(Math.floor(targetStartM / 60)).padStart(2, '0')}:${String(targetStartM % 60).padStart(2, '0')}` : ''})`, 'success');
+        }
+        return;
+      }
+    }
+
+    // Si déposé nulle part de valide, restaurer l'état
+    dragInitialTops.clear();
+    renderPlanGrid(true);
   }
 }
 
