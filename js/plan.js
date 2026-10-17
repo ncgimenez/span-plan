@@ -515,6 +515,17 @@ function renderPlanGrid(forceRebuild = false) {
         `;
       }
 
+      if (scrollContainer) {
+        const existingGuidance = scrollContainer.querySelector('.schedule-empty-guidance');
+        if (timedTasks.length === 0) {
+          if (!existingGuidance) {
+            scrollContainer.insertAdjacentHTML('afterbegin', renderEmptyDayGuidanceHtml(dateStr));
+          }
+        } else if (existingGuidance) {
+          existingGuidance.remove();
+        }
+      }
+
       if (scrollContainer && prevScroll !== null) {
         scrollContainer.scrollTop = prevScroll;
       }
@@ -577,6 +588,7 @@ function renderPlanGrid(forceRebuild = false) {
       </div>
 
       <div class="day-schedule-scroll" id="scheduleScroll_${dateStr}" data-date="${dateStr}">
+        ${timedTasks.length === 0 ? renderEmptyDayGuidanceHtml(dateStr) : ''}
         <div class="schedule-grid-canvas" 
              data-date="${dateStr}"
              onpointerdown="handleCanvasPointerDown(event, '${dateStr}')"
@@ -725,6 +737,21 @@ function renderNowLineHtml() {
   return `
     <div class="now-timeline-marker" style="top: ${top}px;">
       <span class="now-badge">${timeLabel}</span>
+    </div>
+  `;
+}
+
+function renderEmptyDayGuidanceHtml(dateStr) {
+  return `
+    <div class="schedule-empty-guidance" onclick="openCreateModalWithDefaults('${dateStr}')">
+      <div class="empty-guidance-content">
+        <span class="empty-guidance-icon">✨</span>
+        <div class="empty-guidance-text">
+          <span class="empty-guidance-title">Journée libre</span>
+          <span class="empty-guidance-desc">Touchez une heure ou le bouton + pour planifier</span>
+        </div>
+      </div>
+      <button type="button" class="btn-empty-guidance-add">+ Planifier</button>
     </div>
   `;
 }
@@ -2154,16 +2181,15 @@ function setMobileDayView(mode) {
     shell.classList.toggle('mobile-mode-todo', mode === 'todo');
     shell.classList.toggle('mobile-mode-backlog', mode === 'backlog');
   }
+
   const btnA = document.getElementById('segBtnAgenda');
   const btnT = document.getElementById('segBtnTodo');
-  const btnB = document.getElementById('segBtnBacklog');
   if (btnA) btnA.classList.toggle('active', mode === 'agenda');
   if (btnT) btnT.classList.toggle('active', mode === 'todo');
-  if (btnB) btnB.classList.toggle('active', mode === 'backlog');
 
   const navBtnToday = document.getElementById('mobileNavToday');
   const navBtnBacklog = document.getElementById('mobileNavBacklog');
-  if (navBtnToday) navBtnToday.classList.toggle('active', mode === 'agenda' && currentTimelineOffset === 0);
+  if (navBtnToday) navBtnToday.classList.toggle('active', (mode === 'agenda' || mode === 'todo') && currentTimelineOffset === 0);
   if (navBtnBacklog) navBtnBacklog.classList.toggle('active', mode === 'backlog');
 
   if (mode === 'backlog') {
@@ -2230,6 +2256,9 @@ function renderDateStrip() {
 
 function selectDateFromStrip(targetOffset) {
   currentTimelineOffset = targetOffset;
+  if (currentMobileDayView === 'backlog') {
+    setMobileDayView('agenda');
+  }
   renderPlanGrid(true);
   renderDateStrip();
   applyDynamicScroll();
