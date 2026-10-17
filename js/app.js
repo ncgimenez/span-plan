@@ -50,6 +50,129 @@ function exportData() {
   showToast('Backup exported successfully (JSON)');
 }
 
+function exportIcsFile(category = 'all') {
+  const allTasks = (window.SpanPlanState && window.SpanPlanState.tasks) || [];
+  
+  // Exporter uniquement les blocs qui ont une date et une heure (time blocks réels)
+  const scheduledTasks = allTasks.filter(t => {
+    if (!t || !t.date || !t.time) return false;
+    if (category !== 'all' && (t.context || 'work').toLowerCase() !== category.toLowerCase()) {
+      return false;
+    }
+    return true;
+  });
+
+  if (scheduledTasks.length === 0) {
+    const label = category === 'all' ? 'scheduled tasks or events' : `${category} scheduled items`;
+    showToast(`No ${label} found to export.`, 'info');
+    return;
+  }
+
+  function formatIcsDateTime(dateStr, timeStr) {
+    const [year, month, day] = dateStr.split('-');
+    const [hours, minutes] = (timeStr || '09:00').split(':');
+    return `${year}${month}${day}T${hours.padStart(2, '0')}${minutes.padStart(2, '0')}00`;
+  }
+
+  function calculateIcsEndDateTime(dateStr, timeStr, durationMinutes) {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const [hours, minutes] = (timeStr || '09:00').split(':').map(Number);
+    
+    const startDate = new Date(year, month - 1, day, hours, minutes, 0);
+    const endDate = new Date(startDate.getTime() + (durationMinutes || 45) * 60 * 1000);
+    
+    const y = endDate.getFullYear();
+    const m = String(endDate.getMonth() + 1).padStart(2, '0');
+    const d = String(endDate.getDate()).padStart(2, '0');
+    const h = String(endDate.getHours()).padStart(2, '0');
+    const min = String(endDate.getMinutes()).padStart(2, '0');
+    return `${y}${m}${d}T${h}${min}00`;
+  }
+
+  function escapeIcsText(str) {
+    if (!str) return '';
+    return str
+      .replace(/\\/g, '\\\\')
+      .replace(/;/g, '\\;')
+      .replace(/,/g, '\\,')
+      .replace(/\n/g, '\\n');
+  }
+
+  const nowStamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const calName = category === 'all' ? 'Span Plan' : `Span ${category.charAt(0).toUpperCase() + category.slice(1)}`;
+
+  let icsLines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Span Suite//Span Plan//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    `X-WR-CALNAME:${calName}`,
+    'X-WR-CALDESC:Time-blocked schedule from Span Plan'
+  ];
+
+  if (category === 'work') {
+    icsLines.push('X-APPLE-CALENDAR-COLOR:#818cf8');
+    icsLines.push('COLOR:#818cf8');
+  } else if (category === 'life') {
+    icsLines.push('X-APPLE-CALENDAR-COLOR:#10b981');
+    icsLines.push('COLOR:#10b981');
+  } else if (category === 'fun') {
+    icsLines.push('X-APPLE-CALENDAR-COLOR:#fb7185');
+    icsLines.push('COLOR:#fb7185');
+  }
+
+  scheduledTasks.forEach(task => {
+    const context = (task.context || 'work').toLowerCase();
+    
+    // Pastille de couleur discrète et élégante
+    let colorDot = '🟣';
+    if (context === 'life') colorDot = '🟢';
+    else if (context === 'fun') colorDot = '🔴';
+
+    const cleanTitle = (task.title || 'Untitled task').trim();
+    const summary = `${colorDot} ${cleanTitle}`;
+
+    const dtStart = formatIcsDateTime(task.date, task.time);
+    const dtEnd = calculateIcsEndDateTime(task.date, task.time, task.duration || 45);
+    const uid = `${task.id || ('task_' + Math.random().toString(36).slice(2))}@spanplan.app`;
+
+    const categoryName = context.charAt(0).toUpperCase() + context.slice(1);
+    const desc = `Context: ${categoryName}\\nPlanned in Span Plan`;
+
+    icsLines.push('BEGIN:VEVENT');
+    icsLines.push(`UID:${uid}`);
+    icsLines.push(`DTSTAMP:${nowStamp}`);
+    icsLines.push(`DTSTART:${dtStart}`);
+    icsLines.push(`DTEND:${dtEnd}`);
+    icsLines.push(`SUMMARY:${escapeIcsText(summary)}`);
+    icsLines.push(`DESCRIPTION:${desc}`);
+    icsLines.push(`CATEGORIES:${categoryName}`);
+    icsLines.push('STATUS:CONFIRMED');
+    icsLines.push('END:VEVENT');
+  });
+
+  icsLines.push('END:VCALENDAR');
+
+  const icsContent = icsLines.join('\r\n');
+  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const fileDate = new Date().toISOString().slice(0, 10);
+  const filename = category === 'all' 
+    ? `span-plan-${fileDate}.ics` 
+    : `span-plan-${category}-${fileDate}.ics`;
+
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  showToast(`${scheduledTasks.length} ${category === 'all' ? '' : category + ' '}event(s) exported to ${filename}`, 'success');
+}
+
 function importData(event) {
   const file = event.target.files[0];
   if (!file) return;

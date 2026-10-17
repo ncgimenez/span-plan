@@ -2160,12 +2160,53 @@ body {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   color: var(--text-main);
-  padding: 8px;
+  padding: 8px 12px;
   border-radius: 10px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   text-align: center;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-backup:hover {
+  background: var(--card-hover);
+  border-color: var(--card-border-hover);
+  transform: translateY(-1px);
+}
+
+.btn-backup:active {
+  transform: scale(0.97) translateY(0);
+}
+
+.calendar-export-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  width: 100%;
+}
+
+.btn-ics-all {
+  width: 100%;
+  padding: 9px 12px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ics-category-pills {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+
+.mini-backup {
+  flex: 1;
+  padding: 7px 6px;
+  font-size: 11.5px;
 }
 
 /* NAVIGATION MOBILE AU BAS DE L'ÉCRAN */

@@ -13,7 +13,7 @@
   <link rel="icon" type="image/png" href="span-logo.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
-  <link rel="stylesheet" href="style.css?v=7.0">
+  <link rel="stylesheet" href="style.css?v=7.1">
 </head>
 <body>
 
@@ -356,6 +356,19 @@
           </label>
         </div>
 
+        <div style="margin-top: 14px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Calendar Export (.ics)</div>
+        <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; margin-bottom: 8px;">
+          Export scheduled time-blocks to Apple Calendar, Google Calendar, or Outlook with minimalist category dots (🟣 Work, 🟢 Life, 🔴 Fun).
+        </div>
+        <div class="calendar-export-grid">
+          <button class="btn-backup btn-ics-all" onclick="exportIcsFile('all')">📅 Export All (.ics)</button>
+          <div class="ics-category-pills">
+            <button class="btn-backup mini-backup" onclick="exportIcsFile('work')" title="Export Work events only">🟣 Work</button>
+            <button class="btn-backup mini-backup" onclick="exportIcsFile('life')" title="Export Life events only">🟢 Life</button>
+            <button class="btn-backup mini-backup" onclick="exportIcsFile('fun')" title="Export Fun events only">🔴 Fun</button>
+          </div>
+        </div>
+
         <div style="margin-top: 14px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Maintenance & Data</div>
         <div class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
           <div style="font-size: 12px; color: var(--text-muted);">
@@ -400,8 +413,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=7.0"></script>
-  <script src="js/plan.js?v=7.0"></script>
-  <script src="js/app.js?v=7.0"></script>
+  <script src="js/sync.js?v=7.1"></script>
+  <script src="js/plan.js?v=7.1"></script>
+  <script src="js/app.js?v=7.1"></script>
 </body>
 </html>
