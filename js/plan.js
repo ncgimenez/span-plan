@@ -45,11 +45,19 @@ try {
   rawTasks = null;
 }
 
+function isMockSampleTask(t) {
+  if (!t || !t.id) return true;
+  const title = (t.title || '').trim().toLowerCase();
+  if (t.id === 'p_sample_today_1' || t.id === 'p_sample_today_2' || t.id === 'sub_standup_1') return true;
+  if (title === 'team standup meeting #work' || title === 'grocery shopping #life' || title === 'grocery shopping #home' || title === 'préparer mes 3 points clés #work') return true;
+  return false;
+}
+
 if (!hasStoredData) {
   window.SpanPlanState.tasks = [];
 } else {
   const cleanTasks = Array.isArray(rawTasks)
-    ? rawTasks.filter(t => t && t.id && !String(t.id).startsWith('p_sample_') && t.title !== 'Team standup meeting #work' && t.title !== 'Grocery shopping #life')
+    ? rawTasks.filter(t => !isMockSampleTask(t))
     : [];
   window.SpanPlanState.tasks = cleanTasks.map(t => ({
     id: t.id || ('p_' + Math.random().toString(36).substr(2, 9)),

@@ -120,9 +120,17 @@ async function loadPlanFromCloud() {
       if (planTasks && Array.isArray(planTasks)) {
         isCloudSyncInProgress = true;
 
-        // Éliminer définitivement toute fausse tâche de test (p_sample_)
-        const cleanRemoteTasks = planTasks.filter(t => t && t.id && !String(t.id).startsWith('p_sample_') && t.title !== 'Team standup meeting #work' && t.title !== 'Grocery shopping #life');
-        const localTasks = ((window.SpanPlanState && window.SpanPlanState.tasks) || []).filter(t => t && t.id && !String(t.id).startsWith('p_sample_') && t.title !== 'Team standup meeting #work' && t.title !== 'Grocery shopping #life');
+        const isMockSampleTask = (t) => {
+          if (!t || !t.id) return true;
+          const title = (t.title || '').trim().toLowerCase();
+          if (t.id === 'p_sample_today_1' || t.id === 'p_sample_today_2' || t.id === 'sub_standup_1') return true;
+          if (title === 'team standup meeting #work' || title === 'grocery shopping #life' || title === 'grocery shopping #home' || title === 'préparer mes 3 points clés #work') return true;
+          return false;
+        };
+
+        // Éliminer définitivement toute fausse tâche de test (p_sample_today_1, p_sample_today_2, mock standup)
+        const cleanRemoteTasks = planTasks.filter(t => !isMockSampleTask(t));
+        const localTasks = ((window.SpanPlanState && window.SpanPlanState.tasks) || []).filter(t => !isMockSampleTask(t));
 
         const mergedMap = new Map();
 
