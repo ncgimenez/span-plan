@@ -30,6 +30,16 @@ function normalizePlanContext(cat) {
   return 'work';
 }
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function renderTitleWithTagsHtml(titleStr) {
   if (!titleStr) return 'Untitled';
   return titleStr.replace(/#([\w\-]+)/g, (match, tag) => {
@@ -373,8 +383,7 @@ function renderDayCapacityHtml(timedTasks) {
   const pctLife = Math.min(100, (lifeM / maxBudget) * 100);
   const pctFun  = Math.min(100, (funM  / maxBudget) * 100);
 
-  const breakdownTitle = `Work: ${formatMinutesDuration(workM)} · Life: ${formatMinutesDuration(lifeM)} · Fun: ${formatMinutesDuration(funM)}`;
-  const countLabel = `${timedTasks.length} item${timedTasks.length > 1 ? 's' : ''}`;
+  const breakdownTitle = `${timedTasks.length} item${timedTasks.length > 1 ? 's' : ''} scheduled • Work: ${formatMinutesDuration(workM)} · Life: ${formatMinutesDuration(lifeM)} · Fun: ${formatMinutesDuration(funM)}`;
 
   return `
     <div class="day-capacity-tracker" title="${breakdownTitle}">
@@ -384,13 +393,7 @@ function renderDayCapacityHtml(timedTasks) {
         <div class="day-capacity-seg seg-fun"  style="width: ${pctFun}%;"></div>
       </div>
       <div class="day-capacity-meta">
-        <span class="day-capacity-total">${totalM > 0 ? formatMinutesDuration(totalM) : '0h scheduled'}</span>
-        <div class="day-capacity-dots">
-          ${workM > 0 ? `<span class="cap-dot dot-work" title="Work: ${formatMinutesDuration(workM)}"></span>` : ''}
-          ${lifeM > 0 ? `<span class="cap-dot dot-life" title="Life: ${formatMinutesDuration(lifeM)}"></span>` : ''}
-          ${funM  > 0 ? `<span class="cap-dot dot-fun" title="Fun: ${formatMinutesDuration(funM)}"></span>` : ''}
-        </div>
-        <span class="day-capacity-count">${countLabel}</span>
+        <span class="day-capacity-total">${totalM > 0 ? formatMinutesDuration(totalM) : 'Free day'}</span>
       </div>
     </div>
   `;
@@ -527,6 +530,10 @@ function renderPlanGrid(forceRebuild = false) {
       }
 
       // Dock inférieur To-do
+      const dockEl = col.querySelector('.day-dock');
+      if (dockEl) {
+        dockEl.classList.toggle('is-empty', unscheduledTasks.length === 0);
+      }
       const dockCount = col.querySelector('.dock-count-pill');
       if (dockCount) dockCount.textContent = unscheduledTasks.length;
 
@@ -600,7 +607,7 @@ function renderPlanGrid(forceRebuild = false) {
         </div>
       </div>
 
-      <div class="day-dock" 
+      <div class="day-dock ${unscheduledTasks.length === 0 ? 'is-empty' : ''}" 
            data-date="${dateStr}"
            ondragover="allowDockDrop(event)" 
            ondragleave="removeDockDropHighlight(event)"
@@ -829,10 +836,10 @@ function renderTimedBlocks(tasks, dateStr) {
           <span class="schedule-block-title">${rolloverPrefix}${renderTitleWithTagsHtml(task.title)}</span>
           ${progressPillHtml}
           ${isLiveNow ? '<span class="live-pulse-badge">● LIVE</span>' : ''}
-          <span class="schedule-block-time">${task.time}</span>
+          ${height < 44 ? `<span class="schedule-block-time">${task.time}</span>` : ''}
           <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
         </div>
-        ${height >= 44 ? `<div class="schedule-block-sub">${timeRangeStr} · ${duration}m</div>` : ''}
+        ${height >= 44 ? `<div class="schedule-block-sub">${timeRangeStr}</div>` : ''}
         ${subtasksHtml}
         
         <div class="resize-handle" 
@@ -860,7 +867,7 @@ function handleTaskRowClick(e, id) {
 
 function renderUnscheduledList(tasks) {
   if (tasks.length === 0) {
-    return `<li style="font-size: 11px; color: rgba(255,255,255,0.2); padding: 8px 4px; text-align: center;">No unscheduled tasks</li>`;
+    return '';
   }
 
   return tasks.map(task => {
@@ -2081,13 +2088,28 @@ function renderSubtasksModalList() {
   }
 
   listEl.innerHTML = subtasks.map(sub => `
-    <div class="subtask-interactive-row ${sub.completed ? 'completed' : ''}" 
-         onclick="handleSubtaskModalToggle('${sub.id}')">
-      <div class="subtask-checkbox ${sub.completed ? 'checked' : ''}">
+    <div class="subtask-interactive-row ${sub.completed ? 'completed' : ''}" data-subtask-id="${sub.id}">
+      <div class="subtask-checkbox ${sub.completed ? 'checked' : ''}" 
+           onclick="event.stopPropagation(); handleSubtaskModalToggle('${sub.id}')"
+           title="Toggle completed">
         ${sub.completed ? '✓' : ''}
       </div>
-      <span class="subtask-row-title">${renderTitleWithTagsHtml(sub.title)}</span>
-      <span class="subtask-cat-indicator cat-${sub.context || parent.context || 'work'}"></span>
+      <input type="text" 
+             class="subtask-title-input ${sub.completed ? 'completed' : ''}" 
+             value="${escapeHtml(sub.title)}" 
+             placeholder="Subtask name..."
+             onclick="event.stopPropagation()"
+             onchange="updateSubtaskTitle('${sub.id}', this.value)"
+             onkeydown="if(event.key==='Enter') { this.blur(); }">
+      <button type="button" 
+              class="subtask-cat-btn cat-${sub.context || parent.context || 'work'}" 
+              onclick="event.stopPropagation(); cycleSubtaskContext('${sub.id}')" 
+              title="Category: ${sub.context || parent.context || 'work'} (click to change)">
+      </button>
+      <button type="button" 
+              class="subtask-delete-btn" 
+              onclick="event.stopPropagation(); deleteSubtask('${sub.id}')" 
+              title="Delete subtask">✕</button>
     </div>
   `).join('');
 }
@@ -2095,7 +2117,101 @@ function renderSubtasksModalList() {
 function handleSubtaskModalToggle(subtaskId) {
   if (!currentSubtasksParentId) return;
   toggleSubtaskCompletion(currentSubtasksParentId, subtaskId);
+  const parent = window.SpanPlanState.tasks.find(t => t.id === currentSubtasksParentId);
+  syncSubtasksToFocus(parent);
   renderSubtasksModalList();
+}
+
+function updateSubtaskTitle(subtaskId, newTitle) {
+  if (!currentSubtasksParentId) return;
+  const parent = window.SpanPlanState.tasks.find(t => t.id === currentSubtasksParentId);
+  if (!parent || !Array.isArray(parent.subtasks)) return;
+
+  const sub = parent.subtasks.find(s => String(s.id) === String(subtaskId));
+  if (!sub) return;
+
+  const trimmed = (newTitle || '').trim();
+  if (trimmed && trimmed !== sub.title) {
+    sub.title = trimmed;
+    savePlanState();
+    syncSubtasksToFocus(parent);
+    if (typeof showToast === 'function') {
+      showToast('Subtask updated', 'info');
+    }
+  }
+}
+
+function cycleSubtaskContext(subtaskId) {
+  if (!currentSubtasksParentId) return;
+  const parent = window.SpanPlanState.tasks.find(t => t.id === currentSubtasksParentId);
+  if (!parent || !Array.isArray(parent.subtasks)) return;
+
+  const sub = parent.subtasks.find(s => String(s.id) === String(subtaskId));
+  if (!sub) return;
+
+  const contexts = ['work', 'life', 'fun'];
+  const currentCtx = sub.context || parent.context || 'work';
+  const nextIdx = (contexts.indexOf(currentCtx) + 1) % contexts.length;
+  sub.context = contexts[nextIdx];
+
+  savePlanState();
+  syncSubtasksToFocus(parent);
+  renderSubtasksModalList();
+}
+
+function deleteSubtask(subtaskId) {
+  if (!currentSubtasksParentId) return;
+  const parent = window.SpanPlanState.tasks.find(t => t.id === currentSubtasksParentId);
+  if (!parent || !Array.isArray(parent.subtasks)) return;
+
+  parent.subtasks = parent.subtasks.filter(s => String(s.id) !== String(subtaskId));
+  savePlanState();
+  syncSubtasksToFocus(parent);
+  renderSubtasksModalList();
+  if (typeof showToast === 'function') {
+    showToast('Subtask deleted', 'info');
+  }
+}
+
+function syncSubtasksToFocus(parent) {
+  if (!parent) return;
+  try {
+    let focusTasks = JSON.parse(localStorage.getItem('span_tasks'));
+    if (!Array.isArray(focusTasks)) return;
+
+    const parentId = parent.focusId || parent.id;
+    focusTasks = focusTasks.filter(ft => ft.parentEventId !== parentId && ft.parentEventId !== parent.id);
+
+    (parent.subtasks || []).forEach(st => {
+      focusTasks.push({
+        id: st.id,
+        title: st.title,
+        completed: !!st.completed,
+        category: st.context || parent.context || 'work',
+        parentEventId: parentId
+      });
+    });
+
+    localStorage.setItem('span_tasks', JSON.stringify(focusTasks));
+  } catch (e) {}
+}
+
+function toggleQuickAddBar(forceOpen = null) {
+  const container = document.getElementById('quickAddContainer') || document.querySelector('.quick-add-container');
+  if (!container) return;
+  const isCurrentlyOpen = container.classList.contains('is-visible');
+  const shouldOpen = (forceOpen !== null) ? forceOpen : !isCurrentlyOpen;
+  
+  container.classList.toggle('is-visible', shouldOpen);
+  if (shouldOpen) {
+    const input = document.getElementById('quickTaskInput');
+    if (input) {
+      setTimeout(() => {
+        input.focus();
+        input.select();
+      }, 60);
+    }
+  }
 }
 
 function submitSubtaskInlineAdd() {
@@ -2117,6 +2233,7 @@ function submitSubtaskInlineAdd() {
   parent.subtasks.push(newSub);
   input.value = '';
   savePlanState();
+  syncSubtasksToFocus(parent);
   renderSubtasksModalList();
 }
 

@@ -13,7 +13,7 @@
   <link rel="icon" type="image/png" href="span-logo.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
-  <link rel="stylesheet" href="style.css?v=6.2">
+  <link rel="stylesheet" href="style.css?v=6.3">
 </head>
 <body>
 
@@ -57,7 +57,7 @@
         </div>
 
         <div class="header-actions">
-          <button class="icon-btn btn-new-task" onclick="openCreateModalWithDefaults()" title="New task or event (N / C)">
+          <button class="icon-btn btn-new-task" onclick="toggleQuickAddBar()" title="New task or event (N / C)">
             <span>+ New</span>
           </button>
           <button class="icon-btn" id="btnToggleDrawer" onclick="toggleBacklogDrawer()" title="Backlog Drawer (B / L)">
@@ -72,7 +72,7 @@
     </header>
 
     <!-- SMART QUICK ADD BAR -->
-    <div class="quick-add-container">
+    <div class="quick-add-container" id="quickAddContainer">
       <div class="quick-input-wrap">
         <span class="quick-icon">⚡</span>
         <input type="text" class="quick-input" id="quickTaskInput" 
@@ -99,6 +99,7 @@
         </select>
 
         <button class="btn-quick-add" onclick="submitQuickAdd()">Add</button>
+        <button type="button" class="btn-quick-close" onclick="toggleQuickAddBar(false)" title="Close (Esc)">✕</button>
       </div>
     </div>
 
@@ -379,8 +380,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=6.2"></script>
-  <script src="js/plan.js?v=6.2"></script>
-  <script src="js/app.js?v=6.2"></script>
+  <script src="js/sync.js?v=6.3"></script>
+  <script src="js/plan.js?v=6.3"></script>
+  <script src="js/app.js?v=6.3"></script>
 </body>
 </html>

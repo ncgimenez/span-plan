@@ -105,15 +105,20 @@ window.addEventListener('keydown', (e) => {
   // ⌘K ou Ctrl+K : Focus barre d'ajout rapide (fonctionne même si déjà en saisie)
   if (hasModifier && e.key.toLowerCase() === 'k') {
     e.preventDefault();
-    const quickInput = document.getElementById('quickTaskInput');
-    if (quickInput) {
-      quickInput.focus();
-      quickInput.select();
+    if (typeof toggleQuickAddBar === 'function') {
+      toggleQuickAddBar(true);
+    } else {
+      const quickInput = document.getElementById('quickTaskInput');
+      if (quickInput) {
+        quickInput.focus();
+        quickInput.select();
+      }
     }
     return;
   }
   
   if (e.key === 'Escape') {
+    if (typeof toggleQuickAddBar === 'function') toggleQuickAddBar(false);
     closeSettingsModal();
     if (typeof closeEditModal === 'function') closeEditModal();
     if (typeof closeSubtasksModal === 'function') closeSubtasksModal();
@@ -169,7 +174,9 @@ window.addEventListener('keydown', (e) => {
     if (typeof toggleBacklogDrawer === 'function') toggleBacklogDrawer();
   } else if (e.key === 'n' || e.key === 'N' || e.key === 'c' || e.key === 'C') {
     e.preventDefault();
-    if (typeof openCreateModalWithDefaults === 'function') {
+    if (typeof toggleQuickAddBar === 'function') {
+      toggleQuickAddBar(true);
+    } else if (typeof openCreateModalWithDefaults === 'function') {
       openCreateModalWithDefaults();
     }
   } else if (['1', '3', '5', '7'].includes(e.key)) {
