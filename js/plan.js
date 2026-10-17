@@ -83,6 +83,122 @@ if (!hasStoredData) {
   })) : [];
 }
 
+// ==============================================================
+// PASSERELLE DE SYNCHRONISATION SPAN FOCUS -> SPAN PLAN BACKLOG
+// ==============================================================
+function syncFocusTasksToPlanBacklog(shouldSave = true, customFocusTasks = null) {
+  let focusTasks = [];
+  if (Array.isArray(customFocusTasks)) {
+    focusTasks = customFocusTasks;
+  } else {
+    try {
+      focusTasks = JSON.parse(localStorage.getItem('span_tasks')) || [];
+    } catch (e) {
+      focusTasks = [];
+    }
+  }
+
+  if (!Array.isArray(focusTasks) || focusTasks.length === 0) return false;
+
+  let dismissedFocusIds = [];
+  try {
+    dismissedFocusIds = JSON.parse(localStorage.getItem('span_plan_dismissed_focus_ids')) || [];
+  } catch (e) {}
+
+  let hasChanges = false;
+  if (!window.SpanPlanState.tasks) window.SpanPlanState.tasks = [];
+  const planTasks = window.SpanPlanState.tasks;
+
+  focusTasks.forEach(ft => {
+    if (!ft || !ft.title) return;
+    if (ft.id && dismissedFocusIds.includes(ft.id)) return;
+    
+    // Rechercher si cette tâche existe déjà dans Span Plan (soit par son ID Focus, soit par son titre sans date)
+    let existing = planTasks.find(pt => pt.id === ft.id || pt.focusId === ft.id);
+    if (!existing) {
+      existing = planTasks.find(pt => pt.title && pt.title.trim().toLowerCase() === ft.title.trim().toLowerCase() && !pt.date);
+    }
+
+    if (!existing) {
+      // Nouvelle tâche provenant de Span Focus -> Intégration directe au Backlog
+      const cat = ft.category ? String(ft.category).toLowerCase() : 'work';
+      const normalizedContext = normalizePlanContext(cat);
+      
+      const newBacklogTask = {
+        id: ft.id || ('t_' + Date.now() + Math.random().toString(36).substr(2, 4)),
+        focusId: ft.id || null,
+        title: ft.title,
+        type: 'task',
+        date: null, // PLACÉE DANS LE BACKLOG (LATER)
+        time: '',
+        duration: 45,
+        context: normalizedContext,
+        completed: !!ft.completed,
+        isRollover: false,
+        fromFocus: true
+      };
+      planTasks.unshift(newBacklogTask);
+      hasChanges = true;
+    } else {
+      // Conserver le lien de provenance Focus
+      if (!existing.focusId && ft.id) {
+        existing.focusId = ft.id;
+      }
+      existing.fromFocus = true;
+
+      // Synchronisation du statut de complétion
+      if (ft.completed && !existing.completed) {
+        existing.completed = true;
+        hasChanges = true;
+      }
+    }
+  });
+
+  if (hasChanges && shouldSave) {
+    savePlanState();
+  }
+  return hasChanges;
+}
+
+function syncPlanTaskUpdateToFocus(taskId, isCompleted, title) {
+  try {
+    let focusTasks = JSON.parse(localStorage.getItem('span_tasks'));
+    if (!Array.isArray(focusTasks)) return;
+
+    let modified = false;
+    focusTasks.forEach(ft => {
+      if (ft.id === taskId || (title && ft.title && ft.title.trim().toLowerCase() === title.trim().toLowerCase())) {
+        if (isCompleted !== undefined && ft.completed !== isCompleted) {
+          ft.completed = isCompleted;
+          modified = true;
+        }
+      }
+    });
+
+    if (modified) {
+      localStorage.setItem('span_tasks', JSON.stringify(focusTasks));
+      if (typeof supabaseClient !== 'undefined' && supabaseClient && typeof SYNC_USER_ID !== 'undefined') {
+        supabaseClient.from('user_state').update({
+          focus_tasks: focusTasks,
+          updated_at: new Date().toISOString()
+        }).eq('id', SYNC_USER_ID).then(() => {}).catch(() => {});
+      }
+    }
+  } catch (e) {
+    // Non bloquant
+  }
+}
+
+// Synchronisation initiale au démarrage
+syncFocusTasksToPlanBacklog(false);
+
+// Synchronisation temps réel inter-onglets (si Focus et Plan sont ouverts en parallèle)
+window.addEventListener('storage', (e) => {
+  if (e.key === 'span_tasks') {
+    syncFocusTasksToPlanBacklog(true);
+  }
+});
+
 let visibleDaysCount = parseInt(localStorage.getItem('span_plan_visible_days')) || 3;
 if (visibleDaysCount < 3) visibleDaysCount = 3;
 
@@ -161,6 +277,92 @@ function savePlanState() {
   if (typeof syncPlanToCloud === 'function') syncPlanToCloud();
 }
 
+function formatMinutesDuration(totalM) {
+  if (totalM <= 0) return '0h';
+  const h = Math.floor(totalM / 60);
+  const m = totalM % 60;
+  if (h === 0) return `${m}m`;
+  return m > 0 ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`;
+}
+
+function renderDayCapacityHtml(timedTasks) {
+  const workM = timedTasks.filter(t => t.context === 'work').reduce((acc, t) => acc + (t.duration || 45), 0);
+  const lifeM = timedTasks.filter(t => t.context === 'life').reduce((acc, t) => acc + (t.duration || 45), 0);
+  const funM  = timedTasks.filter(t => t.context === 'fun').reduce((acc, t) => acc + (t.duration || 45), 0);
+  const totalM = workM + lifeM + funM;
+
+  const maxBudget = Math.max(480, totalM); // Baseline 8h
+  const pctWork = Math.min(100, (workM / maxBudget) * 100);
+  const pctLife = Math.min(100, (lifeM / maxBudget) * 100);
+  const pctFun  = Math.min(100, (funM  / maxBudget) * 100);
+
+  const breakdownTitle = `Work: ${formatMinutesDuration(workM)} · Life: ${formatMinutesDuration(lifeM)} · Fun: ${formatMinutesDuration(funM)}`;
+  const countLabel = `${timedTasks.length} bloc${timedTasks.length > 1 ? 's' : ''}`;
+
+  return `
+    <div class="day-capacity-tracker" title="${breakdownTitle}">
+      <div class="day-capacity-bar-bg">
+        <div class="day-capacity-seg seg-work" style="width: ${pctWork}%;"></div>
+        <div class="day-capacity-seg seg-life" style="width: ${pctLife}%;"></div>
+        <div class="day-capacity-seg seg-fun"  style="width: ${pctFun}%;"></div>
+      </div>
+      <div class="day-capacity-meta">
+        <span class="day-capacity-total">${totalM > 0 ? formatMinutesDuration(totalM) : '0h planifié'}</span>
+        <div class="day-capacity-dots">
+          ${workM > 0 ? `<span class="cap-dot dot-work" title="Work: ${formatMinutesDuration(workM)}"></span>` : ''}
+          ${lifeM > 0 ? `<span class="cap-dot dot-life" title="Life: ${formatMinutesDuration(lifeM)}"></span>` : ''}
+          ${funM  > 0 ? `<span class="cap-dot dot-fun" title="Fun: ${formatMinutesDuration(funM)}"></span>` : ''}
+        </div>
+        <span class="day-capacity-count">${countLabel}</span>
+      </div>
+    </div>
+  `;
+}
+
+function handleCanvasHoverMove(e) {
+  if (isPointerDragging || hasMovedBeyondThreshold || draggedTaskId || isDrawingMarquee) {
+    const existing = document.getElementById('gridHoverSlot');
+    if (existing) existing.remove();
+    return;
+  }
+  if (e.target.closest('.schedule-block-item') || e.target.closest('.resize-handle') || e.target.closest('.now-timeline-marker')) {
+    const existing = document.getElementById('gridHoverSlot');
+    if (existing) existing.remove();
+    return;
+  }
+
+  const canvas = e.currentTarget;
+  const rect = canvas.getBoundingClientRect();
+  const offsetY = Math.max(0, e.clientY - rect.top);
+
+  let minutes = Math.round((offsetY / HOUR_HEIGHT) * 60);
+  minutes = Math.round(minutes / 15) * 15;
+  minutes = Math.max(0, Math.min(23 * 60 + 45, minutes));
+
+  const top = ((minutes - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+  const h = String(Math.floor(minutes / 60)).padStart(2, '0');
+  const m = String(minutes % 60).padStart(2, '0');
+
+  let slot = document.getElementById('gridHoverSlot');
+  if (!slot) {
+    slot = document.createElement('div');
+    slot.id = 'gridHoverSlot';
+    canvas.appendChild(slot);
+  } else if (slot.parentElement !== canvas) {
+    slot.remove();
+    canvas.appendChild(slot);
+  }
+
+  slot.className = 'grid-hover-slot';
+  slot.style.top = `${top}px`;
+  slot.innerHTML = `<span class="hover-slot-icon">+</span><span>${h}:${m} (45m)</span>`;
+}
+
+function handleCanvasHoverLeave(e) {
+  const slot = document.getElementById('gridHoverSlot');
+  if (slot) slot.remove();
+}
+
 function calculateVisibleDates() {
   const dates = [];
   const baseDate = new Date();
@@ -206,9 +408,11 @@ function renderPlanGrid(forceRebuild = false) {
       const timedTasks = dayTasks.filter(t => !!t.time);
       const unscheduledTasks = dayTasks.filter(t => !t.time);
 
-      // Compteur du header
-      const metaEl = col.querySelector('.day-meta-est');
-      if (metaEl) metaEl.textContent = `${dayTasks.length} items`;
+      // Jauge de charge dynamique Available-to-Promise
+      const trackerEl = col.querySelector('.day-capacity-tracker');
+      if (trackerEl) {
+        trackerEl.outerHTML = renderDayCapacityHtml(timedTasks);
+      }
 
       // Grille horaire : mémoriser et restaurer instantanément le scroll
       const scrollContainer = col.querySelector('.day-schedule-scroll');
@@ -274,21 +478,26 @@ function renderPlanGrid(forceRebuild = false) {
 
     col.innerHTML = `
       <div class="day-header">
-        <div class="day-title-wrap">
-          <span class="day-name">${isToday ? 'Today' : dayName}</span>
-          <span class="day-date">${dayNum}</span>
+        <div class="day-header-top">
+          <div class="day-title-wrap">
+            <span class="day-name">${isToday ? 'Today' : dayName}</span>
+            <span class="day-date">${dayNum}</span>
+          </div>
+          ${isToday ? '<span class="today-badge-chip">Aujourd\'hui</span>' : ''}
         </div>
-        <span class="day-meta-est">${dayTasks.length} items</span>
+        ${renderDayCapacityHtml(timedTasks)}
       </div>
 
       <div class="day-schedule-scroll" id="scheduleScroll_${dateStr}" data-date="${dateStr}">
         <div class="schedule-grid-canvas" 
              data-date="${dateStr}"
              onpointerdown="handleCanvasPointerDown(event, '${dateStr}')"
+             onpointermove="handleCanvasHoverMove(event)"
+             onpointerleave="handleCanvasHoverLeave(event)"
              ondragover="allowCanvasDrop(event)" 
              ondragleave="removeCanvasDropHighlight(event)"
              ondrop="handleCanvasDrop(event, '${dateStr}')"
-             title="Cliquer pour créer une tâche, ou glisser pour sélectionner plusieurs créneaux">
+             title="Cliquer pour créer une tâche ou un événement à cet horaire">
           ${renderHourLines()}
           ${isToday ? renderNowLineHtml() : ''}
           <div class="cal-marquee"></div>
@@ -396,14 +605,15 @@ function computeOverlapLayout(tasks) {
   return results;
 }
 
-// LIGNES D'HEURES DE 00:00 À 23:00
+// LIGNES D'HEURES DE 00:00 À 23:00 (NUIT ATTÉNUÉE 00h-07h, JOUR & SOIRÉE CLAIRE 07h-23h)
 function renderHourLines() {
   let html = '';
   for (let h = START_HOUR; h <= END_HOUR; h++) {
     const top = (h - START_HOUR) * HOUR_HEIGHT;
     const label = `${String(h).padStart(2, '0')}:00`;
+    const isNight = (h < 7);
     html += `
-      <div class="hour-row" style="top: ${top}px;">
+      <div class="hour-row ${isNight ? 'is-night' : ''}" style="top: ${top}px;">
         <span class="hour-label">${label}</span>
         <div class="hour-line"></div>
       </div>
@@ -432,10 +642,13 @@ function renderNowLineHtml() {
 
 function renderTimedBlocks(tasks, dateStr) {
   const layoutItems = computeOverlapLayout(tasks);
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
   return layoutItems.map(({ task, start, duration, colIndex, totalCols }) => {
     const isEvent = task.type === 'event';
     const isSelected = selectedTaskIds.has(task.id);
+    const isLiveNow = (dateStr === TODAY_STR && currentMinutes >= start && currentMinutes < (start + duration));
     const startMinutes = START_HOUR * 60;
     let top = ((start - startMinutes) / 60) * HOUR_HEIGHT;
     top = Math.max(0, top);
@@ -451,15 +664,16 @@ function renderTimedBlocks(tasks, dateStr) {
     const rolloverPrefix = task.isRollover ? '⟳ ' : '';
     const eventClass = isEvent ? 'is-event' : '';
     const selectedClass = isSelected ? 'is-selected' : '';
+    const liveClass = isLiveNow ? 'is-live-now' : '';
 
     // Gestion propre des colonnes de chevauchement
     let positionStyle = `top: ${top}px; height: ${height}px;`;
     if (totalCols > 1) {
-      positionStyle += ` left: calc(48px + (100% - 56px) * ${colIndex} / ${totalCols}); width: calc((100% - 56px) / ${totalCols} - 4px);`;
+      positionStyle += ` left: calc(52px + (100% - 60px) * ${colIndex} / ${totalCols}); width: calc((100% - 60px) / ${totalCols} - 4px);`;
     }
 
     return `
-      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass}" 
+      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass}" 
            id="block_${task.id}"
            data-task-id="${task.id}"
            data-date="${dateStr}"
@@ -476,6 +690,7 @@ function renderTimedBlocks(tasks, dateStr) {
             </div>
           `}
           <span class="schedule-block-title">${rolloverPrefix}${renderTitleWithTagsHtml(task.title)}</span>
+          ${isLiveNow ? '<span class="live-pulse-badge">● LIVE</span>' : ''}
           ${isEvent ? '<span class="event-badge">Event</span>' : ''}
           <span class="schedule-block-time">${task.time}</span>
           <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
@@ -772,10 +987,18 @@ function handleBlockPointerMove(e) {
     let deltaMinutes = Math.round(deltaHours * 60);
     deltaMinutes = Math.round(deltaMinutes / 15) * 15;
 
+    // Colonne cible sous le curseur
+    const targetCol = document.elementFromPoint(e.clientX, e.clientY)?.closest('.day-column');
+    const targetCanvas = targetCol ? targetCol.querySelector('.schedule-grid-canvas') : null;
+
     dragInitialTops.forEach(info => {
+      // Déplacement fluide 60fps de la carte sous le curseur
+      info.el.style.top = `${info.initialTop + deltaY}px`;
+      info.el.style.pointerEvents = 'none';
+
       const newStartMinutes = Math.max(0, Math.min(23 * 60 + 45, info.initialStartMinutes + deltaMinutes));
-      const newTop = ((newStartMinutes - START_HOUR * 60) / 60) * HOUR_HEIGHT;
-      info.el.style.top = `${newTop}px`;
+      const snappedTop = ((newStartMinutes - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+      const height = Math.max(34, (info.duration / 60) * HOUR_HEIGHT);
 
       const endMinutes = newStartMinutes + info.duration;
       const startH = String(Math.floor(newStartMinutes / 60)).padStart(2, '0');
@@ -787,6 +1010,29 @@ function handleBlockPointerMove(e) {
       if (timeLabel) timeLabel.textContent = `${startH}:${startM}`;
       const subLabel = info.el.querySelector('.schedule-block-sub');
       if (subLabel) subLabel.textContent = `${startH}:${startM} – ${endH}:${endM} · ${info.duration}m`;
+
+      // Ghost slot montrant l'emplacement exact d'atterrissage (fit)
+      const ghostId = `pointerDragGhost_${info.task.id}`;
+      let ghost = document.getElementById(ghostId);
+      const hostCanvas = targetCanvas || info.el.closest('.schedule-grid-canvas');
+      if (hostCanvas) {
+        if (!ghost) {
+          ghost = document.createElement('div');
+          ghost.id = ghostId;
+          hostCanvas.appendChild(ghost);
+        } else if (ghost.parentElement !== hostCanvas) {
+          ghost.remove();
+          hostCanvas.appendChild(ghost);
+        }
+        const isEvent = (info.task.type === 'event');
+        ghost.className = `drag-preview-slot cat-${info.task.context || 'work'}`;
+        ghost.style.top = `${snappedTop}px`;
+        ghost.style.height = `${height}px`;
+        ghost.innerHTML = `
+          <div class="ghost-time-label">${isEvent ? '📅 ' : '⏱ '}${startH}:${startM} – ${endH}:${endM} (${info.duration}m)</div>
+          <div class="ghost-title-label">${info.task.title}</div>
+        `;
+      }
     });
   }
 }
@@ -796,8 +1042,12 @@ function handleBlockPointerUp(e) {
   window.removeEventListener('pointerup', handleBlockPointerUp);
   window.removeEventListener('pointercancel', handleBlockPointerUp);
 
+  // Retirer tous les ghost slots de déplacement
+  document.querySelectorAll('[id^="pointerDragGhost_"]').forEach(g => g.remove());
+
   dragInitialTops.forEach(info => {
     info.el.classList.remove('is-batch-dragging');
+    info.el.style.pointerEvents = '';
   });
 
   const anchorId = dragAnchorTaskId;
@@ -823,18 +1073,24 @@ function handleBlockPointerUp(e) {
     deltaMinutes = Math.round(deltaMinutes / 15) * 15;
 
     const targetCol = document.elementFromPoint(e.clientX, e.clientY)?.closest('.day-column');
-    const targetDateStr = targetCol ? targetCol.dataset.date : null;
+    const targetDock = document.elementFromPoint(e.clientX, e.clientY)?.closest('.day-dock');
+    const targetDateStr = targetDock ? targetDock.dataset.date : (targetCol ? targetCol.dataset.date : null);
     const anchorDate = dragInitialTops.get(anchorId)?.date;
 
     let movedCount = 0;
     dragInitialTops.forEach(info => {
-      const newStartMinutes = Math.max(0, Math.min(23 * 60 + 45, info.initialStartMinutes + deltaMinutes));
-      const startH = String(Math.floor(newStartMinutes / 60)).padStart(2, '0');
-      const startM = String(newStartMinutes % 60).padStart(2, '0');
+      if (targetDock) {
+        info.task.time = '';
+        info.task.date = targetDateStr || anchorDate;
+      } else {
+        const newStartMinutes = Math.max(0, Math.min(23 * 60 + 45, info.initialStartMinutes + deltaMinutes));
+        const startH = String(Math.floor(newStartMinutes / 60)).padStart(2, '0');
+        const startM = String(newStartMinutes % 60).padStart(2, '0');
 
-      info.task.time = `${startH}:${startM}`;
-      if (targetDateStr && anchorDate && targetDateStr !== anchorDate) {
-        info.task.date = targetDateStr;
+        info.task.time = `${startH}:${startM}`;
+        if (targetDateStr && anchorDate && targetDateStr !== anchorDate) {
+          info.task.date = targetDateStr;
+        }
       }
       info.task.isRollover = false;
       movedCount++;
@@ -1237,16 +1493,25 @@ function renderBacklogDrawer() {
 
   backlogTasks.forEach(task => {
     const isEvent = task.type === 'event';
+    const isFromFocus = !!task.fromFocus || !!task.focusId;
+    const completedClass = task.completed ? 'completed' : '';
     const li = document.createElement('li');
-    li.className = `task-item cat-${task.context || 'work'} ${isEvent ? 'is-event' : ''}`;
+    li.className = `task-item cat-${task.context || 'work'} ${isEvent ? 'is-event' : ''} ${completedClass}`;
     li.draggable = true;
     li.ondragstart = (e) => handleDragStart(e, task.id);
     li.ondragend = (e) => handleDragEnd(e);
 
     li.innerHTML = `
       <div class="task-row-main">
-        ${isEvent ? `<span class="event-icon" title="Événement (non cochable)">📅</span>` : ''}
-        <span class="task-text" onclick="openEditModal('${task.id}')">${renderTitleWithTagsHtml(task.title)}</span>
+        ${isEvent ? `
+          <span class="event-icon" title="Événement (non cochable)">📅</span>
+        ` : `
+          <div class="checkbox" onclick="event.stopPropagation(); toggleTaskCompletion('${task.id}')" title="Marquer comme terminé">
+            ${task.completed ? '✓' : ''}
+          </div>
+        `}
+        <span class="task-text ${completedClass}" onclick="openEditModal('${task.id}')">${renderTitleWithTagsHtml(task.title)}</span>
+        ${isFromFocus ? '<span class="badge-from-focus" title="Synchronisé depuis Span Focus">Focus</span>' : ''}
         ${isEvent ? '<span class="event-badge">Event</span>' : ''}
         <button class="btn-task-action" onclick="scheduleTaskDirectly('${task.id}', '${TODAY_STR}')" title="Planifier aujourd'hui">☀️</button>
         <button class="btn-task-action" onclick="deleteTask('${task.id}')" title="Supprimer">✕</button>
@@ -1290,10 +1555,22 @@ function toggleTaskCompletion(id) {
   const task = window.SpanPlanState.tasks.find(t => t.id === id);
   if (!task) return;
   task.completed = !task.completed;
+  syncPlanTaskUpdateToFocus(task.focusId || task.id, task.completed, task.title);
   savePlanState();
 }
 
 function deleteTask(id) {
+  const task = window.SpanPlanState.tasks.find(t => t.id === id);
+  if (task && (task.focusId || task.fromFocus)) {
+    try {
+      let dismissed = JSON.parse(localStorage.getItem('span_plan_dismissed_focus_ids')) || [];
+      const focusKey = task.focusId || task.id;
+      if (!dismissed.includes(focusKey)) {
+        dismissed.push(focusKey);
+        localStorage.setItem('span_plan_dismissed_focus_ids', JSON.stringify(dismissed));
+      }
+    } catch (e) {}
+  }
   window.SpanPlanState.tasks = window.SpanPlanState.tasks.filter(t => t.id !== id);
   savePlanState();
 }
@@ -1684,7 +1961,15 @@ function setContextFilter(ctx) {
 
 function toggleBacklogDrawer() {
   const drawer = document.getElementById('backlogDrawer');
-  if (drawer) drawer.classList.toggle('open');
+  if (drawer) {
+    const isOpening = !drawer.classList.contains('open');
+    drawer.classList.toggle('open');
+    if (isOpening) {
+      syncFocusTasksToPlanBacklog(true);
+      renderBacklogDrawer();
+      updateCounters();
+    }
+  }
 }
 
 function togglePinDrawer() {

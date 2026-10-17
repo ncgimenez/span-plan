@@ -25,8 +25,17 @@ function closeSettingsModal() {
 }
 
 function goToFocusApp() {
-  // Ajuste selon le déploiement réel (ex: ../focus/index.html ou https://focus.spansuite.app)
-  window.location.href = '../focus/index.html';
+  if (window.location.hostname.includes('github.io')) {
+    window.location.href = 'https://ncgimenez.github.io/span-focus/';
+  } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    if (window.location.pathname.startsWith('/span-plan')) {
+      window.location.href = '/span-focus/';
+    } else {
+      window.location.href = 'https://ncgimenez.github.io/span-focus/';
+    }
+  } else {
+    window.location.href = '/span-focus/';
+  }
 }
 
 function exportData() {

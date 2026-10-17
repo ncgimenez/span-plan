@@ -81,7 +81,7 @@ async function loadPlanFromCloud() {
   try {
     const { data, error } = await supabaseClient
       .from('user_state')
-      .select('plan_tasks')
+      .select('plan_tasks, focus_tasks')
       .eq('id', SYNC_USER_ID)
       .single();
 
@@ -90,45 +90,66 @@ async function loadPlanFromCloud() {
       return;
     }
 
-    if (data && data.plan_tasks && Array.isArray(data.plan_tasks)) {
-      isCloudSyncInProgress = true;
-
-      const localTasks = (window.SpanPlanState && window.SpanPlanState.tasks) || [];
-      const remoteTasks = data.plan_tasks;
-
-      // Fusion par ID : respecte les nouveautés distantes et conserve les ajouts récents
-      const mergedMap = new Map();
-
-      // On insère d'abord les tâches distantes
-      remoteTasks.forEach(task => {
-        if (task && task.id) mergedMap.set(task.id, task);
-      });
-
-      // On fusionne avec les tâches locales
-      localTasks.forEach(task => {
-        if (task && task.id) {
-          // Si la tâche n'existait pas sur le cloud, on la préserve
-          if (!mergedMap.has(task.id)) {
-            mergedMap.set(task.id, task);
+    if (data) {
+      // 1. Synchronisation des tâches Focus distantes vers le backlog Plan
+      if (data.focus_tasks && Array.isArray(data.focus_tasks)) {
+        try {
+          const currentFocus = localStorage.getItem('span_tasks');
+          if (!currentFocus || currentFocus === '[]') {
+            localStorage.setItem('span_tasks', JSON.stringify(data.focus_tasks));
           }
+        } catch (e) {}
+
+        if (typeof syncFocusTasksToPlanBacklog === 'function') {
+          syncFocusTasksToPlanBacklog(false, data.focus_tasks);
         }
-      });
+      }
 
-      const mergedList = Array.from(mergedMap.values());
+      // 2. Fusion des tâches Plan
+      if (data.plan_tasks && Array.isArray(data.plan_tasks)) {
+        isCloudSyncInProgress = true;
 
-      window.SpanPlanState.tasks = mergedList;
-      localStorage.setItem('span_plan_tasks', JSON.stringify(mergedList));
-      
-      if (typeof executeAutoRollover === 'function') executeAutoRollover();
-      if (typeof renderPlanGrid === 'function') renderPlanGrid();
-      if (typeof renderBacklogDrawer === 'function') renderBacklogDrawer();
-      if (typeof updateCounters === 'function') updateCounters();
+        const localTasks = (window.SpanPlanState && window.SpanPlanState.tasks) || [];
+        const remoteTasks = data.plan_tasks;
 
-      isCloudSyncInProgress = false;
+        // Fusion par ID : respecte les nouveautés distantes et conserve les ajouts récents
+        const mergedMap = new Map();
 
-      // Si le local avait des éléments non encore présents sur le cloud, on synchronise
-      if (mergedList.length > remoteTasks.length) {
-        syncPlanToCloud();
+        // On insère d'abord les tâches distantes
+        remoteTasks.forEach(task => {
+          if (task && task.id) mergedMap.set(task.id, task);
+        });
+
+        // On fusionne avec les tâches locales
+        localTasks.forEach(task => {
+          if (task && task.id) {
+            // Si la tâche n'existait pas sur le cloud, on la préserve
+            if (!mergedMap.has(task.id)) {
+              mergedMap.set(task.id, task);
+            }
+          }
+        });
+
+        const mergedList = Array.from(mergedMap.values());
+
+        window.SpanPlanState.tasks = mergedList;
+        localStorage.setItem('span_plan_tasks', JSON.stringify(mergedList));
+        
+        if (typeof executeAutoRollover === 'function') executeAutoRollover();
+        if (typeof renderPlanGrid === 'function') renderPlanGrid();
+        if (typeof renderBacklogDrawer === 'function') renderBacklogDrawer();
+        if (typeof updateCounters === 'function') updateCounters();
+
+        isCloudSyncInProgress = false;
+
+        // Si le local avait des éléments non encore présents sur le cloud, on synchronise
+        if (mergedList.length > remoteTasks.length) {
+          syncPlanToCloud();
+        }
+      } else {
+        // Même s'il n'y a pas de plan_tasks, rafraîchir le drawer si des focus_tasks ont été importées
+        if (typeof renderBacklogDrawer === 'function') renderBacklogDrawer();
+        if (typeof updateCounters === 'function') updateCounters();
       }
     }
   } catch (err) {
@@ -156,7 +177,7 @@ function setupRealtimeSubscription() {
         filter: `id=eq.${SYNC_USER_ID}`
       },
       (payload) => {
-        if (payload.new && payload.new.plan_tasks) {
+        if (payload.new && (payload.new.plan_tasks || payload.new.focus_tasks)) {
           // Évite une boucle si c'est cet appareil qui vient d'écrire
           if (!isCloudSyncInProgress) {
             loadPlanFromCloud();
