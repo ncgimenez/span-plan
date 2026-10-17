@@ -511,13 +511,7 @@ function renderPlanGrid(forceRebuild = false) {
 
       if (scrollContainer) {
         const existingGuidance = scrollContainer.querySelector('.schedule-empty-guidance');
-        if (timedTasks.length === 0) {
-          if (!existingGuidance) {
-            scrollContainer.insertAdjacentHTML('afterbegin', renderEmptyDayGuidanceHtml(dateStr));
-          }
-        } else if (existingGuidance) {
-          existingGuidance.remove();
-        }
+        if (existingGuidance) existingGuidance.remove();
       }
 
       if (scrollContainer && prevScroll !== null) {
@@ -585,7 +579,6 @@ function renderPlanGrid(forceRebuild = false) {
       </div>
 
       <div class="day-schedule-scroll" id="scheduleScroll_${dateStr}" data-date="${dateStr}">
-        ${timedTasks.length === 0 ? renderEmptyDayGuidanceHtml(dateStr) : ''}
         <div class="schedule-grid-canvas" 
              data-date="${dateStr}"
              onpointerdown="handleCanvasPointerDown(event, '${dateStr}')"
@@ -738,19 +731,8 @@ function renderNowLineHtml() {
   `;
 }
 
-function renderEmptyDayGuidanceHtml(dateStr) {
-  return `
-    <div class="schedule-empty-guidance" onclick="openCreateModalWithDefaults('${dateStr}')">
-      <div class="empty-guidance-content">
-        <span class="empty-guidance-icon">✨</span>
-        <div class="empty-guidance-text">
-          <span class="empty-guidance-title">Free day</span>
-          <span class="empty-guidance-desc">Click any hour or + to schedule</span>
-        </div>
-      </div>
-      <button type="button" class="btn-empty-guidance-add">+ Schedule</button>
-    </div>
-  `;
+function renderEmptyDayGuidanceHtml() {
+  return '';
 }
 
 function renderTimedBlocks(tasks, dateStr) {

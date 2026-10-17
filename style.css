@@ -2482,60 +2482,7 @@ body {
     box-shadow: none !important;
   }
 
-  /* GUIDANCE LORS D'UNE JOURNÉE SANS CRÉNEAU */
-  .schedule-empty-guidance {
-    margin: 10px 8px;
-    padding: 12px 14px;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px dashed rgba(255, 255, 255, 0.15);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-  .schedule-empty-guidance:active {
-    background: rgba(255, 255, 255, 0.06);
-    transform: scale(0.99);
-  }
-  .empty-guidance-content {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex: 1;
-  }
-  .empty-guidance-icon {
-    font-size: 20px;
-  }
-  .empty-guidance-text {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .empty-guidance-title {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text-main);
-  }
-  .empty-guidance-desc {
-    font-size: 11px;
-    color: var(--text-muted);
-    line-height: 1.3;
-  }
-  .btn-empty-guidance-add {
-    background: var(--streak);
-    color: #0d0d0f;
-    border: none;
-    border-radius: 8px;
-    padding: 6px 11px;
-    font-size: 11.5px;
-    font-weight: 700;
-    cursor: pointer;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
+
 
   /* TIROIR BACKLOG SUR MOBILE (FERMÉ PAR DÉFAUT, AUCUN DÉBORDEMENT) */
   .backlog-drawer {
