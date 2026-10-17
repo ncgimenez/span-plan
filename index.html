@@ -7,13 +7,13 @@
   
   <meta name="theme-color" content="#0d0d0f" id="themeMetaColor">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="Plan">
 
   <link rel="icon" type="image/png" href="span-logo.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
-  <link rel="stylesheet" href="style.css?v=5.3">
+  <link rel="stylesheet" href="style.css?v=5.4">
 </head>
 <body>
 
@@ -115,6 +115,9 @@
       <button type="button" class="seg-btn" id="segBtnTodo" onclick="setMobileDayView('todo')">
         <span>📋 À faire (<span id="mobileTodoCount">0</span>)</span>
       </button>
+      <button type="button" class="seg-btn" id="segBtnBacklog" onclick="setMobileDayView('backlog')">
+        <span>📥 Backlog (<span id="mobileBacklogCount">0</span>)</span>
+      </button>
     </div>
 
     <!-- MAIN WORKSPACE -->
@@ -148,28 +151,28 @@
         </ul>
       </aside>
     </main>
-
-    <!-- MOBILE BOTTOM NAVIGATION (IOS NATIVE STYLE) -->
-    <nav class="nav-bar mobile-nav">
-      <div class="nav-items">
-        <button type="button" class="nav-btn" id="mobileNavToday" onclick="jumpToToday()">
-          <span class="nav-icon">☀️</span>
-          <span>Aujourd'hui</span>
-        </button>
-        <button type="button" class="nav-btn nav-btn-add" onclick="openCreateModalWithDefaults()" title="Nouvelle tâche ou événement">
-          <div class="nav-fab-circle">+</div>
-        </button>
-        <button type="button" class="nav-btn" id="mobileNavBacklog" onclick="toggleBacklogDrawer()" title="Backlog">
-          <span class="nav-icon">📋</span>
-          <span>Backlog (<span id="mobileLaterCount">0</span>)</span>
-        </button>
-        <button type="button" class="nav-btn" onclick="goToFocusApp()" title="Span Focus">
-          <span class="nav-icon">⚡</span>
-          <span>Focus ↗</span>
-        </button>
-      </div>
-    </nav>
   </div>
+
+  <!-- MOBILE BOTTOM NAVIGATION (IOS NATIVE STYLE) -->
+  <nav class="nav-bar mobile-nav">
+    <div class="nav-items">
+      <button type="button" class="nav-btn" id="mobileNavToday" onclick="jumpToToday()">
+        <span class="nav-icon">☀️</span>
+        <span>Aujourd'hui</span>
+      </button>
+      <button type="button" class="nav-btn nav-btn-add" onclick="openCreateModalWithDefaults()" title="Nouvelle tâche ou événement">
+        <div class="nav-fab-circle">+</div>
+      </button>
+      <button type="button" class="nav-btn" id="mobileNavBacklog" onclick="toggleBacklogDrawer()" title="Backlog">
+        <span class="nav-icon">📋</span>
+        <span>Backlog (<span id="mobileLaterCount">0</span>)</span>
+      </button>
+      <button type="button" class="nav-btn" onclick="goToFocusApp()" title="Span Focus">
+        <span class="nav-icon">⚡</span>
+        <span>Focus ↗</span>
+      </button>
+    </div>
+  </nav>
 
   <!-- CONTEXT MENU POPOVER FOR TASK (⋮) -->
   <div class="task-popover-menu" id="taskPopoverMenu" style="display: none;">
@@ -308,8 +311,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=5.3"></script>
-  <script src="js/plan.js?v=5.3"></script>
-  <script src="js/app.js?v=5.3"></script>
+  <script src="js/sync.js?v=5.4"></script>
+  <script src="js/plan.js?v=5.4"></script>
+  <script src="js/app.js?v=5.4"></script>
 </body>
 </html>

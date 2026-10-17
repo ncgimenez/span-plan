@@ -1649,7 +1649,7 @@ function renderBacklogDrawer() {
 
 function updateCounters() {
   const laterCount = window.SpanPlanState.tasks.filter(t => !t.date).length;
-  ['globalLaterCount', 'drawerLaterCount', 'mobileLaterCount'].forEach(id => {
+  ['globalLaterCount', 'drawerLaterCount', 'mobileLaterCount', 'mobileBacklogCount'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = laterCount;
   });
@@ -2063,6 +2063,9 @@ function navigateTimeline(direction) {
 
 function jumpToToday() {
   currentTimelineOffset = 0;
+  if (isMobileScreen()) {
+    setMobileDayView('agenda');
+  }
   renderPlanGrid(true);
   if (typeof renderDateStrip === 'function') renderDateStrip();
   applyDynamicScroll();
@@ -2089,6 +2092,14 @@ function setContextFilter(ctx) {
 }
 
 function toggleBacklogDrawer() {
+  if (isMobileScreen()) {
+    if (currentMobileDayView === 'backlog') {
+      setMobileDayView('agenda');
+    } else {
+      setMobileDayView('backlog');
+    }
+    return;
+  }
   const drawer = document.getElementById('backlogDrawer');
   const toggleBtn = document.getElementById('btnToggleDrawer');
   if (drawer) {
@@ -2133,7 +2144,7 @@ function applyPinState() {
 // ==============================================================
 // EXPÉRIENCE MOBILE-FIRST (IPHONE 13 MINI & SMARTPHONES)
 // ==============================================================
-let currentMobileDayView = 'agenda'; // 'agenda' | 'todo'
+let currentMobileDayView = 'agenda'; // 'agenda' | 'todo' | 'backlog'
 
 function setMobileDayView(mode) {
   currentMobileDayView = mode;
@@ -2141,11 +2152,25 @@ function setMobileDayView(mode) {
   if (shell) {
     shell.classList.toggle('mobile-mode-agenda', mode === 'agenda');
     shell.classList.toggle('mobile-mode-todo', mode === 'todo');
+    shell.classList.toggle('mobile-mode-backlog', mode === 'backlog');
   }
   const btnA = document.getElementById('segBtnAgenda');
   const btnT = document.getElementById('segBtnTodo');
+  const btnB = document.getElementById('segBtnBacklog');
   if (btnA) btnA.classList.toggle('active', mode === 'agenda');
   if (btnT) btnT.classList.toggle('active', mode === 'todo');
+  if (btnB) btnB.classList.toggle('active', mode === 'backlog');
+
+  const navBtnToday = document.getElementById('mobileNavToday');
+  const navBtnBacklog = document.getElementById('mobileNavBacklog');
+  if (navBtnToday) navBtnToday.classList.toggle('active', mode === 'agenda' && currentTimelineOffset === 0);
+  if (navBtnBacklog) navBtnBacklog.classList.toggle('active', mode === 'backlog');
+
+  if (mode === 'backlog') {
+    syncFocusTasksToPlanBacklog(true);
+    renderBacklogDrawer();
+    updateCounters();
+  }
 }
 
 function renderDateStrip() {

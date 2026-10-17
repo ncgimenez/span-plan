@@ -57,21 +57,34 @@
   user-select: none;
 }
 
-html, body {
+html {
   height: 100%;
   width: 100%;
+  overflow: hidden;
+}
+
+body {
+  height: 100%;
+  height: 100dvh;
+  min-height: 100%;
+  min-height: -webkit-fill-available;
+  width: 100%;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
   background-color: var(--bg);
   color: var(--text-main);
   font-family: var(--font);
   transition: background-color 0.25s ease, color 0.25s ease;
-}
-
-body {
   display: flex;
   justify-content: center;
   align-items: stretch;
-  height: 100dvh;
+}
+
+@supports (-webkit-touch-callout: none) {
+  html, body {
+    height: -webkit-fill-available;
+  }
 }
 
 /* SCROLLBARS RAFFINÉES & DISCRÈTES */
@@ -1908,10 +1921,16 @@ body {
    ============================================================== */
 @media (max-width: 768px) {
   .desktop-shell {
-    padding: calc(env(safe-area-inset-top, 14px) + 2px) 8px calc(64px + env(safe-area-inset-bottom, 12px)) 8px !important;
+    height: 100% !important;
+    height: -webkit-fill-available !important;
+    max-height: 100% !important;
+    min-height: -webkit-fill-available !important;
+    padding-top: calc(env(safe-area-inset-top, 14px) + 2px) !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    padding-bottom: calc(54px + env(safe-area-inset-bottom, 14px)) !important;
     overflow: hidden !important;
-    height: 100vh !important;
-    max-height: 100vh !important;
+    box-sizing: border-box !important;
   }
 
   /* Header compact 1 seule ligne */
@@ -2139,15 +2158,34 @@ body {
     overflow-y: auto !important;
   }
 
+  /* Mode Backlog : Journée masquée, Backlog prend tout l'espace */
+  .mobile-mode-backlog .planner-board-container {
+    display: none !important;
+  }
+  .mobile-mode-backlog .backlog-drawer {
+    display: flex !important;
+    position: static !important;
+    transform: none !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    z-index: 10 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: none !important;
+  }
+
   /* TIROIR BACKLOG EN PLEIN ÉCRAN FLUIDE (BOTTOM SHEET NATIVE) */
   .backlog-drawer {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
     right: 0 !important;
-    bottom: 0 !important;
+    bottom: calc(54px + env(safe-area-inset-bottom, 14px)) !important;
     width: 100vw !important;
-    height: 100vh !important;
+    height: auto !important;
     max-width: 100vw !important;
     z-index: 9999 !important;
     background: #0d0d0f !important;
@@ -2157,7 +2195,7 @@ body {
     border-left: none !important;
     border-radius: 0 !important;
     padding-top: calc(env(safe-area-inset-top, 14px) + 8px) !important;
-    padding-bottom: calc(env(safe-area-inset-bottom, 14px) + 12px) !important;
+    padding-bottom: 12px !important;
   }
 
   .backlog-drawer.open {
@@ -2177,20 +2215,22 @@ body {
     display: none !important;
   }
 
-  /* BARRE DE NAVIGATION INFÉRIEURE MODERNE */
+  /* BARRE DE NAVIGATION INFÉRIEURE MODERNE FIXÉE AU BAS ABSOLU */
   .mobile-nav {
     display: flex !important;
     position: fixed !important;
     bottom: 0 !important;
     left: 0 !important;
     right: 0 !important;
-    height: calc(54px + env(safe-area-inset-bottom, 10px)) !important;
-    padding-bottom: env(safe-area-inset-bottom, 10px) !important;
-    background: rgba(18, 18, 20, 0.94) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
+    width: 100vw !important;
+    height: calc(54px + env(safe-area-inset-bottom, 14px)) !important;
+    padding-bottom: env(safe-area-inset-bottom, 14px) !important;
+    background: rgba(18, 18, 20, 0.96) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
     border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
-    z-index: 200 !important;
+    z-index: 1000 !important;
+    box-sizing: border-box !important;
   }
 
   .mobile-nav .nav-items {
