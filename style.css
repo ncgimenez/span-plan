@@ -1925,8 +1925,8 @@ body {
 /* RECTANGLE D'INVITATION AU SURVOL DE LA GRILLE */
 .grid-hover-slot {
   position: absolute;
-  left: 52px;
-  right: 8px;
+  left: 4px;
+  right: 4px;
   height: 46px;
   border: 1.5px dashed rgba(255, 255, 255, 0.22);
   border-radius: 8px;
@@ -1949,15 +1949,15 @@ body {
   opacity: 0.85;
 }
 
-/* LIGNE "NOW" (RUBY NEON GLOW) */
+/* LIGNE "NOW" (RUBY NEON GLOW DISCRÈTE ET ÉLÉGANTE SOUS LES CARTES) */
 .now-timeline-marker {
   position: absolute;
   left: 0;
   right: 0;
   height: 2px;
   background: linear-gradient(90deg, #ef4444, #fb7185);
-  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
-  z-index: 45 !important;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.45);
+  z-index: 3 !important;
   display: flex;
   align-items: center;
   pointer-events: none;
@@ -1966,33 +1966,18 @@ body {
 .now-timeline-marker::before {
   content: "";
   position: absolute;
-  left: 48px;
-  width: 8px;
-  height: 8px;
+  left: 0;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #ef4444;
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.9);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.9);
   transform: translate(-50%, 0);
-  animation: pulseNowMarker 2s infinite ease-in-out;
   pointer-events: none;
-}
-
-@keyframes pulseNowMarker {
-  0%, 100% { transform: translate(-50%, 0) scale(1); box-shadow: 0 0 8px rgba(239, 68, 68, 0.8); }
-  50% { transform: translate(-50%, 0) scale(1.35); box-shadow: 0 0 14px rgba(239, 68, 68, 1); }
 }
 
 .now-badge {
-  font-size: 9.5px;
-  font-weight: 700;
-  color: #ffffff;
-  background: #ef4444;
-  padding: 1.5px 5px;
-  border-radius: 4px;
-  position: absolute;
-  left: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-  pointer-events: none;
+  display: none;
 }
 
 /* ==============================================================
@@ -2000,13 +1985,13 @@ body {
    ============================================================== */
 .schedule-block-item {
   position: absolute;
-  left: 52px;
-  right: 8px;
+  left: 4px;
+  right: 4px;
   border-radius: 8px;
   padding: 4px 8px;
   cursor: grab;
   user-select: none;
-  z-index: 5;
+  z-index: 6;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -2340,49 +2325,144 @@ body {
   align-items: center;
 }
 
-/* BLOC EN COURS DE DÉROULEMENT (LIVE RIGHT NOW) */
+/* BLOC EN COURS DE DÉROULEMENT (LIVE RIGHT NOW - FOCUS GRADE) */
 .schedule-block-item.is-live-now {
-  border-color: rgba(255, 255, 255, 0.45) !important;
-  animation: liveBlockBreathing 2.4s infinite ease-in-out;
-  z-index: 10;
+  border-color: rgba(239, 68, 68, 0.45) !important;
+  border-left: 3.5px solid #ef4444 !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(239, 68, 68, 0.25) !important;
+  z-index: 8 !important;
 }
 
-@keyframes liveBlockBreathing {
-  0%, 100% {
-    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.25), 0 4px 16px rgba(0, 0, 0, 0.35);
-  }
-  50% {
-    box-shadow: 0 0 0 2.5px rgba(255, 255, 255, 0.6), 0 8px 24px rgba(0, 0, 0, 0.55);
-  }
-}
-
-.live-pulse-dot {
-  width: 6.5px;
-  height: 6.5px;
-  border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 6px #10b981;
+.live-top-badges {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   flex-shrink: 0;
-  animation: pulseDotAnim 2s infinite ease-in-out;
 }
 
-@keyframes pulseDotAnim {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.85); }
-}
-
-.live-pulse-badge {
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  padding: 1.5px 5px;
-  border-radius: 4px;
-  background: rgba(239, 68, 68, 0.16);
-  color: #fca5a5;
-  border: 1px solid rgba(239, 68, 68, 0.35);
-  margin-left: 4px;
+.live-status-pill {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
+  background: rgba(239, 68, 68, 0.22);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #ffffff;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  line-height: 1.2;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.35);
+}
+
+.live-status-pill.mini {
+  padding: 0.5px 5px;
+  font-size: 8px;
+}
+
+.live-status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 6px #ffffff;
+  animation: liveDotPulse 1.4s infinite alternate ease-in-out;
+}
+
+@keyframes liveDotPulse {
+  from { opacity: 0.5; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1.15); }
+}
+
+.live-progress-container {
+  margin-top: 5px;
+  padding: 6px 8px 4px 8px;
+  background: rgba(0, 0, 0, 0.36);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  box-sizing: border-box;
+}
+
+.live-progress-track {
+  position: relative;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  width: 100%;
+}
+
+.live-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ef4444 0%, #f43f5e 100%);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.7);
+}
+
+.live-progress-knob {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: #ef4444;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
+  padding: 1px 5px;
+  font-size: 8px;
+  font-weight: 750;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.live-knob-dot {
+  width: 3.5px;
+  height: 3.5px;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.live-knob-time {
+  font-size: 8px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.live-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 9.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.live-meta-start,
+.live-meta-end {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.live-meta-remaining {
+  color: #f87171;
+  font-weight: 750;
+}
+
+.live-compact-time-left {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #f87171;
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 @keyframes livePulseTag {
@@ -2553,23 +2633,23 @@ body.is-card-dragging * {
    ============================================================== */
 .drag-preview-slot {
   position: absolute;
-  left: 52px;
-  right: 8px;
-  border: 2px dashed rgba(255, 255, 255, 0.55);
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  border-radius: 12px;
-  z-index: 15;
+  left: 4px;
+  right: 4px;
+  border: 2px dashed rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 8px;
+  z-index: 25 !important;
   pointer-events: none;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 6px 12px;
+  padding: 4px 10px;
   box-sizing: border-box;
   animation: ghostSlotPulse 1.4s infinite ease-in-out;
   transition: top 0.05s ease, height 0.05s ease;
-  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), inset 0 0 12px rgba(255, 255, 255, 0.08);
 }
 
 @keyframes ghostSlotPulse {

@@ -885,7 +885,7 @@ function renderPlanGrid(forceRebuild = false) {
     const { timedTasks } = dayDataMap.get(dateStr);
 
     return `
-      <div class="cal-day-column ${isToday ? 'is-today' : ''}" data-date="${dateStr}">
+      <div class="cal-day-column day-column ${isToday ? 'is-today' : ''}" data-date="${dateStr}">
         <div class="cal-day-hour-lines">
           ${hourLinesTemplate}
         </div>
@@ -1212,11 +1212,10 @@ function renderNowLineHtml() {
   if (currentMinutes < startMinutes || currentMinutes > endMinutes) return '';
 
   const top = ((currentMinutes - startMinutes) / 60) * HOUR_HEIGHT;
-  const timeLabel = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
   return `
     <div class="now-timeline-marker" style="top: ${top}px;">
-      <span class="now-badge">${timeLabel}</span>
+      <span class="now-dot"></span>
     </div>
   `;
 }
@@ -1254,10 +1253,10 @@ function renderTimedBlocks(tasks, dateStr) {
     const completedClass = task.completed ? 'is-completed' : '';
     const isCompact = height < 38;
 
-    // Gestion propre des colonnes de chevauchement
+    // Gestion propre des colonnes de chevauchement pleine largeur
     let positionStyle = `top: ${top}px; height: ${height}px;`;
     if (totalCols > 1) {
-      positionStyle += ` left: calc(52px + (100% - 60px) * ${colIndex} / ${totalCols}); width: calc((100% - 60px) / ${totalCols} - 4px);`;
+      positionStyle += ` left: calc(4px + (100% - 8px) * ${colIndex} / ${totalCols}); width: calc((100% - 8px) / ${totalCols} - 3px);`;
     }
 
     const childSubtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
@@ -1266,13 +1265,41 @@ function renderTimedBlocks(tasks, dateStr) {
       ? `<span class="event-progress-pill" onclick="event.stopPropagation(); openSubtasksModal('${task.id}')" title="Subtasks (${doneSubCount}/${childSubtasks.length})">☑ ${doneSubCount}/${childSubtasks.length}</span>` 
       : '';
 
+    // Barre de progression intégrée et dynamique inspirée de Span Focus
+    let liveProgressHtml = '';
+    const elapsedMinutes = Math.max(0, currentMinutes - start);
+    const remainingMinutes = Math.max(0, endTotal - currentMinutes);
+    const livePercent = Math.min(100, Math.max(0, Math.round((elapsedMinutes / duration) * 100)));
+    const currH = String(now.getHours()).padStart(2, '0');
+    const currM = String(now.getMinutes()).padStart(2, '0');
+    const currTimeStr = `${currH}:${currM}`;
+
+    if (isLiveNow && height >= 56) {
+      liveProgressHtml = `
+        <div class="live-progress-container">
+          <div class="live-progress-track">
+            <div class="live-progress-fill" style="width: ${livePercent}%;"></div>
+            <div class="live-progress-knob" style="left: ${livePercent}%;">
+              <span class="live-knob-dot"></span>
+              <span class="live-knob-time">${currTimeStr}</span>
+            </div>
+          </div>
+          <div class="live-progress-meta">
+            <span class="live-meta-start">${task.time}</span>
+            <span class="live-meta-remaining">${remainingMinutes}m left (${livePercent}%)</span>
+            <span class="live-meta-end">${endH}:${endM}</span>
+          </div>
+        </div>
+      `;
+    }
+
     let subtasksHtml = '';
-    const hasSubtasksRendered = childSubtasks.length > 0 && height >= 75;
+    const hasSubtasksRendered = childSubtasks.length > 0 && height >= 85 && !isLiveNow;
     if (hasSubtasksRendered) {
       let maxFit = 1;
-      if (height >= 105) {
+      if (height >= 115) {
         maxFit = 3;
-      } else if (height >= 85) {
+      } else if (height >= 95) {
         maxFit = 2;
       } else {
         maxFit = 1;
@@ -1307,10 +1334,16 @@ function renderTimedBlocks(tasks, dateStr) {
               ${task.completed ? '✓' : ''}
             </div>
           ` : ''}
-          <span class="compact-time">${task.time}</span>
+          ${isLiveNow ? `
+            <span class="live-status-pill mini"><span class="live-status-dot"></span>LIVE</span>
+          ` : `
+            <span class="compact-time">${task.time}</span>
+          `}
           <span class="schedule-block-title">${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
           ${progressPillHtml}
-          ${isLiveNow ? '<span class="live-pulse-dot" title="Happening right now"></span>' : ''}
+          ${isLiveNow ? `
+            <span class="live-compact-time-left">${remainingMinutes}m left</span>
+          ` : ''}
           <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
         </div>
       `;
@@ -1324,14 +1357,25 @@ function renderTimedBlocks(tasks, dateStr) {
               ${task.completed ? '✓' : ''}
             </div>
           ` : ''}
+          ${isLiveNow ? `
+            <div class="live-top-badges">
+              <div class="block-time-badge">
+                <span class="badge-start">${task.time}</span>
+                <span class="badge-end">${endH}:${endM}</span>
+              </div>
+              <span class="live-status-pill"><span class="live-status-dot"></span>LIVE</span>
+            </div>
+          ` : ''}
           <span class="schedule-block-title">${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
           ${progressPillHtml}
-          ${isLiveNow ? '<span class="live-pulse-dot" title="Happening right now"></span>' : ''}
           <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
         </div>
-        <div class="schedule-block-meta">
-          <span class="schedule-block-time">${timeRangeStr}</span>
-        </div>
+        ${!isLiveNow ? `
+          <div class="schedule-block-meta">
+            <span class="schedule-block-time">${timeRangeStr}</span>
+          </div>
+        ` : ''}
+        ${liveProgressHtml}
         ${subtasksHtml}
       `;
     }
@@ -1707,65 +1751,65 @@ function handleBlockPointerMove(e) {
     }
 
     // Détection de la colonne ou du dock sous le curseur
-    const targetDock = document.elementFromPoint(e.clientX, e.clientY)?.closest('.day-dock');
-    const targetCol = document.elementFromPoint(e.clientX, e.clientY)?.closest('.day-column');
+    const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+    const targetDock = elUnder?.closest('.day-dock, .cal-allday-drop-cell, .cal-allday-row');
+    const targetCanvas = elUnder?.closest('.schedule-grid-canvas');
+    const targetCol = targetCanvas ? targetCanvas.closest('.cal-day-column, .day-column') : elUnder?.closest('.cal-day-column, .day-column');
 
-    document.querySelectorAll('.day-dock.dock-drop-hover').forEach(d => {
-      if (d !== targetDock) d.classList.remove('dock-drop-hover');
+    document.querySelectorAll('.day-dock.dock-drop-hover, .cal-allday-drop-cell.drag-over').forEach(d => {
+      if (d !== targetDock) d.classList.remove('dock-drop-hover', 'drag-over');
     });
 
     if (targetDock) {
-      targetDock.classList.add('dock-drop-hover');
+      targetDock.classList.add('dock-drop-hover', 'drag-over');
       document.querySelectorAll('[id^="pointerDragGhost_"]').forEach(g => g.remove());
       return;
     }
 
-    if (targetCol) {
-      const targetCanvas = targetCol.querySelector('.schedule-grid-canvas');
-      if (targetCanvas) {
-        const cRect = targetCanvas.getBoundingClientRect();
-        const relY = Math.max(0, (e.clientY - dragGrabOffsetY) - cRect.top);
-        let targetStartM = Math.round((relY / HOUR_HEIGHT) * 60);
-        targetStartM = Math.round(targetStartM / 15) * 15;
-        targetStartM = Math.max(0, Math.min(23 * 60 + 45, targetStartM));
+    const activeCanvas = targetCanvas || targetCol?.querySelector('.schedule-grid-canvas');
+    if (targetCol && activeCanvas) {
+      const cRect = activeCanvas.getBoundingClientRect();
+      const relY = Math.max(0, (e.clientY - dragGrabOffsetY) - cRect.top);
+      let targetStartM = Math.round((relY / HOUR_HEIGHT) * 60);
+      targetStartM = Math.round(targetStartM / 15) * 15;
+      targetStartM = Math.max(0, Math.min(23 * 60 + 45, targetStartM));
 
-        const anchorInfo = dragInitialTops.get(dragAnchorTaskId);
-        const anchorStartM = anchorInfo ? anchorInfo.initialStartMinutes : 0;
-        const diffM = targetStartM - anchorStartM;
+      const anchorInfo = dragInitialTops.get(dragAnchorTaskId);
+      const anchorStartM = anchorInfo ? anchorInfo.initialStartMinutes : 0;
+      const diffM = targetStartM - anchorStartM;
 
-        dragInitialTops.forEach(info => {
-          const itemStartM = Math.max(0, Math.min(23 * 60 + 45, info.initialStartMinutes + diffM));
-          const itemEndM = itemStartM + info.duration;
-          const snappedTop = ((itemStartM - START_HOUR * 60) / 60) * HOUR_HEIGHT;
-          const height = Math.max(34, (info.duration / 60) * HOUR_HEIGHT);
+      dragInitialTops.forEach(info => {
+        const itemStartM = Math.max(0, Math.min(23 * 60 + 45, info.initialStartMinutes + diffM));
+        const itemEndM = itemStartM + info.duration;
+        const snappedTop = ((itemStartM - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+        const height = Math.max(30, (info.duration / 60) * HOUR_HEIGHT);
 
-          const startH = String(Math.floor(itemStartM / 60)).padStart(2, '0');
-          const startM = String(itemStartM % 60).padStart(2, '0');
-          const endH = String(Math.floor(itemEndM / 60)).padStart(2, '0');
-          const endM = String(itemEndM % 60).padStart(2, '0');
+        const startH = String(Math.floor(itemStartM / 60)).padStart(2, '0');
+        const startM = String(itemStartM % 60).padStart(2, '0');
+        const endH = String(Math.floor(itemEndM / 60)).padStart(2, '0');
+        const endM = String(itemEndM % 60).padStart(2, '0');
 
-          const ghostId = `pointerDragGhost_${info.task.id}`;
-          let ghost = document.getElementById(ghostId);
-          if (!ghost) {
-            ghost = document.createElement('div');
-            ghost.id = ghostId;
-            targetCanvas.appendChild(ghost);
-          } else if (ghost.parentElement !== targetCanvas) {
-            ghost.remove();
-            targetCanvas.appendChild(ghost);
-          }
-          ghost.className = `drag-preview-slot cat-${info.task.context || 'work'}`;
-          ghost.style.top = `${snappedTop}px`;
-          ghost.style.height = `${height}px`;
-          ghost.style.left = '52px';
-          ghost.style.right = '8px';
-          const isEvent = (info.task.type === 'event');
-          ghost.innerHTML = `
-            <div class="ghost-time-label">${isEvent ? '📅 ' : '⏱ '}${startH}:${startM} – ${endH}:${endM} (${info.duration}m)</div>
-            <div class="ghost-title-label">${info.task.title}</div>
-          `;
-        });
-      }
+        const ghostId = `pointerDragGhost_${info.task.id}`;
+        let ghost = document.getElementById(ghostId);
+        if (!ghost) {
+          ghost = document.createElement('div');
+          ghost.id = ghostId;
+          activeCanvas.appendChild(ghost);
+        } else if (ghost.parentElement !== activeCanvas) {
+          ghost.remove();
+          activeCanvas.appendChild(ghost);
+        }
+        ghost.className = `drag-preview-slot cat-${info.task.context || 'work'}`;
+        ghost.style.top = `${snappedTop}px`;
+        ghost.style.height = `${height}px`;
+        ghost.style.left = '4px';
+        ghost.style.right = '4px';
+        const isEvent = (info.task.type === 'event');
+        ghost.innerHTML = `
+          <div class="ghost-time-label">${isEvent ? '📅 ' : '⏱ '}${startH}:${startM} – ${endH}:${endM} (${info.duration}m)</div>
+          <div class="ghost-title-label">${info.task.title}</div>
+        `;
+      });
     } else {
       document.querySelectorAll('[id^="pointerDragGhost_"]').forEach(g => g.remove());
     }
@@ -1782,7 +1826,7 @@ function handleBlockPointerUp(e) {
   if (avatar) avatar.remove();
 
   document.querySelectorAll('[id^="pointerDragGhost_"]').forEach(g => g.remove());
-  document.querySelectorAll('.day-dock.dock-drop-hover').forEach(d => d.classList.remove('dock-drop-hover'));
+  document.querySelectorAll('.day-dock.dock-drop-hover, .cal-allday-drop-cell.drag-over').forEach(d => d.classList.remove('dock-drop-hover', 'drag-over'));
 
   dragInitialTops.forEach(info => {
     info.el.classList.remove('is-batch-dragging');
@@ -1810,8 +1854,10 @@ function handleBlockPointerUp(e) {
   }
 
   if (wasDragging) {
-    const targetDock = document.elementFromPoint(e.clientX, e.clientY)?.closest('.day-dock');
-    const targetCol = document.elementFromPoint(e.clientX, e.clientY)?.closest('.day-column');
+    const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+    const targetDock = elUnder?.closest('.day-dock, .cal-allday-drop-cell, .cal-allday-row');
+    const targetCanvas = elUnder?.closest('.schedule-grid-canvas');
+    const targetCol = targetCanvas ? targetCanvas.closest('.cal-day-column, .day-column') : elUnder?.closest('.cal-day-column, .day-column');
     const anchorInfo = dragInitialTops.get(anchorId);
     const anchorDate = anchorInfo?.date;
 
@@ -1821,51 +1867,51 @@ function handleBlockPointerUp(e) {
       dragInitialTops.forEach(info => {
         info.task.date = targetDate;
         info.task.time = '';
+        info.task.allDay = true;
         info.task.isRollover = false;
         movedCount++;
       });
       dragInitialTops.clear();
       savePlanState();
       if (typeof showToast === 'function') {
-        showToast(`${movedCount} item${movedCount > 1 ? 's' : ''} moved to To-do dock`, 'success');
+        showToast(`${movedCount} item${movedCount > 1 ? 's' : ''} moved to All-day / To-do`, 'success');
       }
       return;
     }
 
-    if (targetCol) {
-      const targetCanvas = targetCol.querySelector('.schedule-grid-canvas');
-      if (targetCanvas) {
-        const cRect = targetCanvas.getBoundingClientRect();
-        const relY = Math.max(0, (e.clientY - dragGrabOffsetY) - cRect.top);
-        let targetStartM = Math.round((relY / HOUR_HEIGHT) * 60);
-        targetStartM = Math.round(targetStartM / 15) * 15;
-        targetStartM = Math.max(0, Math.min(23 * 60 + 45, targetStartM));
+    const activeCanvas = targetCanvas || targetCol?.querySelector('.schedule-grid-canvas');
+    if (targetCol && activeCanvas) {
+      const cRect = activeCanvas.getBoundingClientRect();
+      const relY = Math.max(0, (e.clientY - dragGrabOffsetY) - cRect.top);
+      let targetStartM = Math.round((relY / HOUR_HEIGHT) * 60);
+      targetStartM = Math.round(targetStartM / 15) * 15;
+      targetStartM = Math.max(0, Math.min(23 * 60 + 45, targetStartM));
 
-        const anchorStartM = anchorInfo ? anchorInfo.initialStartMinutes : 0;
-        const diffM = targetStartM - anchorStartM;
-        const targetDateStr = targetCol.dataset.date;
+      const anchorStartM = anchorInfo ? anchorInfo.initialStartMinutes : 0;
+      const diffM = targetStartM - anchorStartM;
+      const targetDateStr = targetCol.dataset.date || activeCanvas.dataset.date;
 
-        let movedCount = 0;
-        dragInitialTops.forEach(info => {
-          const itemStartM = Math.max(0, Math.min(23 * 60 + 45, info.initialStartMinutes + diffM));
-          const startH = String(Math.floor(itemStartM / 60)).padStart(2, '0');
-          const startM = String(itemStartM % 60).padStart(2, '0');
-          info.task.time = `${startH}:${startM}`;
-          info.task.date = targetDateStr || info.task.date;
-          info.task.isRollover = false;
-          movedCount++;
-        });
+      let movedCount = 0;
+      dragInitialTops.forEach(info => {
+        const itemStartM = Math.max(0, Math.min(23 * 60 + 45, info.initialStartMinutes + diffM));
+        const startH = String(Math.floor(itemStartM / 60)).padStart(2, '0');
+        const startM = String(itemStartM % 60).padStart(2, '0');
+        info.task.time = `${startH}:${startM}`;
+        info.task.allDay = false;
+        info.task.date = targetDateStr || info.task.date;
+        info.task.isRollover = false;
+        movedCount++;
+      });
 
-        dragInitialTops.clear();
-        savePlanState();
+      dragInitialTops.clear();
+      savePlanState();
 
-        if (typeof showToast === 'function') {
-          const dateObj = new Date(targetDateStr + 'T00:00:00');
-          const dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-          showToast(`${movedCount} item${movedCount > 1 ? 's' : ''} moved to ${dateLabel} (${targetStartM ? `${String(Math.floor(targetStartM / 60)).padStart(2, '0')}:${String(targetStartM % 60).padStart(2, '0')}` : ''})`, 'success');
-        }
-        return;
+      if (typeof showToast === 'function') {
+        const dateObj = new Date(targetDateStr + 'T00:00:00');
+        const dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        showToast(`${movedCount} item${movedCount > 1 ? 's' : ''} moved to ${dateLabel} (${targetStartM ? `${String(Math.floor(targetStartM / 60)).padStart(2, '0')}:${String(targetStartM % 60).padStart(2, '0')}` : ''})`, 'success');
       }
+      return;
     }
 
     // Si déposé nulle part de valide, restaurer l'état
