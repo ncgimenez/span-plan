@@ -15,7 +15,7 @@
   <link rel="shortcut icon" href="favicon.ico?v=7.14">
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=7.14">
 
-  <link rel="stylesheet" href="style.css?v=7.16">
+  <link rel="stylesheet" href="style.css?v=7.18">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -398,12 +398,20 @@
   <!-- SUBTASKS PREVIEW / CHECKLIST MODAL -->
   <div class="modal-overlay" id="subtasksModalOverlay" onclick="handleBackdropClick(event, 'subtasksModalOverlay')">
     <div class="modal-card subtasks-modal-card" onclick="event.stopPropagation()">
-      <div class="modal-header">
-        <div class="subtasks-header-info">
+      <div class="modal-header" ondblclick="editParentFromSubtasksModal()" style="cursor: pointer;" title="Double-click to edit full details">
+        <div class="subtasks-header-info" ondblclick="editParentFromSubtasksModal()">
           <span class="subtasks-type-badge" id="subtasksTypeBadge">Task</span>
           <span class="subtasks-title-text" id="subtasksTitleText">Subtasks</span>
         </div>
-        <button class="modal-close" onclick="closeSubtasksModal()">✕</button>
+        <div class="subtasks-header-actions">
+          <button type="button" class="btn-subtasks-edit-header" onclick="editParentFromSubtasksModal()" title="Edit full details">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          </button>
+          <button class="modal-close" onclick="closeSubtasksModal()">✕</button>
+        </div>
       </div>
       <div class="modal-body subtasks-modal-body">
         <div class="subtasks-progress-banner">
@@ -717,9 +725,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=7.16"></script>
-  <script src="js/gcal.js?v=7.16"></script>
-  <script src="js/plan.js?v=7.16"></script>
-  <script src="js/app.js?v=7.16"></script>
+  <script src="js/sync.js?v=7.18"></script>
+  <script src="js/gcal.js?v=7.18"></script>
+  <script src="js/plan.js?v=7.18"></script>
+  <script src="js/app.js?v=7.18"></script>
 </body>
 </html>

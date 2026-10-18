@@ -1696,27 +1696,15 @@ body {
 }
 
 /* ==============================================================
-   COLONNE DU JOUR (ÉLÉGANTE, BORDS ARRONDIS 18px)
+   LEGACY COMPATIBILITY
    ============================================================== */
 .day-column {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: 18px;
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 0;
-  min-width: 270px;
-  max-width: 350px;
-  height: 100%;
-  overflow: hidden;
-  position: relative;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.day-column.is-today {
-  border-color: rgba(16, 185, 129, 0.35);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(16, 185, 129, 0.2);
+  min-width: 0;
+  max-width: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  border: none;
 }
 
 .day-header {
@@ -4195,7 +4183,36 @@ body.is-card-dragging * {
   align-items: center;
   gap: 8px;
   overflow: hidden;
-  max-width: 85%;
+  max-width: 80%;
+  cursor: pointer;
+}
+
+.subtasks-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-subtasks-edit-header {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: var(--text-muted);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+
+.btn-subtasks-edit-header:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-main);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .subtasks-type-badge {

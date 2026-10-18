@@ -937,7 +937,7 @@ function renderPlanGrid(forceRebuild = false) {
     const { timedTasks } = dayDataMap.get(dateStr);
 
     return `
-      <div class="cal-day-column day-column ${isToday ? 'is-today' : ''}" data-date="${dateStr}">
+      <div class="cal-day-column ${isToday ? 'is-today' : ''}" data-date="${dateStr}">
         <div class="cal-day-hour-lines">
           ${hourLinesTemplate}
         </div>
@@ -1662,11 +1662,6 @@ function handleBlockPointerDown(e, taskId, dateStr) {
     return;
   }
 
-  // Empêcher la sélection de texte intempestive du navigateur
-  if (e.pointerType === 'mouse') {
-    e.preventDefault();
-  }
-
   const wasAlreadySelected = selectedTaskIds.has(taskId);
   dragWasAlreadySelected = wasAlreadySelected;
 
@@ -1770,7 +1765,7 @@ function handleBlockPointerMove(e) {
     const elUnder = document.elementFromPoint(e.clientX, e.clientY);
     const targetDock = elUnder?.closest('.day-dock, .cal-allday-drop-cell, .cal-allday-row');
     const targetCanvas = elUnder?.closest('.schedule-grid-canvas');
-    const targetCol = targetCanvas ? targetCanvas.closest('.cal-day-column, .day-column') : elUnder?.closest('.cal-day-column, .day-column');
+    const targetCol = targetCanvas ? targetCanvas.closest('.cal-day-column') : elUnder?.closest('.cal-day-column');
 
     document.querySelectorAll('.day-dock.dock-drop-hover, .cal-allday-drop-cell.drag-over').forEach(d => {
       if (d !== targetDock) d.classList.remove('dock-drop-hover', 'drag-over');
@@ -1832,6 +1827,9 @@ function handleBlockPointerMove(e) {
   }
 }
 
+let lastBlockClickTime = 0;
+let lastBlockClickTaskId = null;
+
 function handleBlockPointerUp(e) {
   window.removeEventListener('pointermove', handleBlockPointerMove);
   window.removeEventListener('pointerup', handleBlockPointerUp);
@@ -1858,6 +1856,20 @@ function handleBlockPointerUp(e) {
   hasMovedBeyondThreshold = false;
 
   if (!moved) {
+    const clickNow = Date.now();
+    const isDoubleClick = (lastBlockClickTaskId === anchorId && (clickNow - lastBlockClickTime) < 400);
+
+    if (isDoubleClick) {
+      lastBlockClickTime = 0;
+      lastBlockClickTaskId = null;
+      dragInitialTops.clear();
+      openEditModal(anchorId);
+      return;
+    }
+
+    lastBlockClickTime = clickNow;
+    lastBlockClickTaskId = anchorId;
+
     if (anchorId) {
       if (dragWasAlreadySelected) {
         clearSelection();
@@ -1869,11 +1881,15 @@ function handleBlockPointerUp(e) {
     return;
   }
 
+  // Si déplacement effectué, réinitialiser le compteur de double clic
+  lastBlockClickTime = 0;
+  lastBlockClickTaskId = null;
+
   if (wasDragging) {
     const elUnder = document.elementFromPoint(e.clientX, e.clientY);
     const targetDock = elUnder?.closest('.day-dock, .cal-allday-drop-cell, .cal-allday-row');
     const targetCanvas = elUnder?.closest('.schedule-grid-canvas');
-    const targetCol = targetCanvas ? targetCanvas.closest('.cal-day-column, .day-column') : elUnder?.closest('.cal-day-column, .day-column');
+    const targetCol = targetCanvas ? targetCanvas.closest('.cal-day-column') : elUnder?.closest('.cal-day-column');
     const anchorInfo = dragInitialTops.get(anchorId);
     const anchorDate = anchorInfo?.date;
 
