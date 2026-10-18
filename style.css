@@ -1319,20 +1319,36 @@ body {
 .block-subtask-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 1.5px 3px;
-  border-radius: 5px;
-  background: transparent;
-  border: none;
+  gap: 6px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 3px solid #818cf8;
   cursor: pointer;
-  transition: background 0.12s ease, opacity 0.12s ease;
-  min-height: 17px;
-  height: 17px;
+  transition: background 0.12s ease, opacity 0.12s ease, border-color 0.12s ease;
+  min-height: 19px;
+  height: auto;
   box-sizing: border-box;
 }
 
+.block-subtask-row.subtask-cat-work {
+  border-left-color: var(--color-work, #818cf8);
+  background: rgba(99, 102, 241, 0.14);
+}
+
+.block-subtask-row.subtask-cat-life {
+  border-left-color: var(--color-life, #10b981);
+  background: rgba(16, 185, 129, 0.14);
+}
+
+.block-subtask-row.subtask-cat-fun {
+  border-left-color: var(--color-fun, #fb7185);
+  background: rgba(251, 113, 133, 0.14);
+}
+
 .block-subtask-row:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .block-subtask-row.completed {
@@ -1340,38 +1356,37 @@ body {
 }
 
 .subtask-cat-indicator {
-  width: 3.5px;
-  height: 12.5px;
-  border-radius: 999px;
-  flex-shrink: 0;
-  background: #818cf8;
-}
-
-.subtask-cat-indicator.cat-work {
-  background: #818cf8;
-}
-
-.subtask-cat-indicator.cat-life {
-  background: #10b981;
-}
-
-.subtask-cat-indicator.cat-fun {
-  background: #fb7185;
+  display: none;
 }
 
 .subtask-mini-checkbox {
-  width: 13.5px;
-  height: 13.5px;
-  border-radius: 3.5px;
-  border: 1.4px solid rgba(255, 255, 255, 0.38);
+  width: 12.5px;
+  height: 12.5px;
+  border-radius: 3px;
+  border: 1.3px solid rgba(255, 255, 255, 0.38);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 8.5px;
+  font-size: 8px;
   color: #fff;
   flex-shrink: 0;
   background: transparent;
   transition: all 0.12s ease;
+}
+
+.block-subtask-row.subtask-cat-work .subtask-mini-checkbox.checked {
+  background: #818cf8;
+  border-color: #818cf8;
+}
+
+.block-subtask-row.subtask-cat-life .subtask-mini-checkbox.checked {
+  background: #10b981;
+  border-color: #10b981;
+}
+
+.block-subtask-row.subtask-cat-fun .subtask-mini-checkbox.checked {
+  background: #fb7185;
+  border-color: #fb7185;
 }
 
 .subtask-mini-checkbox:hover {

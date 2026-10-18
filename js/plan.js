@@ -178,14 +178,32 @@ function syncFocusTasksToPlanBacklog(shouldSave = true, customFocusTasks = null)
     );
 
     // Récupérer et formater les sous-tâches associées à cette tâche/événement
-    const mySubtasks = childSubtasks.filter(st => String(st.parentEventId) === String(ft.id) || (ft.planId && String(st.parentEventId) === String(ft.planId)));
-    const formattedSubtasks = mySubtasks.map(st => ({
-      id: st.id,
-      title: st.title,
-      context: normalizePlanContext(st.category),
-      completed: !!st.completed,
-      parentEventId: ft.id
-    }));
+    const mySubtasks = childSubtasks.filter(st => {
+      const pid = String(st.parentEventId);
+      if (pid === String(ft.id)) return true;
+      if (ft.planId && pid === String(ft.planId)) return true;
+      if (ft.focusId && pid === String(ft.focusId)) return true;
+      if (existing) {
+        if (pid === String(existing.id)) return true;
+        if (existing.focusId && pid === String(existing.focusId)) return true;
+      }
+      return false;
+    });
+
+    const formattedSubtasks = mySubtasks.map(st => {
+      let subCtx = 'work';
+      if (/#(life|perso|home)\b/i.test(st.title)) subCtx = 'life';
+      else if (/#(fun|sport)\b/i.test(st.title)) subCtx = 'fun';
+      else if (st.context) subCtx = normalizePlanContext(st.context);
+      else if (st.category) subCtx = normalizePlanContext(st.category);
+      return {
+        id: st.id,
+        title: st.title,
+        context: subCtx,
+        completed: !!st.completed,
+        parentEventId: ft.id
+      };
+    });
 
     if (!existing) {
       // Nouvelle tâche provenant de Span Focus -> Intégration directe
@@ -228,8 +246,15 @@ function syncFocusTasksToPlanBacklog(shouldSave = true, customFocusTasks = null)
       }
 
       // Synchronisation des sous-tâches
-      if (formattedSubtasks.length > 0 || (existing.subtasks && existing.subtasks.length > 0)) {
-        existing.subtasks = formattedSubtasks;
+      if (formattedSubtasks.length > 0) {
+        const existingSubs = Array.isArray(existing.subtasks) ? existing.subtasks : [];
+        const merged = [...formattedSubtasks];
+        existingSubs.forEach(es => {
+          if (!merged.some(m => String(m.id) === String(es.id) || (m.title && es.title && m.title.trim().toLowerCase() === es.title.trim().toLowerCase()))) {
+            merged.push(es);
+          }
+        });
+        existing.subtasks = merged;
         hasChanges = true;
       }
     }
@@ -831,10 +856,10 @@ function renderTimedBlocks(tasks, dateStr) {
       subtasksHtml = `
         <div class="block-subtasks-container">
           ${visibleSubtasks.map(sub => `
-            <div class="block-subtask-row ${sub.completed ? 'completed' : ''}" 
+            <div class="block-subtask-row subtask-cat-${sub.context || 'work'} ${sub.completed ? 'completed' : ''}" 
                  onclick="event.stopPropagation(); toggleSubtaskCompletion('${task.id}', '${sub.id}')"
                  title="${sub.completed ? 'Mark incomplete' : 'Mark completed'}">
-              <span class="subtask-cat-indicator cat-${sub.context || task.context || 'work'}"></span>
+              <span class="subtask-cat-indicator cat-${sub.context || 'work'}"></span>
               <div class="subtask-mini-checkbox ${sub.completed ? 'checked' : ''}">
                 ${sub.completed ? '✓' : ''}
               </div>
@@ -2054,6 +2079,12 @@ function deleteTasks(ids) {
       if (t.id) keysToDismiss.push(t.id);
       if (t.focusId) keysToDismiss.push(t.focusId);
       if (t.title) keysToDismiss.push('title:' + t.title.trim().toLowerCase());
+      if (Array.isArray(t.subtasks)) {
+        t.subtasks.forEach(st => {
+          if (st.id) keysToDismiss.push(st.id);
+          if (st.title) keysToDismiss.push('title:' + st.title.trim().toLowerCase());
+        });
+      }
     }
   });
   ids.forEach(id => {
@@ -2061,6 +2092,13 @@ function deleteTasks(ids) {
   });
 
   addDismissedTaskIds(keysToDismiss);
+
+  // Sync avec le registre de suppression Focus (span_deleted_task_ids)
+  try {
+    const deletedSet = new Set(JSON.parse(localStorage.getItem('span_deleted_task_ids') || '[]'));
+    keysToDismiss.forEach(k => deletedSet.add(String(k)));
+    localStorage.setItem('span_deleted_task_ids', JSON.stringify(Array.from(deletedSet)));
+  } catch (e) {}
 
   // 2. Supprimer de l'état local Plan
   window.SpanPlanState.tasks = (window.SpanPlanState.tasks || []).filter(t => !idSet.has(t.id));
@@ -2466,6 +2504,13 @@ function deleteSubtask(subtaskId) {
     if (subTitle) keys.push('title:' + subTitle);
     addDismissedTaskIds(keys);
 
+    // Sync avec le registre Focus (span_deleted_task_ids)
+    try {
+      const deletedSet = new Set(JSON.parse(localStorage.getItem('span_deleted_task_ids') || '[]'));
+      keys.forEach(k => deletedSet.add(String(k)));
+      localStorage.setItem('span_deleted_task_ids', JSON.stringify(Array.from(deletedSet)));
+    } catch (e) {}
+
     // 2. Nettoyer de span_tasks (Focus)
     try {
       let focusTasks = JSON.parse(localStorage.getItem('span_tasks')) || [];
@@ -2506,13 +2551,28 @@ function syncSubtasksToFocus(parent) {
     const parentId = parent.focusId || parent.id;
     focusTasks = focusTasks.filter(ft => ft.parentEventId !== parentId && ft.parentEventId !== parent.id);
 
+    const catCapMap = { work: 'Work', life: 'Home', fun: 'Fun' };
+
     (parent.subtasks || []).forEach(st => {
+      let subCtx = 'work';
+      if (/#(life|perso|home)\b/i.test(st.title)) subCtx = 'life';
+      else if (/#(fun|sport)\b/i.test(st.title)) subCtx = 'fun';
+      else if (st.context) subCtx = normalizePlanContext(st.context);
+      else if (st.category) subCtx = normalizePlanContext(st.category);
+      else if (parent.context) subCtx = normalizePlanContext(parent.context);
+
       focusTasks.push({
         id: st.id,
         title: st.title,
         completed: !!st.completed,
-        category: st.context || parent.context || 'work',
-        parentEventId: parentId
+        category: catCapMap[subCtx] || 'Work',
+        estimate: 1,
+        duration: 25,
+        isEvent: false,
+        isFavorite: false,
+        parentEventId: parentId,
+        scheduledDate: parent.date || null,
+        scheduledTime: null
       });
     });
 
@@ -2547,12 +2607,19 @@ function submitSubtaskInlineAdd() {
   const parent = window.SpanPlanState.tasks.find(t => t.id === currentSubtasksParentId);
   if (!parent) return;
 
+  let subCtx = 'work';
+  if (/#(life|perso|home)\b/i.test(title)) subCtx = 'life';
+  else if (/#(fun|sport)\b/i.test(title)) subCtx = 'fun';
+  else if (/#(work|code|pro)\b/i.test(title)) subCtx = 'work';
+  else if (currentContextFilter !== 'all') subCtx = normalizePlanContext(currentContextFilter);
+  else subCtx = normalizePlanContext(parent.context || 'work');
+
   if (!Array.isArray(parent.subtasks)) parent.subtasks = [];
   const newSub = {
     id: 'sub_' + Date.now(),
     title: title,
     completed: false,
-    context: parent.context || 'work'
+    context: subCtx
   };
   parent.subtasks.push(newSub);
   input.value = '';
@@ -3165,11 +3232,15 @@ window.addEventListener('resize', () => {
 
 // INITIALISATION AU DÉMARRAGE
 window.addEventListener('DOMContentLoaded', () => {
+  if (typeof syncFocusTasksToPlanBacklog === 'function') {
+    syncFocusTasksToPlanBacklog(false);
+  }
   autoRecoverTodayTasks();
   executeAutoRollover();
   setVisibleDays(visibleDaysCount);
   setMobileDayView('agenda');
   applyPinState();
+  renderPlanGrid();
   renderBacklogDrawer();
   updateCounters();
   renderDateStrip();
