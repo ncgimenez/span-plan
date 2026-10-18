@@ -3275,27 +3275,44 @@ body.is-card-dragging * {
 .form-col { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 
 .modal-allday-row {
-  margin: 2px 0 6px 0;
+  margin: 6px 0 10px 0;
   display: flex;
   align-items: center;
 }
 
 .allday-switch-label {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   cursor: pointer;
   user-select: none;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-main);
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.allday-switch-label:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(129, 140, 248, 0.4);
 }
 
 .allday-switch-label input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   accent-color: #818cf8;
   cursor: pointer;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.allday-switch-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
 }
 
 .type-pills {

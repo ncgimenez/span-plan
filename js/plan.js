@@ -3178,30 +3178,34 @@ function selectModalType(type) {
 
 function toggleModalAllDay(isAllDay) {
   const rowTimes = document.getElementById('rowTaskTimes');
-  const colEndDate = document.getElementById('colTaskEndDate');
-  const lblDate = document.getElementById('lblTaskDate');
-  const dateInput = document.getElementById('editTaskDate');
-  const endDateInput = document.getElementById('editTaskEndDate');
+  const allDayCheck = document.getElementById('editTaskAllDay');
+  if (allDayCheck) allDayCheck.checked = !!isAllDay;
 
-  if (isAllDay) {
-    if (rowTimes) rowTimes.style.display = 'none';
-    if (colEndDate) colEndDate.style.display = 'flex';
-    if (lblDate) lblDate.textContent = 'Start Date';
-    if (endDateInput && (!endDateInput.value || (dateInput && endDateInput.value < dateInput.value))) {
-      endDateInput.value = dateInput ? dateInput.value : '';
-    }
-  } else {
-    if (rowTimes) rowTimes.style.display = 'flex';
-    if (colEndDate) colEndDate.style.display = 'none';
-    if (lblDate) lblDate.textContent = 'Date';
+  if (rowTimes) {
+    rowTimes.style.display = isAllDay ? 'none' : 'flex';
   }
 }
 
 function handleModalStartDateChange() {
   const dateInput = document.getElementById('editTaskDate');
   const endDateInput = document.getElementById('editTaskEndDate');
-  if (dateInput && endDateInput && (!endDateInput.value || endDateInput.value < dateInput.value)) {
-    endDateInput.value = dateInput.value;
+  if (dateInput && endDateInput) {
+    if (!endDateInput.value || endDateInput.value < dateInput.value) {
+      endDateInput.value = dateInput.value;
+    }
+  }
+}
+
+function handleModalEndDateChange() {
+  const dateInput = document.getElementById('editTaskDate');
+  const endDateInput = document.getElementById('editTaskEndDate');
+  const allDayCheck = document.getElementById('editTaskAllDay');
+
+  if (dateInput && endDateInput && dateInput.value && endDateInput.value) {
+    if (endDateInput.value > dateInput.value && allDayCheck && !allDayCheck.checked) {
+      allDayCheck.checked = true;
+      toggleModalAllDay(true);
+    }
   }
 }
 
@@ -3228,6 +3232,12 @@ function handleModalEndTimeChange() {
     if (durInput) durInput.value = dur;
   }
 }
+
+window.toggleModalAllDay = toggleModalAllDay;
+window.handleModalStartDateChange = handleModalStartDateChange;
+window.handleModalEndDateChange = handleModalEndDateChange;
+window.handleModalStartTimeChange = handleModalStartTimeChange;
+window.handleModalEndTimeChange = handleModalEndTimeChange;
 
 function openCreateModalWithDefaults(dateStr = TODAY_STR, timeStr = '') {
   editingTaskId = null;

@@ -14,7 +14,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="span-logo.png?v=7.11">
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=7.11">
 
-  <link rel="stylesheet" href="style.css?v=7.10">
+  <link rel="stylesheet" href="style.css?v=7.12">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -338,15 +338,15 @@
           </label>
         </div>
 
-        <!-- DATES ROW -->
+        <!-- DATES ROW (ALWAYS VISIBLE) -->
         <div class="form-row">
           <div class="form-col" id="colTaskStartDate">
-            <label class="modal-label" id="lblTaskDate">Date</label>
+            <label class="modal-label" id="lblTaskDate">Start Date</label>
             <input type="date" class="modal-input" id="editTaskDate" onchange="handleModalStartDateChange()">
           </div>
-          <div class="form-col" id="colTaskEndDate" style="display: none;">
-            <label class="modal-label">End Date</label>
-            <input type="date" class="modal-input" id="editTaskEndDate">
+          <div class="form-col" id="colTaskEndDate">
+            <label class="modal-label" id="lblTaskEndDate">End Date</label>
+            <input type="date" class="modal-input" id="editTaskEndDate" onchange="handleModalEndDateChange()">
           </div>
         </div>
 
@@ -702,9 +702,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=7.8"></script>
-  <script src="js/gcal.js?v=7.8"></script>
-  <script src="js/plan.js?v=7.8"></script>
-  <script src="js/app.js?v=7.8"></script>
+  <script src="js/sync.js?v=7.12"></script>
+  <script src="js/gcal.js?v=7.12"></script>
+  <script src="js/plan.js?v=7.12"></script>
+  <script src="js/app.js?v=7.12"></script>
 </body>
 </html>
