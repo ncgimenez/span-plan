@@ -199,9 +199,21 @@ async function loadPlanFromCloud() {
             const localSubtasks = Array.isArray(localTask.subtasks) ? localTask.subtasks : [];
             const remoteSubtasks = Array.isArray(remoteTask.subtasks) ? remoteTask.subtasks : [];
             
-            const mergedSubtasks = [...localSubtasks];
+            const mergedSubtasks = localSubtasks.map(lsub => {
+              const rmatch = remoteSubtasks.find(rsub => 
+                String(rsub.id) === String(lsub.id) || 
+                (rsub.title && lsub.title && rsub.title.trim().toLowerCase() === lsub.title.trim().toLowerCase())
+              );
+              if (rmatch) {
+                return {
+                  ...lsub,
+                  completed: lsub.completed || rmatch.completed
+                };
+              }
+              return lsub;
+            });
             remoteSubtasks.forEach(rsub => {
-              if (rsub && !mergedSubtasks.some(lsub => lsub.id === rsub.id || (lsub.title && lsub.title === rsub.title))) {
+              if (rsub && !mergedSubtasks.some(lsub => String(lsub.id) === String(rsub.id) || (lsub.title && rsub.title && lsub.title.trim().toLowerCase() === rsub.title.trim().toLowerCase()))) {
                 mergedSubtasks.push(rsub);
               }
             });

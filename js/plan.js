@@ -97,25 +97,34 @@ if (!hasStoredData) {
   const cleanTasks = Array.isArray(rawTasks)
     ? rawTasks.filter(t => !isMockSampleTask(t))
     : [];
-  window.SpanPlanState.tasks = cleanTasks.map(t => ({
-    id: t.id || ('p_' + Math.random().toString(36).substr(2, 9)),
-    title: t.title || 'Untitled',
-    type: t.type === 'event' ? 'event' : 'task',
-    allDay: t.allDay !== undefined ? !!t.allDay : (!t.time && !!t.date),
-    date: (t.date && t.date.trim() !== '') ? t.date.slice(0, 10) : null,
-    endDate: (t.endDate && t.endDate.trim() !== '') ? t.endDate.slice(0, 10) : null,
-    recurrence: t.recurrence || 'none',
-    recurrenceExceptions: Array.isArray(t.recurrenceExceptions) ? t.recurrenceExceptions : [],
-    time: t.time || '',
-    endTime: t.endTime || '',
-    duration: typeof t.duration === 'number' ? t.duration : 45,
-    context: normalizePlanContext(t.context || t.category),
-    completed: !!t.completed,
-    isRollover: !!t.isRollover,
-    fromFocus: !!t.fromFocus,
-    focusId: t.focusId || null,
-    subtasks: Array.isArray(t.subtasks) ? t.subtasks : []
-  }));
+  window.SpanPlanState.tasks = cleanTasks.map(t => {
+    const isAllDay = t.allDay !== undefined ? !!t.allDay : (!t.time && !!t.date);
+    const dateVal = (t.date && t.date.trim() !== '') ? t.date.slice(0, 10) : null;
+    let endDateVal = (t.endDate && t.endDate.trim() !== '') ? t.endDate.slice(0, 10) : null;
+    // Pour une tâche ou événement avec horaire précis sans récurrence, endDate ne doit jamais être différente de date
+    if (!isAllDay && t.time && (!t.recurrence || t.recurrence === 'none')) {
+      endDateVal = dateVal;
+    }
+    return {
+      id: t.id || ('p_' + Math.random().toString(36).substr(2, 9)),
+      title: t.title || 'Untitled',
+      type: t.type === 'event' ? 'event' : 'task',
+      allDay: isAllDay,
+      date: dateVal,
+      endDate: endDateVal,
+      recurrence: t.recurrence || 'none',
+      recurrenceExceptions: Array.isArray(t.recurrenceExceptions) ? t.recurrenceExceptions : [],
+      time: t.time || '',
+      endTime: t.endTime || '',
+      duration: typeof t.duration === 'number' ? t.duration : 45,
+      context: normalizePlanContext(t.context || t.category),
+      completed: !!t.completed,
+      isRollover: !!t.isRollover,
+      fromFocus: !!t.fromFocus,
+      focusId: t.focusId || null,
+      subtasks: Array.isArray(t.subtasks) ? t.subtasks : []
+    };
+  });
 }
 
 // ==============================================================
@@ -132,7 +141,9 @@ function isTaskOccurringOnDate(task, targetDateStr) {
 
   const rec = task.recurrence || 'none';
   if (rec === 'none') {
-    if (task.endDate && task.endDate >= task.date) {
+    // Les plages multi-jours (endDate > date) sont réservées aux événements ALL-DAY
+    const isMultiDaySpan = !!(task.allDay || !task.time);
+    if (isMultiDaySpan && task.endDate && task.endDate >= task.date) {
       return task.date <= targetDateStr && targetDateStr <= task.endDate;
     }
     return task.date === targetDateStr;
@@ -320,7 +331,7 @@ function syncFocusTasksToPlanBacklog(shouldSave = true, customFocusTasks = null)
         type: isEv ? 'event' : 'task',
         date: ft.scheduledDate || null,
         time: ft.scheduledTime || '',
-        duration: ft.duration || (ft.estimate ? ft.estimate * 25 : 45),
+        duration: ft.duration || (ft.estimate ? ft.estimate * 30 : 30),
         context: normalizedContext,
         completed: !!ft.completed,
         isRollover: false,
@@ -347,15 +358,29 @@ function syncFocusTasksToPlanBacklog(shouldSave = true, customFocusTasks = null)
         hasChanges = true;
       }
 
-      // Synchronisation des sous-tâches
+      // Synchronisation des sous-tâches (fusion intelligente préservant l'état coché)
       if (formattedSubtasks.length > 0) {
         const existingSubs = Array.isArray(existing.subtasks) ? existing.subtasks : [];
-        const merged = [...formattedSubtasks];
-        existingSubs.forEach(es => {
-          if (!merged.some(m => String(m.id) === String(es.id) || (m.title && es.title && m.title.trim().toLowerCase() === es.title.trim().toLowerCase()))) {
-            merged.push(es);
+        const merged = existingSubs.map(es => {
+          const matchingFocus = formattedSubtasks.find(fs => 
+            String(fs.id) === String(es.id) || 
+            (fs.title && es.title && fs.title.trim().toLowerCase() === es.title.trim().toLowerCase())
+          );
+          if (matchingFocus) {
+            return {
+              ...es,
+              completed: es.completed || matchingFocus.completed
+            };
+          }
+          return es;
+        });
+
+        formattedSubtasks.forEach(fs => {
+          if (!merged.some(m => String(m.id) === String(fs.id) || (m.title && fs.title && m.title.trim().toLowerCase() === fs.title.trim().toLowerCase()))) {
+            merged.push(fs);
           }
         });
+
         existing.subtasks = merged;
         hasChanges = true;
       }
@@ -369,28 +394,36 @@ function syncFocusTasksToPlanBacklog(shouldSave = true, customFocusTasks = null)
 }
 
 function toggleSubtaskCompletion(parentTaskId, subtaskId) {
-  const parentTask = window.SpanPlanState.tasks.find(t => t.id === parentTaskId);
+  const parentTask = window.SpanPlanState.tasks.find(t => String(t.id) === String(parentTaskId));
   if (!parentTask || !parentTask.subtasks) return;
-  const sub = parentTask.subtasks.find(s => s.id === subtaskId);
+  const sub = parentTask.subtasks.find(s => String(s.id) === String(subtaskId));
   if (!sub) return;
   sub.completed = !sub.completed;
+  parentTask.updated_at = new Date().toISOString();
 
-  // Sync to Focus
-  syncPlanSubtaskUpdateToFocus(subtaskId, sub.completed);
+  // Sync bidirectionnelle infaillible vers Focus
+  syncPlanSubtaskUpdateToFocus(subtaskId, sub.completed, sub.title);
+  if (typeof syncSubtasksToFocus === 'function') {
+    syncSubtasksToFocus(parentTask);
+  }
 
   savePlanState();
 }
 
-function syncPlanSubtaskUpdateToFocus(subtaskId, isCompleted) {
+function syncPlanSubtaskUpdateToFocus(subtaskId, isCompleted, subTitle = '') {
   try {
     let focusTasks = JSON.parse(localStorage.getItem('span_tasks'));
     if (!Array.isArray(focusTasks)) return;
 
     let modified = false;
+    const normTitle = (subTitle || '').trim().toLowerCase();
     focusTasks.forEach(ft => {
-      if (ft.id === subtaskId) {
+      const idMatch = ft.id && (String(ft.id) === String(subtaskId));
+      const titleMatch = normTitle && ft.title && (ft.title.trim().toLowerCase() === normTitle);
+      if (idMatch || titleMatch) {
         if (ft.completed !== isCompleted) {
           ft.completed = isCompleted;
+          ft.updated_at = new Date().toISOString();
           modified = true;
         }
       }
@@ -635,7 +668,7 @@ function calculateVisibleDates() {
   return dates;
 }
 
-function renderTimeRulerHtml() {
+function renderTimeRulerHtml(visibleDates = []) {
   let html = '';
   for (let h = START_HOUR; h <= END_HOUR; h++) {
     const top = (h - START_HOUR) * HOUR_HEIGHT;
@@ -647,6 +680,25 @@ function renderTimeRulerHtml() {
       </div>
     `;
   }
+
+  const hasToday = visibleDates.some(d => getLocalDateString(d) === TODAY_STR);
+  if (hasToday) {
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const startMinutes = START_HOUR * 60;
+    const endMinutes = (END_HOUR + 1) * 60;
+    if (currentMinutes >= startMinutes && currentMinutes <= endMinutes) {
+      const nowTop = Math.round(((currentMinutes - startMinutes) / 60) * HOUR_HEIGHT);
+      const currH = String(now.getHours()).padStart(2, '0');
+      const currM = String(now.getMinutes()).padStart(2, '0');
+      html += `
+        <div class="cal-time-now-badge" style="top: ${nowTop}px;" title="Current time: ${currH}:${currM}">
+          <span>${currH}:${currM}</span>
+        </div>
+      `;
+    }
+  }
+
   return html;
 }
 
@@ -924,7 +976,7 @@ function renderPlanGrid(forceRebuild = false) {
       <div class="cal-scroll-viewport" id="calScrollViewport">
         <div class="cal-scroll-content">
           <div class="cal-time-ruler">
-            ${renderTimeRulerHtml()}
+            ${renderTimeRulerHtml(visibleDates)}
           </div>
           <div class="cal-grid-columns" style="grid-template-columns: repeat(${visibleDates.length}, 1fr);">
             ${gridColumnsHtml}
@@ -1265,36 +1317,10 @@ function renderTimedBlocks(tasks, dateStr) {
       ? `<span class="event-progress-pill" onclick="event.stopPropagation(); openSubtasksModal('${task.id}')" title="Subtasks (${doneSubCount}/${childSubtasks.length})">☑ ${doneSubCount}/${childSubtasks.length}</span>` 
       : '';
 
-    // Barre de progression intégrée et dynamique inspirée de Span Focus
-    let liveProgressHtml = '';
-    const elapsedMinutes = Math.max(0, currentMinutes - start);
     const remainingMinutes = Math.max(0, endTotal - currentMinutes);
-    const livePercent = Math.min(100, Math.max(0, Math.round((elapsedMinutes / duration) * 100)));
-    const currH = String(now.getHours()).padStart(2, '0');
-    const currM = String(now.getMinutes()).padStart(2, '0');
-    const currTimeStr = `${currH}:${currM}`;
-
-    if (isLiveNow && height >= 56) {
-      liveProgressHtml = `
-        <div class="live-progress-container">
-          <div class="live-progress-track">
-            <div class="live-progress-fill" style="width: ${livePercent}%;"></div>
-            <div class="live-progress-knob" style="left: ${livePercent}%;">
-              <span class="live-knob-dot"></span>
-              <span class="live-knob-time">${currTimeStr}</span>
-            </div>
-          </div>
-          <div class="live-progress-meta">
-            <span class="live-meta-start">${task.time}</span>
-            <span class="live-meta-remaining">${remainingMinutes}m left (${livePercent}%)</span>
-            <span class="live-meta-end">${endH}:${endM}</span>
-          </div>
-        </div>
-      `;
-    }
 
     let subtasksHtml = '';
-    const hasSubtasksRendered = childSubtasks.length > 0 && height >= 85 && !isLiveNow;
+    const hasSubtasksRendered = childSubtasks.length > 0 && height >= 75;
     if (hasSubtasksRendered) {
       let maxFit = 1;
       if (height >= 115) {
@@ -1334,15 +1360,12 @@ function renderTimedBlocks(tasks, dateStr) {
               ${task.completed ? '✓' : ''}
             </div>
           ` : ''}
-          ${isLiveNow ? `
-            <span class="live-status-pill mini"><span class="live-status-dot"></span>LIVE</span>
-          ` : `
-            <span class="compact-time">${task.time}</span>
-          `}
+          <span class="compact-time">${task.time}</span>
           <span class="schedule-block-title">${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
           ${progressPillHtml}
           ${isLiveNow ? `
-            <span class="live-compact-time-left">${remainingMinutes}m left</span>
+            <span class="live-status-pill mini"><span class="live-status-dot"></span>LIVE</span>
+            <span class="live-meta-remaining">${remainingMinutes}m left</span>
           ` : ''}
           <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
         </div>
@@ -1357,25 +1380,18 @@ function renderTimedBlocks(tasks, dateStr) {
               ${task.completed ? '✓' : ''}
             </div>
           ` : ''}
-          ${isLiveNow ? `
-            <div class="live-top-badges">
-              <div class="block-time-badge">
-                <span class="badge-start">${task.time}</span>
-                <span class="badge-end">${endH}:${endM}</span>
-              </div>
-              <span class="live-status-pill"><span class="live-status-dot"></span>LIVE</span>
-            </div>
-          ` : ''}
           <span class="schedule-block-title">${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
           ${progressPillHtml}
           <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
         </div>
-        ${!isLiveNow ? `
-          <div class="schedule-block-meta">
-            <span class="schedule-block-time">${timeRangeStr}</span>
-          </div>
-        ` : ''}
-        ${liveProgressHtml}
+        <div class="schedule-block-meta">
+          <span class="schedule-block-time">${timeRangeStr}</span>
+          ${isLiveNow ? `
+            <span class="live-meta-divider">•</span>
+            <span class="live-status-pill mini"><span class="live-status-dot"></span>LIVE</span>
+            <span class="live-meta-remaining">${remainingMinutes}m left</span>
+          ` : ''}
+        </div>
         ${subtasksHtml}
       `;
     }
@@ -1866,9 +1882,11 @@ function handleBlockPointerUp(e) {
       let movedCount = 0;
       dragInitialTops.forEach(info => {
         info.task.date = targetDate;
+        info.task.endDate = targetDate;
         info.task.time = '';
         info.task.allDay = true;
         info.task.isRollover = false;
+        info.task.updated_at = new Date().toISOString();
         movedCount++;
       });
       dragInitialTops.clear();
@@ -1899,7 +1917,9 @@ function handleBlockPointerUp(e) {
         info.task.time = `${startH}:${startM}`;
         info.task.allDay = false;
         info.task.date = targetDateStr || info.task.date;
+        info.task.endDate = targetDateStr || info.task.date;
         info.task.isRollover = false;
+        info.task.updated_at = new Date().toISOString();
         movedCount++;
       });
 
@@ -2277,8 +2297,11 @@ function handleCanvasDrop(e, targetDate) {
   const task = window.SpanPlanState.tasks.find(t => t.id === draggedTaskId);
   if (task) {
     task.date = targetDate;
+    task.endDate = targetDate;
     task.time = newTime;
+    task.allDay = false;
     task.isRollover = false;
+    task.updated_at = new Date().toISOString();
     savePlanState();
     if (typeof showToast === 'function') {
       const typeLabel = task.type === 'event' ? 'Event scheduled' : 'Task scheduled';
@@ -2312,8 +2335,11 @@ function handleDropToDock(e, targetDate) {
   const task = window.SpanPlanState.tasks.find(t => t.id === draggedTaskId);
   if (task) {
     task.date = targetDate;
+    task.endDate = targetDate;
     task.time = '';
+    task.allDay = true;
     task.isRollover = false;
+    task.updated_at = new Date().toISOString();
     savePlanState();
     if (typeof showToast === 'function') {
       const typeLabel = task.type === 'event' ? 'Event moved' : 'Task moved';
@@ -3131,7 +3157,7 @@ function syncSubtasksToFocus(parent) {
         completed: !!st.completed,
         category: catCapMap[subCtx] || 'Work',
         estimate: 1,
-        duration: 25,
+        duration: 30,
         isEvent: false,
         isFavorite: false,
         parentEventId: parentId,
