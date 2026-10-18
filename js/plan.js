@@ -503,9 +503,9 @@ function renderPlanGrid(forceRebuild = false) {
       if (canvas) {
         canvas.innerHTML = `
           ${renderHourLines()}
-          ${isToday ? renderNowLineHtml() : ''}
           <div class="cal-marquee"></div>
           ${renderTimedBlocks(timedTasks, dateStr)}
+          ${isToday ? renderNowLineHtml() : ''}
         `;
       }
 
@@ -589,9 +589,9 @@ function renderPlanGrid(forceRebuild = false) {
              ondrop="handleCanvasDrop(event, '${dateStr}')"
              title="Click to create task or event at this time">
           ${renderHourLines()}
-          ${isToday ? renderNowLineHtml() : ''}
           <div class="cal-marquee"></div>
           ${renderTimedBlocks(timedTasks, dateStr)}
+          ${isToday ? renderNowLineHtml() : ''}
         </div>
       </div>
 

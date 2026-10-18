@@ -998,7 +998,8 @@ body {
   right: 0;
   height: 2px;
   background: linear-gradient(90deg, #ef4444, #fb7185);
-  z-index: 15;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+  z-index: 45 !important;
   display: flex;
   align-items: center;
   pointer-events: none;
@@ -1015,6 +1016,7 @@ body {
   box-shadow: 0 0 10px rgba(239, 68, 68, 0.9);
   transform: translate(-50%, 0);
   animation: pulseNowMarker 2s infinite ease-in-out;
+  pointer-events: none;
 }
 
 @keyframes pulseNowMarker {
@@ -1032,6 +1034,7 @@ body {
   position: absolute;
   left: 8px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
 }
 
 /* ==============================================================
