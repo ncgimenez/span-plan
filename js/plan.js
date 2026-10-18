@@ -1650,11 +1650,26 @@ function handleBlockDrop(e, targetBlockId) {
     targetTask.subtasks.push(newSubtask);
   }
 
+  // Enregistrer la tâche glissée dans les identifiants supprimés pour éviter toute résurrection par le cloud
+  const keysToDismiss = [draggedTask.id];
+  if (draggedTask.focusId) keysToDismiss.push(draggedTask.focusId);
+  if (draggedTask.title) keysToDismiss.push('title:' + draggedTask.title.trim().toLowerCase());
+  addDismissedTaskIds(keysToDismiss);
+
+  // Mettre à jour l'horodatage du parent
+  targetTask.updated_at = new Date().toISOString();
+
   // Retirer la tâche glissée de la liste racine
   allTasks.splice(draggedIndex, 1);
   draggedTaskId = null;
 
   savePlanState();
+  if (typeof syncSubtasksToFocus === 'function') {
+    syncSubtasksToFocus(targetTask);
+  }
+  if (typeof syncPlanToCloud === 'function') {
+    syncPlanToCloud();
+  }
 
   if (typeof showToast === 'function') {
     const parentType = targetTask.type === 'event' ? 'event' : 'task';

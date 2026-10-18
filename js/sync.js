@@ -181,11 +181,43 @@ async function loadPlanFromCloud() {
         const cleanRemoteTasks = planTasks.filter(t => !isMockSampleTask(t) && !isDismissed(t));
         const localTasks = ((window.SpanPlanState && window.SpanPlanState.tasks) || []).filter(t => !isMockSampleTask(t) && !isDismissed(t));
 
+        const localTasksMap = new Map();
+        localTasks.forEach(task => {
+          if (task && task.id) localTasksMap.set(task.id, task);
+        });
+
         const mergedMap = new Map();
 
-        // 1. Tâches du cloud (source de vérité)
-        cleanRemoteTasks.forEach(task => {
-          if (task && task.id) mergedMap.set(task.id, task);
+        // 1. Examiner les tâches distantes du cloud
+        cleanRemoteTasks.forEach(remoteTask => {
+          if (!remoteTask || !remoteTask.id) return;
+          const localTask = localTasksMap.get(remoteTask.id);
+          if (!localTask) {
+            mergedMap.set(remoteTask.id, remoteTask);
+          } else {
+            // Fusion intelligente : protéger les sous-tâches et modifications locales récentes
+            const localSubtasks = Array.isArray(localTask.subtasks) ? localTask.subtasks : [];
+            const remoteSubtasks = Array.isArray(remoteTask.subtasks) ? remoteTask.subtasks : [];
+            
+            const mergedSubtasks = [...localSubtasks];
+            remoteSubtasks.forEach(rsub => {
+              if (rsub && !mergedSubtasks.some(lsub => lsub.id === rsub.id || (lsub.title && lsub.title === rsub.title))) {
+                mergedSubtasks.push(rsub);
+              }
+            });
+
+            const remoteIsNewer = Boolean(
+              remoteTask.updated_at && localTask.updated_at && 
+              new Date(remoteTask.updated_at).getTime() > new Date(localTask.updated_at).getTime() && 
+              remoteSubtasks.length >= localSubtasks.length
+            );
+
+            const winner = remoteIsNewer 
+              ? { ...remoteTask, subtasks: mergedSubtasks } 
+              : { ...localTask, subtasks: mergedSubtasks };
+
+            mergedMap.set(remoteTask.id, winner);
+          }
         });
 
         // 2. Fusionner les tâches créées localement qui ne sont pas encore sur le cloud
