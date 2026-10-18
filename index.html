@@ -14,7 +14,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="span-logo.png?v=7.11">
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=7.11">
 
-  <link rel="stylesheet" href="style.css?v=7.12">
+  <link rel="stylesheet" href="style.css?v=7.13">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -364,6 +364,20 @@
 
         <input type="hidden" id="editTaskDuration" value="45">
 
+        <!-- RECURRENCE ROW -->
+        <div class="form-row" id="rowTaskRecurrence">
+          <div class="form-col">
+            <label class="modal-label">Repeat (Récurrence)</label>
+            <select class="modal-select" id="editTaskRecurrence">
+              <option value="none">Does not repeat (Une seule fois)</option>
+              <option value="daily">Every day (Tous les jours)</option>
+              <option value="weekly" id="optRecurrenceWeekly">Every week (Chaque semaine)</option>
+              <option value="biweekly">Every 2 weeks (Toutes les 2 semaines)</option>
+              <option value="monthly">Every month (Chaque mois)</option>
+            </select>
+          </div>
+        </div>
+
         <label class="modal-label">Category Context</label>
         <div class="category-pills" id="modalContextPills">
           <button type="button" class="cat-pill cat-work" data-context="work" onclick="selectEditContext('work')">Work</button>
@@ -702,9 +716,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=7.12"></script>
-  <script src="js/gcal.js?v=7.12"></script>
-  <script src="js/plan.js?v=7.12"></script>
-  <script src="js/app.js?v=7.12"></script>
+  <script src="js/sync.js?v=7.13"></script>
+  <script src="js/gcal.js?v=7.13"></script>
+  <script src="js/plan.js?v=7.13"></script>
+  <script src="js/app.js?v=7.13"></script>
 </body>
 </html>

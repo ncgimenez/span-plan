@@ -104,6 +104,8 @@ if (!hasStoredData) {
     allDay: t.allDay !== undefined ? !!t.allDay : (!t.time && !!t.date),
     date: (t.date && t.date.trim() !== '') ? t.date.slice(0, 10) : null,
     endDate: (t.endDate && t.endDate.trim() !== '') ? t.endDate.slice(0, 10) : null,
+    recurrence: t.recurrence || 'none',
+    recurrenceExceptions: Array.isArray(t.recurrenceExceptions) ? t.recurrenceExceptions : [],
     time: t.time || '',
     endTime: t.endTime || '',
     duration: typeof t.duration === 'number' ? t.duration : 45,
@@ -115,6 +117,75 @@ if (!hasStoredData) {
     subtasks: Array.isArray(t.subtasks) ? t.subtasks : []
   }));
 }
+
+// ==============================================================
+// MOTEUR DE RÉCURRENCE D'ÉVÉNEMENTS & TÂCHES (HEBDO, JOUR, ETC.)
+// ==============================================================
+function isTaskOccurringOnDate(task, targetDateStr) {
+  if (!task || !targetDateStr) return false;
+  if (!task.date) return false; // Les tâches non planifiées du backlog ne récurrent pas
+
+  // Vérifier les exceptions (occurrences supprimées spécifiquement)
+  if (Array.isArray(task.recurrenceExceptions) && task.recurrenceExceptions.includes(targetDateStr)) {
+    return false;
+  }
+
+  const rec = task.recurrence || 'none';
+  if (rec === 'none') {
+    if (task.endDate && task.endDate >= task.date) {
+      return task.date <= targetDateStr && targetDateStr <= task.endDate;
+    }
+    return task.date === targetDateStr;
+  }
+
+  // Ne pas afficher avant la date initiale de création de l'événement
+  if (targetDateStr < task.date) return false;
+
+  const [sy, sm, sd] = task.date.split('-').map(Number);
+  const [ty, tm, td] = targetDateStr.split('-').map(Number);
+  const startD = new Date(sy, sm - 1, sd, 12, 0, 0);
+  const targetD = new Date(ty, tm - 1, td, 12, 0, 0);
+
+  if (rec === 'daily') {
+    return true;
+  }
+
+  if (rec === 'weekly') {
+    return startD.getDay() === targetD.getDay();
+  }
+
+  if (rec === 'biweekly') {
+    if (startD.getDay() !== targetD.getDay()) return false;
+    const diffTime = targetD.getTime() - startD.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    const diffWeeks = Math.floor(diffDays / 7);
+    return diffWeeks % 2 === 0;
+  }
+
+  if (rec === 'monthly') {
+    return startD.getDate() === targetD.getDate();
+  }
+
+  return false;
+}
+
+function updateRecurrenceWeeklyLabel(dateStr) {
+  const opt = document.getElementById('optRecurrenceWeekly');
+  if (!opt) return;
+  if (!dateStr) {
+    opt.textContent = 'Every week (Chaque semaine)';
+    return;
+  }
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dateObj = new Date(y, m - 1, d, 12, 0, 0);
+  const weekdayNamesEn = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const weekdayNamesFr = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+  const dayIdx = dateObj.getDay();
+  opt.textContent = `Every week on ${weekdayNamesEn[dayIdx]} (Chaque ${weekdayNamesFr[dayIdx]})`;
+}
+
+window.isTaskOccurringOnDate = isTaskOccurringOnDate;
+window.updateRecurrenceWeeklyLabel = updateRecurrenceWeeklyLabel;
 
 // ==============================================================
 // PASSERELLE DE SYNCHRONISATION SPAN FOCUS -> SPAN PLAN BACKLOG
@@ -595,42 +666,162 @@ function quickAddAllDayPrompt(dateStr) {
   openCreateModalWithDefaults(dateStr, '');
 }
 
-function renderAllDayTasksHtml(unscheduledTasks, dateStr) {
-  if (!unscheduledTasks || unscheduledTasks.length === 0) {
-    return `<div class="cal-allday-empty-placeholder" onclick="event.stopPropagation(); quickAddAllDayPrompt('${dateStr}')" title="Click to add all-day task"><span class="allday-hover-plus">+</span></div>`;
-  }
-  return unscheduledTasks.map(task => {
+function renderAllDayContinuousRibbonHtml(visibleDates) {
+  if (!visibleDates || visibleDates.length === 0) return '';
+  const visibleDateStrs = visibleDates.map(d => getLocalDateString(d));
+  const visStartStr = visibleDateStrs[0];
+  const visEndStr = visibleDateStrs[visibleDateStrs.length - 1];
+
+  const allTasks = window.SpanPlanState.tasks || [];
+  const items = [];
+
+  allTasks.forEach(task => {
+    const isMultiDay = !!(task.date && task.endDate && task.endDate > task.date);
+    const isAllDay = !!task.allDay || (!task.time && !!task.date) || isMultiDay;
+    if (!isAllDay) return;
+
+    const contextMatch = (currentContextFilter === 'all' || task.context === currentContextFilter);
+    const tagMatch = !currentTagFilter || (task.title && task.title.toLowerCase().includes(`#${currentTagFilter.toLowerCase()}`));
+    if (!contextMatch || !tagMatch) return;
+
+    const rec = task.recurrence || 'none';
+
+    if (rec === 'none') {
+      const tStart = task.date || visStartStr;
+      const tEnd = (task.endDate && task.endDate >= tStart) ? task.endDate : tStart;
+      if (tEnd < visStartStr || tStart > visEndStr) return;
+
+      let colStart = visibleDateStrs.indexOf(tStart);
+      const startsBefore = (colStart === -1);
+      if (startsBefore) colStart = 0;
+
+      let colEnd = visibleDateStrs.indexOf(tEnd);
+      const endsAfter = (colEnd === -1);
+      if (endsAfter) colEnd = visibleDateStrs.length - 1;
+
+      items.push({
+        task,
+        colStart,
+        colEnd,
+        spanCols: (colEnd - colStart + 1),
+        isMultiDay: isMultiDay || (colEnd > colStart) || startsBefore || endsAfter,
+        startsBefore,
+        endsAfter
+      });
+    } else {
+      visibleDateStrs.forEach((ds, cIdx) => {
+        if (isTaskOccurringOnDate(task, ds)) {
+          items.push({
+            task,
+            colStart: cIdx,
+            colEnd: cIdx,
+            spanCols: 1,
+            isMultiDay: false,
+            startsBefore: false,
+            endsAfter: false
+          });
+        }
+      });
+    }
+  });
+
+  // Tri : bannières multi-jours les plus longues en haut, puis par colonne de départ
+  items.sort((a, b) => {
+    if (b.spanCols !== a.spanCols) return b.spanCols - a.spanCols;
+    if (a.colStart !== b.colStart) return a.colStart - b.colStart;
+    return (a.task.title || '').localeCompare(b.task.title || '');
+  });
+
+  // Algorithme glouton d'affectation des pistes (lignes horizontales)
+  const tracks = [];
+  items.forEach(item => {
+    let assigned = -1;
+    for (let r = 0; r < tracks.length; r++) {
+      const collision = tracks[r].some(occ => !(item.colEnd < occ.start || item.colStart > occ.end));
+      if (!collision) {
+        assigned = r;
+        tracks[r].push({ start: item.colStart, end: item.colEnd });
+        break;
+      }
+    }
+    if (assigned === -1) {
+      assigned = tracks.length;
+      tracks.push([{ start: item.colStart, end: item.colEnd }]);
+    }
+    item.track = assigned;
+  });
+
+  const totalTracks = Math.max(1, tracks.length);
+
+  const dropCellsHtml = visibleDates.map((dateObj, c) => {
+    const dateStr = getLocalDateString(dateObj);
+    return `
+      <div class="cal-allday-drop-cell" 
+           style="grid-column: ${c + 1}; grid-row: 1 / -1;"
+           data-date="${dateStr}"
+           ondragover="allowDockDrop(event)" 
+           ondragleave="removeDockDropHighlight(event)"
+           ondrop="handleDropToDock(event, '${dateStr}')"
+           onclick="quickAddAllDayPrompt('${dateStr}')"
+           title="Click or drop to add all-day event on ${dateStr}">
+      </div>
+    `;
+  }).join('');
+
+  const ribbonsHtml = items.map(item => {
+    const { task, colStart, colEnd, isMultiDay, startsBefore, endsAfter, track } = item;
     const isEvent = task.type === 'event';
-    const rolloverPrefix = task.isRollover ? '⟳ ' : '';
+    const recIcon = (task.recurrence && task.recurrence !== 'none') ? '<span class="recurrence-badge" title="Repeats: ' + task.recurrence + '">🔁</span> ' : '';
     const childSubtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
     const doneSubCount = childSubtasks.filter(s => s.completed).length;
     const progressPillHtml = childSubtasks.length > 0 
       ? `<span class="event-progress-pill" onclick="event.stopPropagation(); openSubtasksModal('${task.id}')" title="Subtasks (${doneSubCount}/${childSubtasks.length})">${doneSubCount}/${childSubtasks.length}</span>` 
       : '';
 
-    const isMultiDay = task.date && task.endDate && task.endDate > task.date;
-    const rangeTooltip = isMultiDay ? ` • ${task.date} → ${task.endDate}` : '';
+    const rangeTooltip = (task.date && task.endDate && task.endDate > task.date) ? ` • ${task.date} → ${task.endDate}` : '';
+    const dateRangeLabel = isMultiDay ? `<span class="ribbon-date-range">${task.date.slice(5)} → ${task.endDate ? task.endDate.slice(5) : ''}</span>` : '';
+
+    const multiDayClasses = [
+      isMultiDay ? 'is-multiday-span' : '',
+      startsBefore ? 'starts-before' : '',
+      endsAfter ? 'ends-after' : ''
+    ].filter(Boolean).join(' ');
 
     return `
-      <div class="cal-allday-chip cat-${task.context || 'work'} ${task.completed ? 'completed' : ''} ${isMultiDay ? 'is-multiday' : ''}" 
+      <div class="cal-allday-ribbon cat-${task.context || 'work'} ${task.completed ? 'completed' : ''} ${multiDayClasses}"
            id="allday_${task.id}"
+           style="grid-column: ${colStart + 1} / ${colEnd + 2}; grid-row: ${track + 1}; z-index: 2;"
            draggable="true"
            ondragstart="handleDragStart(event, '${task.id}')"
            ondragend="handleDragEnd(event)"
            onclick="event.stopPropagation(); openEditModal('${task.id}')"
-           title="Click to edit${rangeTooltip}">
-        ${!isEvent ? `
-          <div class="subtask-mini-checkbox ${task.completed ? 'checked' : ''}" 
-               onclick="event.stopPropagation(); toggleTaskCompletion('${task.id}')">
-            ${task.completed ? '✓' : ''}
-          </div>
-        ` : '<span style="font-size:10px;">📅</span>'}
-        <span class="allday-chip-title">${rolloverPrefix}${renderTitleWithTagsHtml(task.title)}</span>
-        ${isMultiDay ? '<span class="allday-range-indicator">↔</span>' : ''}
-        ${progressPillHtml}
+           title="${escapeHtml(task.title)}${rangeTooltip}">
+        <div class="ribbon-content">
+          ${!isEvent ? `
+            <div class="subtask-mini-checkbox ${task.completed ? 'checked' : ''}" 
+                 onclick="event.stopPropagation(); toggleTaskCompletion('${task.id}')">
+              ${task.completed ? '✓' : ''}
+            </div>
+          ` : '<span style="font-size:10.5px; flex-shrink:0;">📅</span>'}
+          <span class="ribbon-title">${recIcon}${renderTitleWithTagsHtml(task.title)}</span>
+          ${dateRangeLabel}
+          ${progressPillHtml}
+        </div>
       </div>
     `;
   }).join('');
+
+  return `
+    <div class="cal-allday-section">
+      <div class="cal-gutter-allday">
+        <span class="allday-label">ALL-DAY</span>
+      </div>
+      <div class="cal-allday-grid" style="grid-template-columns: repeat(${visibleDates.length}, 1fr); grid-template-rows: repeat(${totalTracks}, auto);">
+        ${dropCellsHtml}
+        ${ribbonsHtml}
+      </div>
+    </div>
+  `;
 }
 
 function renderPlanGrid(forceRebuild = false) {
@@ -644,18 +835,15 @@ function renderPlanGrid(forceRebuild = false) {
   const viewport = document.getElementById('calScrollViewport');
   const prevScroll = viewport ? viewport.scrollTop : null;
 
-  // Calculer les données par jour (avec support des événements multi-jours)
+  // Calculer les données par jour (avec support des récurrences et multi-jours)
   const dayDataMap = new Map();
   visibleDates.forEach(dateObj => {
     const dateStr = getLocalDateString(dateObj);
     const dayTasks = (window.SpanPlanState.tasks || []).filter(t => {
-      const hasEndDate = t.endDate && t.endDate >= t.date;
-      const dateMatch = hasEndDate
-        ? (t.date <= dateStr && dateStr <= t.endDate)
-        : (t.date === dateStr);
+      const occurs = isTaskOccurringOnDate(t, dateStr);
       const contextMatch = (currentContextFilter === 'all' || t.context === currentContextFilter);
       const tagMatch = !currentTagFilter || (t.title && t.title.toLowerCase().includes(`#${currentTagFilter.toLowerCase()}`));
-      return dateMatch && contextMatch && tagMatch;
+      return occurs && contextMatch && tagMatch;
     });
     dayDataMap.set(dateStr, {
       dateObj,
@@ -664,13 +852,13 @@ function renderPlanGrid(forceRebuild = false) {
     });
   });
 
-  // Construction du calendrier unifié complet
+  // Construction des en-têtes de colonnes (Badge jour + Capacité horaire)
   const headerCellsHtml = visibleDates.map(dateObj => {
     const dateStr = getLocalDateString(dateObj);
     const isToday = (dateStr === TODAY_STR);
     const weekdayShort = dateObj.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
     const dayNumber = dateObj.getDate();
-    const { timedTasks, unscheduledTasks } = dayDataMap.get(dateStr);
+    const { timedTasks } = dayDataMap.get(dateStr);
 
     const capacityHtml = renderDayCapacityHtml(timedTasks);
 
@@ -684,14 +872,6 @@ function renderPlanGrid(forceRebuild = false) {
             </div>
           </div>
           ${capacityHtml}
-        </div>
-        <div class="cal-allday-row ${unscheduledTasks.length === 0 ? 'is-empty' : ''}" 
-             data-date="${dateStr}"
-             ondragover="allowDockDrop(event)" 
-             ondragleave="removeDockDropHighlight(event)"
-             ondrop="handleDropToDock(event, '${dateStr}')"
-             title="Drop here to make an all-day / unscheduled task">
-          ${renderAllDayTasksHtml(unscheduledTasks, dateStr)}
         </div>
       </div>
     `;
@@ -730,12 +910,15 @@ function renderPlanGrid(forceRebuild = false) {
   grid.innerHTML = `
     <div class="cal-unified-container">
       <div class="cal-sticky-header">
-        <div class="cal-gutter-header">
-          <span class="cal-tz-label">TIME</span>
+        <div class="cal-header-top-row">
+          <div class="cal-gutter-header">
+            <span class="cal-tz-label">TIME</span>
+          </div>
+          <div class="cal-columns-header" style="grid-template-columns: repeat(${visibleDates.length}, 1fr);">
+            ${headerCellsHtml}
+          </div>
         </div>
-        <div class="cal-columns-header" style="grid-template-columns: repeat(${visibleDates.length}, 1fr);">
-          ${headerCellsHtml}
-        </div>
+        ${renderAllDayContinuousRibbonHtml(visibleDates)}
       </div>
 
       <div class="cal-scroll-viewport" id="calScrollViewport">
@@ -839,22 +1022,18 @@ function renderMiniMonthCalendar() {
   const visibleDateStrs = new Set(visibleDates.map(d => getLocalDateString(d)));
   const firstVisibleStr = visibleDates.length > 0 ? getLocalDateString(visibleDates[0]) : null;
 
-  // Calculer l'ensemble des dates ayant des événements/tâches (incluant les plages multi-jours)
+  // Calculer l'ensemble des dates ayant des événements/tâches (incluant récurrences et multi-jours)
   const datesWithTasks = new Set();
-  (window.SpanPlanState.tasks || []).forEach(t => {
-    if (t.date && t.endDate && t.endDate > t.date) {
-      const [sy, sm, sd] = t.date.split('-').map(Number);
-      const [ey, em, ed] = t.endDate.split('-').map(Number);
-      const cur = new Date(sy, sm - 1, sd);
-      const end = new Date(ey, em - 1, ed);
-      while (cur <= end) {
-        datesWithTasks.add(getLocalDateString(cur));
-        cur.setDate(cur.getDate() + 1);
-      }
-    } else if (t.date) {
-      datesWithTasks.add(t.date);
+  const allTasks = window.SpanPlanState.tasks || [];
+  const checkCur = new Date(miniCalYear, miniCalMonth - 1, 20);
+  const checkEnd = new Date(miniCalYear, miniCalMonth + 1, 15);
+  while (checkCur <= checkEnd) {
+    const ds = getLocalDateString(checkCur);
+    if (allTasks.some(t => isTaskOccurringOnDate(t, ds))) {
+      datesWithTasks.add(ds);
     }
-  });
+    checkCur.setDate(checkCur.getDate() + 1);
+  }
 
   // Premier jour du mois
   const firstDay = new Date(miniCalYear, miniCalMonth, 1);
@@ -1068,6 +1247,7 @@ function renderTimedBlocks(tasks, dateStr) {
 
     const rolloverClass = task.isRollover ? 'rollover' : '';
     const rolloverPrefix = task.isRollover ? '⟳ ' : '';
+    const recPrefix = (task.recurrence && task.recurrence !== 'none') ? '<span class="recurrence-badge" title="Repeats: ' + task.recurrence + '">🔁</span> ' : '';
     const eventClass = isEvent ? 'is-event' : '';
     const selectedClass = isSelected ? 'is-selected' : '';
     const liveClass = isLiveNow ? 'is-live-now' : '';
@@ -1128,7 +1308,7 @@ function renderTimedBlocks(tasks, dateStr) {
             </div>
           ` : ''}
           <span class="compact-time">${task.time}</span>
-          <span class="schedule-block-title">${rolloverPrefix}${renderTitleWithTagsHtml(task.title)}</span>
+          <span class="schedule-block-title">${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
           ${progressPillHtml}
           ${isLiveNow ? '<span class="live-pulse-dot" title="Happening right now"></span>' : ''}
           <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
@@ -1144,7 +1324,7 @@ function renderTimedBlocks(tasks, dateStr) {
               ${task.completed ? '✓' : ''}
             </div>
           ` : ''}
-          <span class="schedule-block-title">${rolloverPrefix}${renderTitleWithTagsHtml(task.title)}</span>
+          <span class="schedule-block-title">${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
           ${progressPillHtml}
           ${isLiveNow ? '<span class="live-pulse-dot" title="Happening right now"></span>' : ''}
           <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
@@ -3194,6 +3374,7 @@ function handleModalStartDateChange() {
       endDateInput.value = dateInput.value;
     }
   }
+  updateRecurrenceWeeklyLabel(dateInput ? dateInput.value : '');
 }
 
 function handleModalEndDateChange() {
@@ -3259,6 +3440,10 @@ function openCreateModalWithDefaults(dateStr = TODAY_STR, timeStr = '') {
   const endDateEl = document.getElementById('editTaskEndDate');
   if (endDateEl) endDateEl.value = dateStr || TODAY_STR;
 
+  const recEl = document.getElementById('editTaskRecurrence');
+  if (recEl) recEl.value = 'none';
+  updateRecurrenceWeeklyLabel(dateStr || TODAY_STR);
+
   const timeEl = document.getElementById('editTaskTime');
   if (timeEl) timeEl.value = timeStr || '09:00';
 
@@ -3308,6 +3493,10 @@ function openEditModal(id) {
 
   const endDateEl = document.getElementById('editTaskEndDate');
   if (endDateEl) endDateEl.value = task.endDate || task.date || '';
+
+  const recEl = document.getElementById('editTaskRecurrence');
+  if (recEl) recEl.value = task.recurrence || 'none';
+  updateRecurrenceWeeklyLabel(task.date || TODAY_STR);
 
   const timeEl = document.getElementById('editTaskTime');
   if (timeEl) timeEl.value = task.time || '09:00';
@@ -3383,6 +3572,9 @@ function saveTaskModal() {
     }
   }
 
+  const recEl = document.getElementById('editTaskRecurrence');
+  const recurrenceVal = recEl ? recEl.value : 'none';
+
   if (editingTaskId) {
     const task = window.SpanPlanState.tasks.find(t => t.id === editingTaskId);
     if (task) {
@@ -3391,6 +3583,7 @@ function saveTaskModal() {
       task.allDay = isAllDay;
       task.date = dateVal;
       task.endDate = isAllDay ? endDateVal : dateVal;
+      task.recurrence = recurrenceVal;
       task.time = timeVal;
       task.endTime = endTimeVal;
       task.duration = durationVal;
@@ -3408,6 +3601,8 @@ function saveTaskModal() {
       allDay: isAllDay,
       date: dateVal,
       endDate: isAllDay ? endDateVal : dateVal,
+      recurrence: recurrenceVal,
+      recurrenceExceptions: [],
       time: timeVal,
       endTime: endTimeVal,
       duration: durationVal,
@@ -3418,8 +3613,9 @@ function saveTaskModal() {
     window.SpanPlanState.tasks.unshift(newTask);
     if (typeof showToast === 'function') {
       const timeTxt = timeVal ? ` at ${timeVal}` : (isAllDay ? ' (All-day)' : '');
+      const recTxt = (recurrenceVal && recurrenceVal !== 'none') ? ' 🔁' : '';
       const label = editingItemType === 'event' ? 'Event created' : 'Task created';
-      showToast(`${label}: "${newTask.title}"${timeTxt}`, 'success');
+      showToast(`${label}: "${newTask.title}"${timeTxt}${recTxt}`, 'success');
     }
   }
 
