@@ -434,6 +434,8 @@ function renderDayCapacityHtml(timedTasks) {
   const funM  = timedTasks.filter(t => t.context === 'fun').reduce((acc, t) => acc + (t.duration || 45), 0);
   const totalM = workM + lifeM + funM;
 
+  if (totalM <= 0) return ''; // Pas de texte encombrant ni de barre inutile si journée libre
+
   const maxBudget = Math.max(480, totalM); // Baseline 8h
   const pctWork = Math.min(100, (workM / maxBudget) * 100);
   const pctLife = Math.min(100, (lifeM / maxBudget) * 100);
@@ -442,14 +444,12 @@ function renderDayCapacityHtml(timedTasks) {
   const breakdownTitle = `${timedTasks.length} item${timedTasks.length > 1 ? 's' : ''} scheduled • Work: ${formatMinutesDuration(workM)} · Life: ${formatMinutesDuration(lifeM)} · Fun: ${formatMinutesDuration(funM)}`;
 
   return `
-    <div class="day-capacity-tracker" title="${breakdownTitle}">
-      <div class="day-capacity-bar-bg">
-        <div class="day-capacity-seg seg-work" style="width: ${pctWork}%;"></div>
-        <div class="day-capacity-seg seg-life" style="width: ${pctLife}%;"></div>
-        <div class="day-capacity-seg seg-fun"  style="width: ${pctFun}%;"></div>
-      </div>
-      <div class="day-capacity-meta">
-        <span class="day-capacity-total">${totalM > 0 ? formatMinutesDuration(totalM) : 'Free day'}</span>
+    <div class="cal-day-capacity-pill" title="${breakdownTitle}">
+      <span class="capacity-total-txt">${formatMinutesDuration(totalM)}</span>
+      <div class="capacity-mini-bar">
+        <span class="cap-bar-seg seg-work" style="width: ${pctWork}%;"></span>
+        <span class="cap-bar-seg seg-life" style="width: ${pctLife}%;"></span>
+        <span class="cap-bar-seg seg-fun"  style="width: ${pctFun}%;"></span>
       </div>
     </div>
   `;
@@ -566,7 +566,7 @@ function quickAddAllDayPrompt(dateStr) {
 
 function renderAllDayTasksHtml(unscheduledTasks, dateStr) {
   if (!unscheduledTasks || unscheduledTasks.length === 0) {
-    return `<div class="cal-allday-empty" onclick="event.stopPropagation(); quickAddAllDayPrompt('${dateStr}')">+ To-do</div>`;
+    return `<div class="cal-allday-empty-placeholder" onclick="event.stopPropagation(); quickAddAllDayPrompt('${dateStr}')" title="Click to add all-day task"><span class="allday-hover-plus">+</span></div>`;
   }
   return unscheduledTasks.map(task => {
     const isEvent = task.type === 'event';
@@ -634,16 +634,18 @@ function renderPlanGrid(forceRebuild = false) {
     const dayNumber = dateObj.getDate();
     const { timedTasks, unscheduledTasks } = dayDataMap.get(dateStr);
 
+    const capacityHtml = renderDayCapacityHtml(timedTasks);
+
     return `
       <div class="cal-day-header-cell ${isToday ? 'is-today' : ''}" data-date="${dateStr}">
         <div class="cal-day-title-row">
-          <span class="cal-day-name">${isToday ? 'TODAY' : weekdayShort}</span>
-          <div class="cal-day-disc ${isToday ? 'is-today-disc' : ''}">
-            <span class="cal-day-date-number">${dayNumber}</span>
+          <div class="cal-day-left-badge">
+            <span class="cal-day-name">${isToday ? 'TODAY' : weekdayShort}</span>
+            <div class="cal-day-disc ${isToday ? 'is-today-disc' : ''}">
+              <span class="cal-day-date-number">${dayNumber}</span>
+            </div>
           </div>
-        </div>
-        <div class="cal-day-capacity">
-          ${renderDayCapacityHtml(timedTasks)}
+          ${capacityHtml}
         </div>
         <div class="cal-allday-row ${unscheduledTasks.length === 0 ? 'is-empty' : ''}" 
              data-date="${dateStr}"
@@ -764,12 +766,32 @@ function selectDateFromMiniCal(dateStr) {
 }
 
 function renderMiniMonthCalendar() {
-  const titleEl = document.getElementById('miniCalMonthYear');
-  const gridEl = document.getElementById('miniCalGrid');
-  if (!gridEl) return;
+  const widget = document.getElementById('miniCalendarWidget');
+  if (!widget) return;
 
   const displayDate = new Date(miniCalYear, miniCalMonth, 1);
   const monthName = displayDate.toLocaleDateString('en-US', { month: 'short' });
+
+  let gridEl = document.getElementById('miniCalGrid');
+  if (!gridEl) {
+    widget.innerHTML = `
+      <div class="mini-cal-header">
+        <span class="mini-cal-title" id="miniCalMonthYear">${monthName} ${miniCalYear}</span>
+        <div class="mini-cal-nav">
+          <button type="button" class="mini-nav-btn" onclick="navigateMiniCal(-1)" title="Previous month">‹</button>
+          <button type="button" class="mini-nav-btn" onclick="navigateMiniCal(1)" title="Next month">›</button>
+        </div>
+      </div>
+      <div class="mini-cal-weekdays">
+        <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+      </div>
+      <div class="mini-cal-grid" id="miniCalGrid"></div>
+    `;
+    gridEl = document.getElementById('miniCalGrid');
+  }
+  if (!gridEl) return;
+
+  const titleEl = document.getElementById('miniCalMonthYear');
   if (titleEl) {
     titleEl.textContent = `${monthName} ${miniCalYear}`;
   }
@@ -3262,6 +3284,10 @@ function setVisibleDays(num) {
   document.querySelectorAll('#daysSelectorGroup .pill-btn').forEach(btn => {
     btn.classList.toggle('active', parseInt(btn.dataset.days, 10) === num);
   });
+  // Pour 1D et 3D, s'assurer que Aujourd'hui est en première colonne
+  if (num === 1 || num === 3) {
+    currentTimelineOffset = 0;
+  }
   renderPlanGrid(true);
   applyDynamicScroll();
 }

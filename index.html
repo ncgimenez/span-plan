@@ -46,7 +46,17 @@
 
       <!-- Mini Month Calendar (Datepicker Widget) -->
       <div class="mini-calendar-widget" id="miniCalendarWidget">
-        <!-- Rendered dynamically by plan.js -->
+        <div class="mini-cal-header">
+          <span class="mini-cal-title" id="miniCalMonthYear">Month Year</span>
+          <div class="mini-cal-nav">
+            <button type="button" class="mini-nav-btn" onclick="navigateMiniCal(-1)" title="Previous month">‹</button>
+            <button type="button" class="mini-nav-btn" onclick="navigateMiniCal(1)" title="Next month">›</button>
+          </div>
+        </div>
+        <div class="mini-cal-weekdays">
+          <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+        </div>
+        <div class="mini-cal-grid" id="miniCalGrid"></div>
       </div>
 
       <!-- Context Filters -->
