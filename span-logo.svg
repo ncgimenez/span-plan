@@ -1,16 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
-  <path d="M 30 2 H 2 L 13 14 L 20 9 H 9 L 13 5 H 26 Z" fill="url(#planLogoTop)" />
-  <path d="M 2 30 H 30 L 19 18 L 12 23 H 23 L 19 27 H 6 Z" fill="url(#planLogoBot)" />
-  <!-- Jalon Milestone de Planification (Diamant blanc pur) -->
-  <path d="M 16 12.8 L 19.2 16 L 16 19.2 L 12.8 16 Z" fill="#ffffff" />
+  <path d="M 30 2 H 2 L 12 13 L 20 8 H 8 L 12 4 H 26 Z" fill="url(#planIndTop)" />
+  <path d="M 2 30 H 30 L 20 19 L 12 24 H 24 L 20 28 H 6 Z" fill="url(#planIndBot)" />
+  <!-- Jalon Milestone de Planification avec halo de respiration sombre -->
+  <path d="M 16 10.5 L 21.5 16 L 16 21.5 L 10.5 16 Z" fill="#141418" />
+  <path d="M 16 11.8 L 20.2 16 L 16 20.2 L 11.8 16 Z" fill="#ffffff" />
   <defs>
-    <linearGradient id="planLogoTop" x1="30" y1="2" x2="2" y2="14" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#38bdf8" />
-      <stop offset="1" stop-color="#0284c7" />
+    <linearGradient id="planIndTop" x1="30" y1="2" x2="2" y2="14" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#a855f7" />
+      <stop offset="1" stop-color="#c084fc" />
     </linearGradient>
-    <linearGradient id="planLogoBot" x1="2" y1="18" x2="30" y2="30" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#0369a1" />
-      <stop offset="1" stop-color="#06b6d4" />
+    <linearGradient id="planIndBot" x1="2" y1="18" x2="30" y2="30" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6366f1" />
+      <stop offset="1" stop-color="#818cf8" />
     </linearGradient>
   </defs>
 </svg>
