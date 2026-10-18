@@ -812,6 +812,9 @@ function renderTimedBlocks(tasks, dateStr) {
            onpointerdown="handleBlockPointerDown(event, '${task.id}', '${dateStr}')"
            ondblclick="event.stopPropagation(); openEditModal('${task.id}')"
            onclick="event.stopPropagation()"
+           ondragover="handleBlockDragOver(event, '${task.id}')"
+           ondragleave="handleBlockDragLeave(event, '${task.id}')"
+           ondrop="handleBlockDrop(event, '${task.id}')"
            title="${isEvent ? '📅 Event: ' : '📋 Task: '}${task.title} (${timeRangeStr})">
         <div class="schedule-block-top">
           <div class="block-time-badge" title="${timeRangeStr}">
@@ -1510,6 +1513,7 @@ function handleDragEnd(e) {
   if (ghost) ghost.remove();
   document.querySelectorAll('.schedule-grid-canvas.drag-over').forEach(c => c.classList.remove('drag-over'));
   document.querySelectorAll('.day-dock.drag-over').forEach(d => d.classList.remove('drag-over'));
+  document.querySelectorAll('.schedule-block-item.subtask-drop-target').forEach(b => b.classList.remove('subtask-drop-target'));
   draggedTaskId = null;
 }
 
@@ -1575,6 +1579,86 @@ function removeCanvasDropHighlight(e) {
   const ghost = document.getElementById('canvasDragGhost');
   if (ghost && ghost.parentElement === e.currentTarget) {
     ghost.remove();
+  }
+}
+
+function handleBlockDragOver(e, targetBlockId) {
+  if (!draggedTaskId || draggedTaskId === targetBlockId) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+
+  const ghost = document.getElementById('canvasDragGhost');
+  if (ghost) ghost.remove();
+
+  const blockEl = document.getElementById(`block_${targetBlockId}`);
+  if (blockEl && !blockEl.classList.contains('subtask-drop-target')) {
+    document.querySelectorAll('.schedule-block-item.subtask-drop-target').forEach(b => {
+      if (b !== blockEl) b.classList.remove('subtask-drop-target');
+    });
+    blockEl.classList.add('subtask-drop-target');
+  }
+}
+
+function handleBlockDragLeave(e, targetBlockId) {
+  if (e.relatedTarget && e.currentTarget.contains(e.relatedTarget)) {
+    return;
+  }
+  const blockEl = document.getElementById(`block_${targetBlockId}`);
+  if (blockEl) {
+    blockEl.classList.remove('subtask-drop-target');
+  }
+}
+
+function handleBlockDrop(e, targetBlockId) {
+  e.preventDefault();
+  e.stopPropagation();
+
+  const blockEl = document.getElementById(`block_${targetBlockId}`);
+  if (blockEl) {
+    blockEl.classList.remove('subtask-drop-target');
+  }
+  const ghost = document.getElementById('canvasDragGhost');
+  if (ghost) ghost.remove();
+  document.querySelectorAll('.schedule-block-item.subtask-drop-target').forEach(b => b.classList.remove('subtask-drop-target'));
+
+  if (!draggedTaskId || draggedTaskId === targetBlockId) return;
+
+  const allTasks = window.SpanPlanState.tasks;
+  const draggedIndex = allTasks.findIndex(t => t.id === draggedTaskId);
+  const targetTask = allTasks.find(t => t.id === targetBlockId);
+
+  if (draggedIndex === -1 || !targetTask) return;
+
+  const draggedTask = allTasks[draggedIndex];
+
+  if (!Array.isArray(targetTask.subtasks)) {
+    targetTask.subtasks = [];
+  }
+
+  // Créer l'entrée sous-tâche à partir de la tâche glissée
+  const newSubtask = {
+    id: 'sub_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36),
+    title: draggedTask.title || 'Untitled subtask',
+    completed: !!draggedTask.completed,
+    context: draggedTask.context || targetTask.context || 'work'
+  };
+
+  if (Array.isArray(draggedTask.subtasks) && draggedTask.subtasks.length > 0) {
+    targetTask.subtasks.push(newSubtask, ...draggedTask.subtasks);
+  } else {
+    targetTask.subtasks.push(newSubtask);
+  }
+
+  // Retirer la tâche glissée de la liste racine
+  allTasks.splice(draggedIndex, 1);
+  draggedTaskId = null;
+
+  savePlanState();
+
+  if (typeof showToast === 'function') {
+    const parentType = targetTask.type === 'event' ? 'event' : 'task';
+    showToast(`Added as subtask to ${parentType} "${targetTask.title}"`, 'success');
   }
 }
 

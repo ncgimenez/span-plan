@@ -1366,6 +1366,40 @@ body {
   z-index: 35 !important;
 }
 
+/* CIBLE DE DÉPÔT EN SOUS-TÂCHE */
+.schedule-block-item.subtask-drop-target {
+  outline: 2px dashed #a855f7 !important;
+  outline-offset: -2px !important;
+  background: rgba(168, 85, 247, 0.22) !important;
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.4), 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+  transform: scale(1.02) !important;
+  z-index: 40 !important;
+  transition: all 0.12s ease;
+}
+
+.schedule-block-item.subtask-drop-target::after {
+  content: "📥 Drop to add as subtask";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(88, 28, 135, 0.88);
+  backdrop-filter: blur(4px);
+  color: #f3e8ff;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 10px;
+  z-index: 50;
+  pointer-events: none;
+  animation: pulseSubtaskDrop 0.8s infinite alternate ease-in-out;
+}
+
+@keyframes pulseSubtaskDrop {
+  from { opacity: 0.85; transform: scale(0.99); }
+  to { opacity: 1; transform: scale(1.01); }
+}
+
 /* DÉPLACEMENT FLUIDE EN GROUPE & AVATAR ATTACHÉ À LA SOURIS */
 body.is-card-dragging,
 body.is-card-dragging * {
