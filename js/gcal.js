@@ -80,29 +80,53 @@ async function fetchGoogleUserProfile() {
   }
 }
 
+function toggleGcalConfigBox() {
+  const box = document.getElementById('gcalClientIdConfigBox');
+  if (!box) return;
+  box.style.display = box.style.display === 'none' ? 'flex' : 'none';
+  if (box.style.display === 'flex') {
+    const input = document.getElementById('inputGcalClientId');
+    if (input) {
+      input.value = localStorage.getItem('span_gcal_client_id') || '';
+      input.focus();
+    }
+  }
+}
+
+function saveCustomGcalClientId() {
+  const input = document.getElementById('inputGcalClientId');
+  if (!input) return;
+  const val = input.value.trim();
+  if (!val) return;
+  localStorage.setItem('span_gcal_client_id', val);
+  initGoogleAuth();
+  const box = document.getElementById('gcalClientIdConfigBox');
+  if (box) box.style.display = 'none';
+  if (typeof showToast === 'function') {
+    showToast('Client ID enregistré ! Lancement de la connexion...', 'success');
+  }
+  setTimeout(connectGoogleCalendar, 150);
+}
+
 function connectGoogleCalendar() {
   const customClientId = localStorage.getItem('span_gcal_client_id');
   
-  if (!gcalTokenClient) {
-    initGoogleAuth();
+  if (!customClientId || customClientId.includes('sampleclientid')) {
+    toggleGcalConfigBox();
+    if (typeof showToast === 'function') {
+      showToast('Entrez votre Google Client ID ci-dessous', 'info');
+    }
+    return;
   }
 
   if (!gcalTokenClient) {
-    // Si l'utilisateur n'a pas encore configuré de client ID personnalisé
-    const promptedId = prompt(
-      "Pour connecter Google Calendar, entrez votre Client ID Google OAuth (Web Application) depuis Google Cloud Console :\n\n(Ou cliquez sur OK si vous souhaitez utiliser le Client ID par défaut)",
-      customClientId || ""
-    );
-    if (promptedId && promptedId.trim()) {
-      localStorage.setItem('span_gcal_client_id', promptedId.trim());
-      initGoogleAuth();
-    }
+    initGoogleAuth();
   }
 
   if (gcalTokenClient) {
     gcalTokenClient.requestAccessToken({ prompt: 'consent' });
   } else {
-    alert("Veuillez renseigner un Client ID Google Cloud OAuth valide dans les réglages.");
+    alert("Impossible d'initialiser Google Identity Services. Vérifiez votre Client ID.");
   }
 }
 

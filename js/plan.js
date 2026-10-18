@@ -127,6 +127,31 @@ function syncFocusTasksToPlanBacklog(shouldSave = true, customFocusTasks = null)
     }
   }
 
+  // Nettoyer les tâches racines isolées qui sont déjà devenues des sous-tâches d'un bloc parent
+  const existingSubtaskTitles = new Set();
+  window.SpanPlanState.tasks.forEach(pt => {
+    if (Array.isArray(pt.subtasks)) {
+      pt.subtasks.forEach(st => {
+        if (st.title) existingSubtaskTitles.add(st.title.trim().toLowerCase());
+        if (st.id) existingSubtaskTitles.add(st.id);
+      });
+    }
+  });
+
+  if (existingSubtaskTitles.size > 0) {
+    const prevLen = window.SpanPlanState.tasks.length;
+    window.SpanPlanState.tasks = window.SpanPlanState.tasks.filter(pt => {
+      if (pt.type !== 'event' && (!pt.subtasks || pt.subtasks.length === 0)) {
+        if (existingSubtaskTitles.has(pt.id)) return false;
+        if (pt.title && existingSubtaskTitles.has(pt.title.trim().toLowerCase())) return false;
+      }
+      return true;
+    });
+    if (window.SpanPlanState.tasks.length !== prevLen) {
+      hasChanges = true;
+    }
+  }
+
   rootFocusTasks.forEach(ft => {
     if (!ft || !ft.title) return;
     const titleKey = 'title:' + ft.title.trim().toLowerCase();
@@ -134,6 +159,17 @@ function syncFocusTasksToPlanBacklog(shouldSave = true, customFocusTasks = null)
     if (ft.focusId && dismissedFocusIds.includes(ft.focusId)) return;
     if (dismissedFocusIds.includes(titleKey)) return;
     
+    // Vérifier si cette tâche est déjà imbriquée comme sous-tâche d'une tâche/événement existant
+    const isAlreadySubtask = window.SpanPlanState.tasks.some(pt => 
+      Array.isArray(pt.subtasks) && pt.subtasks.some(st => 
+        (st.id && (st.id === ft.id || st.id === ft.focusId)) || 
+        (st.title && ft.title && st.title.trim().toLowerCase() === ft.title.trim().toLowerCase())
+      )
+    );
+    if (isAlreadySubtask) {
+      return; // Ne pas réimporter dans le dock du jour !
+    }
+
     // Rechercher si cette tâche existe déjà dans Span Plan (qu'elle soit planifiée sur un jour ou en backlog)
     let existing = window.SpanPlanState.tasks.find(pt => 
       pt.id === ft.id || 
@@ -1636,25 +1672,46 @@ function handleBlockDrop(e, targetBlockId) {
     targetTask.subtasks = [];
   }
 
-  // Créer l'entrée sous-tâche à partir de la tâche glissée
-  const newSubtask = {
-    id: 'sub_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36),
-    title: draggedTask.title || 'Untitled subtask',
-    completed: !!draggedTask.completed,
-    context: draggedTask.context || targetTask.context || 'work'
-  };
+  const draggedTitleClean = (draggedTask.title || 'Untitled subtask').trim();
+  const draggedTitleLower = draggedTitleClean.toLowerCase();
 
-  if (Array.isArray(draggedTask.subtasks) && draggedTask.subtasks.length > 0) {
-    targetTask.subtasks.push(newSubtask, ...draggedTask.subtasks);
-  } else {
-    targetTask.subtasks.push(newSubtask);
+  const alreadyExists = targetTask.subtasks.some(st => 
+    (st.title || '').trim().toLowerCase() === draggedTitleLower
+  );
+
+  if (!alreadyExists) {
+    const newSubtask = {
+      id: 'sub_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36),
+      title: draggedTitleClean,
+      completed: !!draggedTask.completed,
+      context: draggedTask.context || targetTask.context || 'work'
+    };
+
+    if (Array.isArray(draggedTask.subtasks) && draggedTask.subtasks.length > 0) {
+      targetTask.subtasks.push(newSubtask, ...draggedTask.subtasks);
+    } else {
+      targetTask.subtasks.push(newSubtask);
+    }
   }
 
   // Enregistrer la tâche glissée dans les identifiants supprimés pour éviter toute résurrection par le cloud
   const keysToDismiss = [draggedTask.id];
   if (draggedTask.focusId) keysToDismiss.push(draggedTask.focusId);
-  if (draggedTask.title) keysToDismiss.push('title:' + draggedTask.title.trim().toLowerCase());
+  keysToDismiss.push('title:' + draggedTitleLower);
   addDismissedTaskIds(keysToDismiss);
+
+  // Mettre à jour Focus pour lier au parent
+  try {
+    let focusTasks = JSON.parse(localStorage.getItem('span_tasks')) || [];
+    if (Array.isArray(focusTasks)) {
+      const parentId = targetTask.focusId || targetTask.id;
+      const ftIndex = focusTasks.findIndex(ft => ft.id === draggedTask.id || ft.id === draggedTask.focusId || (ft.title && ft.title.trim().toLowerCase() === draggedTitleLower));
+      if (ftIndex !== -1) {
+        focusTasks[ftIndex].parentEventId = parentId;
+        localStorage.setItem('span_tasks', JSON.stringify(focusTasks));
+      }
+    }
+  } catch (e) {}
 
   // Mettre à jour l'horodatage du parent
   targetTask.updated_at = new Date().toISOString();
@@ -1673,7 +1730,7 @@ function handleBlockDrop(e, targetBlockId) {
 
   if (typeof showToast === 'function') {
     const parentType = targetTask.type === 'event' ? 'event' : 'task';
-    showToast(`Added as subtask to ${parentType} "${targetTask.title}"`, 'success');
+    showToast(alreadyExists ? `Subtask already present in "${targetTask.title}"` : `Added as subtask to ${parentType} "${targetTask.title}"`, 'success');
   }
 }
 
@@ -2222,6 +2279,27 @@ function openSubtasksModal(taskId) {
   const task = window.SpanPlanState.tasks.find(t => t.id === taskId);
   if (!task) return;
 
+  // Dédupliquer les sous-tâches si des doublons ont été accidentellement insérés
+  if (Array.isArray(task.subtasks) && task.subtasks.length > 1) {
+    const seenTitles = new Set();
+    const deduped = [];
+    task.subtasks.forEach(s => {
+      const key = (s.title || '').trim().toLowerCase();
+      if (!seenTitles.has(key)) {
+        seenTitles.add(key);
+        deduped.push(s);
+      }
+    });
+    if (deduped.length !== task.subtasks.length) {
+      task.subtasks = deduped;
+      task.updated_at = new Date().toISOString();
+      savePlanState();
+      if (typeof syncSubtasksToFocus === 'function') {
+        syncSubtasksToFocus(task);
+      }
+    }
+  }
+
   currentSubtasksParentId = taskId;
   const overlay = document.getElementById('subtasksModalOverlay');
   const typeBadge = document.getElementById('subtasksTypeBadge');
@@ -2341,9 +2419,40 @@ function deleteSubtask(subtaskId) {
   const parent = window.SpanPlanState.tasks.find(t => t.id === currentSubtasksParentId);
   if (!parent || !Array.isArray(parent.subtasks)) return;
 
-  parent.subtasks = parent.subtasks.filter(s => String(s.id) !== String(subtaskId));
+  const subToDelete = parent.subtasks.find(s => String(s.id) === String(subtaskId));
+  if (subToDelete) {
+    const subTitle = (subToDelete.title || '').trim().toLowerCase();
+
+    // 1. Marquer comme supprimé pour ne jamais être réimporté
+    const keys = [subToDelete.id];
+    if (subTitle) keys.push('title:' + subTitle);
+    addDismissedTaskIds(keys);
+
+    // 2. Nettoyer de span_tasks (Focus)
+    try {
+      let focusTasks = JSON.parse(localStorage.getItem('span_tasks')) || [];
+      if (Array.isArray(focusTasks)) {
+        const cleaned = focusTasks.filter(ft => 
+          String(ft.id) !== String(subtaskId) && 
+          (!ft.title || ft.title.trim().toLowerCase() !== subTitle)
+        );
+        localStorage.setItem('span_tasks', JSON.stringify(cleaned));
+      }
+    } catch (e) {}
+
+    // 3. Supprimer toutes les occurrences de cette sous-tâche dans le parent
+    parent.subtasks = parent.subtasks.filter(s => 
+      String(s.id) !== String(subtaskId) && 
+      (!subTitle || (s.title || '').trim().toLowerCase() !== subTitle)
+    );
+  } else {
+    parent.subtasks = parent.subtasks.filter(s => String(s.id) !== String(subtaskId));
+  }
+
+  parent.updated_at = new Date().toISOString();
   savePlanState();
   syncSubtasksToFocus(parent);
+  if (typeof syncPlanToCloud === 'function') syncPlanToCloud();
   renderSubtasksModalList();
   if (typeof showToast === 'function') {
     showToast('Subtask deleted', 'info');
