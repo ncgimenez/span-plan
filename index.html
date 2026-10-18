@@ -330,20 +330,39 @@
         <label class="modal-label">Title</label>
         <input type="text" class="modal-input" id="editTaskTitle" placeholder="Task or event title...">
 
+        <!-- ALL-DAY TOGGLE ROW -->
+        <div class="modal-allday-row">
+          <label class="allday-switch-label" title="Enable for events that span the whole day or multiple days">
+            <input type="checkbox" id="editTaskAllDay" onchange="toggleModalAllDay(this.checked)">
+            <span class="allday-switch-text">All-day (toute la journée / séjour)</span>
+          </label>
+        </div>
+
+        <!-- DATES ROW -->
         <div class="form-row">
-          <div class="form-col">
-            <label class="modal-label">Date</label>
-            <input type="date" class="modal-input" id="editTaskDate">
+          <div class="form-col" id="colTaskStartDate">
+            <label class="modal-label" id="lblTaskDate">Date</label>
+            <input type="date" class="modal-input" id="editTaskDate" onchange="handleModalStartDateChange()">
           </div>
-          <div class="form-col">
-            <label class="modal-label">Time (Optional)</label>
-            <input type="time" class="modal-input" id="editTaskTime">
-          </div>
-          <div class="form-col" style="max-width: 90px;">
-            <label class="modal-label">Duration</label>
-            <input type="number" class="modal-input" id="editTaskDuration" min="15" step="15" value="45" title="Duration in minutes">
+          <div class="form-col" id="colTaskEndDate" style="display: none;">
+            <label class="modal-label">End Date</label>
+            <input type="date" class="modal-input" id="editTaskEndDate">
           </div>
         </div>
+
+        <!-- TIMES ROW (Shown only when NOT all-day) -->
+        <div class="form-row" id="rowTaskTimes">
+          <div class="form-col">
+            <label class="modal-label">Start Time</label>
+            <input type="time" class="modal-input" id="editTaskTime" onchange="handleModalStartTimeChange()">
+          </div>
+          <div class="form-col">
+            <label class="modal-label">End Time</label>
+            <input type="time" class="modal-input" id="editTaskEndTime" onchange="handleModalEndTimeChange()">
+          </div>
+        </div>
+
+        <input type="hidden" id="editTaskDuration" value="45">
 
         <label class="modal-label">Category Context</label>
         <div class="category-pills" id="modalContextPills">

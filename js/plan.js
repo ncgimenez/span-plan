@@ -30,6 +30,34 @@ function normalizePlanContext(cat) {
   return 'work';
 }
 
+function timeToMinutes(timeStr) {
+  if (!timeStr) return 0;
+  const parts = timeStr.split(':');
+  return (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
+}
+
+function minutesToTime(totalM) {
+  totalM = Math.max(0, Math.min(23 * 60 + 59, totalM));
+  const h = String(Math.floor(totalM / 60)).padStart(2, '0');
+  const m = String(totalM % 60).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
+function getEndTimeFromDuration(startTime, durationMinutes) {
+  if (!startTime) return '10:00';
+  const startM = timeToMinutes(startTime);
+  const endM = Math.min(24 * 60 - 1, startM + (durationMinutes || 45));
+  return minutesToTime(endM);
+}
+
+function getDurationFromTimes(startTime, endTime) {
+  if (!startTime || !endTime) return 45;
+  const startM = timeToMinutes(startTime);
+  const endM = timeToMinutes(endTime);
+  if (endM <= startM) return 30;
+  return endM - startM;
+}
+
 function escapeHtml(str) {
   if (!str) return '';
   return String(str)
@@ -73,8 +101,11 @@ if (!hasStoredData) {
     id: t.id || ('p_' + Math.random().toString(36).substr(2, 9)),
     title: t.title || 'Untitled',
     type: t.type === 'event' ? 'event' : 'task',
+    allDay: t.allDay !== undefined ? !!t.allDay : (!t.time && !!t.date),
     date: (t.date && t.date.trim() !== '') ? t.date.slice(0, 10) : null,
+    endDate: (t.endDate && t.endDate.trim() !== '') ? t.endDate.slice(0, 10) : null,
     time: t.time || '',
+    endTime: t.endTime || '',
     duration: typeof t.duration === 'number' ? t.duration : 45,
     context: normalizePlanContext(t.context || t.category),
     completed: !!t.completed,
@@ -577,14 +608,17 @@ function renderAllDayTasksHtml(unscheduledTasks, dateStr) {
       ? `<span class="event-progress-pill" onclick="event.stopPropagation(); openSubtasksModal('${task.id}')" title="Subtasks (${doneSubCount}/${childSubtasks.length})">${doneSubCount}/${childSubtasks.length}</span>` 
       : '';
 
+    const isMultiDay = task.date && task.endDate && task.endDate > task.date;
+    const rangeTooltip = isMultiDay ? ` • ${task.date} → ${task.endDate}` : '';
+
     return `
-      <div class="cal-allday-chip cat-${task.context || 'work'} ${task.completed ? 'completed' : ''}" 
+      <div class="cal-allday-chip cat-${task.context || 'work'} ${task.completed ? 'completed' : ''} ${isMultiDay ? 'is-multiday' : ''}" 
            id="allday_${task.id}"
            draggable="true"
            ondragstart="handleDragStart(event, '${task.id}')"
            ondragend="handleDragEnd(event)"
            onclick="event.stopPropagation(); openEditModal('${task.id}')"
-           title="Click to edit • Drag to hourly slot to schedule time">
+           title="Click to edit${rangeTooltip}">
         ${!isEvent ? `
           <div class="subtask-mini-checkbox ${task.completed ? 'checked' : ''}" 
                onclick="event.stopPropagation(); toggleTaskCompletion('${task.id}')">
@@ -592,6 +626,7 @@ function renderAllDayTasksHtml(unscheduledTasks, dateStr) {
           </div>
         ` : '<span style="font-size:10px;">📅</span>'}
         <span class="allday-chip-title">${rolloverPrefix}${renderTitleWithTagsHtml(task.title)}</span>
+        ${isMultiDay ? '<span class="allday-range-indicator">↔</span>' : ''}
         ${progressPillHtml}
       </div>
     `;
@@ -609,20 +644,23 @@ function renderPlanGrid(forceRebuild = false) {
   const viewport = document.getElementById('calScrollViewport');
   const prevScroll = viewport ? viewport.scrollTop : null;
 
-  // Calculer les données par jour
+  // Calculer les données par jour (avec support des événements multi-jours)
   const dayDataMap = new Map();
   visibleDates.forEach(dateObj => {
     const dateStr = getLocalDateString(dateObj);
     const dayTasks = (window.SpanPlanState.tasks || []).filter(t => {
-      const dateMatch = (t.date === dateStr);
+      const hasEndDate = t.endDate && t.endDate >= t.date;
+      const dateMatch = hasEndDate
+        ? (t.date <= dateStr && dateStr <= t.endDate)
+        : (t.date === dateStr);
       const contextMatch = (currentContextFilter === 'all' || t.context === currentContextFilter);
       const tagMatch = !currentTagFilter || (t.title && t.title.toLowerCase().includes(`#${currentTagFilter.toLowerCase()}`));
       return dateMatch && contextMatch && tagMatch;
     });
     dayDataMap.set(dateStr, {
       dateObj,
-      timedTasks: dayTasks.filter(t => !!t.time),
-      unscheduledTasks: dayTasks.filter(t => !t.time)
+      timedTasks: dayTasks.filter(t => !t.allDay && !!t.time),
+      unscheduledTasks: dayTasks.filter(t => t.allDay || !t.time)
     });
   });
 
@@ -801,10 +839,21 @@ function renderMiniMonthCalendar() {
   const visibleDateStrs = new Set(visibleDates.map(d => getLocalDateString(d)));
   const firstVisibleStr = visibleDates.length > 0 ? getLocalDateString(visibleDates[0]) : null;
 
-  // Calculer l'ensemble des dates ayant des événements/tâches
+  // Calculer l'ensemble des dates ayant des événements/tâches (incluant les plages multi-jours)
   const datesWithTasks = new Set();
   (window.SpanPlanState.tasks || []).forEach(t => {
-    if (t.date) datesWithTasks.add(t.date);
+    if (t.date && t.endDate && t.endDate > t.date) {
+      const [sy, sm, sd] = t.date.split('-').map(Number);
+      const [ey, em, ed] = t.endDate.split('-').map(Number);
+      const cur = new Date(sy, sm - 1, sd);
+      const end = new Date(ey, em - 1, ed);
+      while (cur <= end) {
+        datesWithTasks.add(getLocalDateString(cur));
+        cur.setDate(cur.getDate() + 1);
+      }
+    } else if (t.date) {
+      datesWithTasks.add(t.date);
+    }
   });
 
   // Premier jour du mois
@@ -3127,23 +3176,91 @@ function selectModalType(type) {
   }
 }
 
+function toggleModalAllDay(isAllDay) {
+  const rowTimes = document.getElementById('rowTaskTimes');
+  const colEndDate = document.getElementById('colTaskEndDate');
+  const lblDate = document.getElementById('lblTaskDate');
+  const dateInput = document.getElementById('editTaskDate');
+  const endDateInput = document.getElementById('editTaskEndDate');
+
+  if (isAllDay) {
+    if (rowTimes) rowTimes.style.display = 'none';
+    if (colEndDate) colEndDate.style.display = 'flex';
+    if (lblDate) lblDate.textContent = 'Start Date';
+    if (endDateInput && (!endDateInput.value || (dateInput && endDateInput.value < dateInput.value))) {
+      endDateInput.value = dateInput ? dateInput.value : '';
+    }
+  } else {
+    if (rowTimes) rowTimes.style.display = 'flex';
+    if (colEndDate) colEndDate.style.display = 'none';
+    if (lblDate) lblDate.textContent = 'Date';
+  }
+}
+
+function handleModalStartDateChange() {
+  const dateInput = document.getElementById('editTaskDate');
+  const endDateInput = document.getElementById('editTaskEndDate');
+  if (dateInput && endDateInput && (!endDateInput.value || endDateInput.value < dateInput.value)) {
+    endDateInput.value = dateInput.value;
+  }
+}
+
+function handleModalStartTimeChange() {
+  const startInput = document.getElementById('editTaskTime');
+  const endInput = document.getElementById('editTaskEndTime');
+  const durInput = document.getElementById('editTaskDuration');
+  if (!startInput || !endInput) return;
+
+  const currentDur = parseInt(durInput ? durInput.value : 45, 10) || 45;
+  if (startInput.value) {
+    endInput.value = getEndTimeFromDuration(startInput.value, currentDur);
+  }
+}
+
+function handleModalEndTimeChange() {
+  const startInput = document.getElementById('editTaskTime');
+  const endInput = document.getElementById('editTaskEndTime');
+  const durInput = document.getElementById('editTaskDuration');
+  if (!startInput || !endInput) return;
+
+  if (startInput.value && endInput.value) {
+    const dur = getDurationFromTimes(startInput.value, endInput.value);
+    if (durInput) durInput.value = dur;
+  }
+}
+
 function openCreateModalWithDefaults(dateStr = TODAY_STR, timeStr = '') {
   editingTaskId = null;
   editingContext = currentContextFilter === 'all' ? 'work' : normalizePlanContext(currentContextFilter);
 
-  selectModalType('task');
+  const isAllDay = !timeStr;
+  const allDayCheck = document.getElementById('editTaskAllDay');
+  if (allDayCheck) allDayCheck.checked = isAllDay;
+  toggleModalAllDay(isAllDay);
+
+  selectModalType(timeStr ? 'event' : 'task');
 
   const titleEl = document.getElementById('editTaskTitle');
   if (titleEl) titleEl.value = '';
+
   const dateEl = document.getElementById('editTaskDate');
   if (dateEl) dateEl.value = dateStr || TODAY_STR;
+
+  const endDateEl = document.getElementById('editTaskEndDate');
+  if (endDateEl) endDateEl.value = dateStr || TODAY_STR;
+
   const timeEl = document.getElementById('editTaskTime');
-  if (timeEl) timeEl.value = timeStr || '';
+  if (timeEl) timeEl.value = timeStr || '09:00';
+
+  const endTimeEl = document.getElementById('editTaskEndTime');
   const durEl = document.getElementById('editTaskDuration');
   if (durEl) durEl.value = 45;
+  if (endTimeEl) {
+    endTimeEl.value = getEndTimeFromDuration(timeStr || '09:00', 45);
+  }
 
   const headerSpan = document.getElementById('modalHeaderTitle') || document.querySelector('#editModalOverlay .modal-header span');
-  if (headerSpan) headerSpan.textContent = timeStr ? `New Event (${timeStr})` : 'New Task';
+  if (headerSpan) headerSpan.textContent = timeStr ? `New Event (${timeStr})` : (isAllDay ? 'New All-Day Item' : 'New Task');
 
   const deleteBtn = document.getElementById('btnModalDeleteTask');
   if (deleteBtn) deleteBtn.style.display = 'none';
@@ -3170,12 +3287,28 @@ function openEditModal(id) {
 
   const titleEl = document.getElementById('editTaskTitle');
   if (titleEl) titleEl.value = task.title;
+
+  const isAllDay = !!task.allDay || (!task.time && !!task.date);
+  const allDayCheck = document.getElementById('editTaskAllDay');
+  if (allDayCheck) allDayCheck.checked = isAllDay;
+  toggleModalAllDay(isAllDay);
+
   const dateEl = document.getElementById('editTaskDate');
   if (dateEl) dateEl.value = task.date || '';
+
+  const endDateEl = document.getElementById('editTaskEndDate');
+  if (endDateEl) endDateEl.value = task.endDate || task.date || '';
+
   const timeEl = document.getElementById('editTaskTime');
-  if (timeEl) timeEl.value = task.time || '';
+  if (timeEl) timeEl.value = task.time || '09:00';
+
+  const endTimeEl = document.getElementById('editTaskEndTime');
   const durEl = document.getElementById('editTaskDuration');
-  if (durEl) durEl.value = task.duration || 45;
+  const dur = task.duration || 45;
+  if (durEl) durEl.value = dur;
+  if (endTimeEl) {
+    endTimeEl.value = task.endTime || getEndTimeFromDuration(task.time || '09:00', dur);
+  }
 
   const deleteBtn = document.getElementById('btnModalDeleteTask');
   if (deleteBtn) deleteBtn.style.display = 'inline-block';
@@ -3215,18 +3348,41 @@ function saveTaskModal() {
   const title = document.getElementById('editTaskTitle').value.trim();
   if (!title) return;
 
+  const allDayCheck = document.getElementById('editTaskAllDay');
+  const isAllDay = allDayCheck ? allDayCheck.checked : false;
+
   const dateVal = document.getElementById('editTaskDate').value || null;
-  const timeVal = document.getElementById('editTaskTime').value || '';
-  const durEl = document.getElementById('editTaskDuration');
-  const durationVal = durEl ? (parseInt(durEl.value, 10) || 45) : 45;
+  let endDateVal = document.getElementById('editTaskEndDate').value || null;
+
+  if (isAllDay && !endDateVal) {
+    endDateVal = dateVal;
+  }
+
+  let timeVal = '';
+  let endTimeVal = '';
+  let durationVal = 45;
+
+  if (!isAllDay) {
+    timeVal = document.getElementById('editTaskTime').value || '';
+    endTimeVal = document.getElementById('editTaskEndTime').value || '';
+    if (timeVal && endTimeVal) {
+      durationVal = getDurationFromTimes(timeVal, endTimeVal);
+    } else if (timeVal) {
+      durationVal = 45;
+      endTimeVal = getEndTimeFromDuration(timeVal, 45);
+    }
+  }
 
   if (editingTaskId) {
     const task = window.SpanPlanState.tasks.find(t => t.id === editingTaskId);
     if (task) {
       task.title = title;
       task.type = editingItemType;
+      task.allDay = isAllDay;
       task.date = dateVal;
+      task.endDate = isAllDay ? endDateVal : dateVal;
       task.time = timeVal;
+      task.endTime = endTimeVal;
       task.duration = durationVal;
       task.context = editingContext;
     }
@@ -3239,8 +3395,11 @@ function saveTaskModal() {
       id: 'p_' + Date.now(),
       title: title,
       type: editingItemType,
+      allDay: isAllDay,
       date: dateVal,
+      endDate: isAllDay ? endDateVal : dateVal,
       time: timeVal,
+      endTime: endTimeVal,
       duration: durationVal,
       context: editingContext,
       completed: false,
@@ -3248,7 +3407,7 @@ function saveTaskModal() {
     };
     window.SpanPlanState.tasks.unshift(newTask);
     if (typeof showToast === 'function') {
-      const timeTxt = timeVal ? ` at ${timeVal}` : '';
+      const timeTxt = timeVal ? ` at ${timeVal}` : (isAllDay ? ' (All-day)' : '');
       const label = editingItemType === 'event' ? 'Event created' : 'Task created';
       showToast(`${label}: "${newTask.title}"${timeTxt}`, 'success');
     }
