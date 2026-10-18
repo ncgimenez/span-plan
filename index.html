@@ -204,6 +204,35 @@
     <button type="button" class="popover-item danger" onclick="popoverAction('delete')">✕ Delete</button>
   </div>
 
+  <!-- QUICK-ADD POPOVER (GOOGLE CALENDAR STYLE ON GRID CLICK) -->
+  <div class="calendar-quick-add-popover" id="calendarQuickAddPopover" style="display: none;" onclick="event.stopPropagation()">
+    <div class="quick-add-header">
+      <div class="quick-add-time-preview" id="quickAddTimePreview">Today • 14:00 – 14:45</div>
+      <button type="button" class="quick-add-close" onclick="closeQuickAddPopover()" title="Close (Esc)">✕</button>
+    </div>
+    <div class="quick-add-body">
+      <input type="text" class="quick-add-title-input" id="quickAddTitleInput" placeholder="Add title..." autocomplete="off" onkeydown="if(event.key==='Enter') saveQuickAdd(); else if(event.key==='Escape') closeQuickAddPopover();">
+      <div class="quick-add-row">
+        <div class="quick-add-type-toggle">
+          <button type="button" class="quick-type-btn active" id="quickTypeEvent" onclick="setQuickAddType('event')">Event</button>
+          <button type="button" class="quick-type-btn" id="quickTypeTask" onclick="setQuickAddType('task')">Task</button>
+        </div>
+        <div class="quick-add-cat-chips" id="quickAddCatChips">
+          <button type="button" class="quick-cat-chip cat-work active" data-context="work" onclick="setQuickAddCategory('work')">Work</button>
+          <button type="button" class="quick-cat-chip cat-life" data-context="life" onclick="setQuickAddCategory('life')">Life</button>
+          <button type="button" class="quick-cat-chip cat-fun" data-context="fun" onclick="setQuickAddCategory('fun')">Fun</button>
+        </div>
+      </div>
+    </div>
+    <div class="quick-add-footer">
+      <button type="button" class="quick-add-more-btn" onclick="openFullEditFromQuickAdd()">More options...</button>
+      <div class="quick-add-actions">
+        <button type="button" class="btn-cancel" onclick="closeQuickAddPopover()">Cancel</button>
+        <button type="button" class="btn-save" id="quickAddSaveBtn" onclick="saveQuickAdd()">Save</button>
+      </div>
+    </div>
+  </div>
+
   <!-- EDIT TASK / EVENT MODAL -->
   <div class="modal-overlay" id="editModalOverlay" onclick="handleBackdropClick(event, 'editModalOverlay')">
     <div class="modal-card" onclick="event.stopPropagation()">
@@ -574,9 +603,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=7.7"></script>
-  <script src="js/gcal.js?v=7.7"></script>
-  <script src="js/plan.js?v=7.7"></script>
-  <script src="js/app.js?v=7.7"></script>
+  <script src="js/sync.js?v=7.8"></script>
+  <script src="js/gcal.js?v=7.8"></script>
+  <script src="js/plan.js?v=7.8"></script>
+  <script src="js/app.js?v=7.8"></script>
 </body>
 </html>

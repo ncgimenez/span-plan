@@ -19,7 +19,7 @@ const TOMORROW_STR = getLocalDateString(tomorrow);
 // CYCLE COMPLET 24 HEURES (00:00 - 23:59)
 const START_HOUR = 0;
 const END_HOUR = 23;
-const HOUR_HEIGHT = 54;
+const HOUR_HEIGHT = 64;
 
 function normalizePlanContext(cat) {
   if (!cat) return 'work';
@@ -586,8 +586,9 @@ function renderPlanGrid(forceRebuild = false) {
     const dateStr = getLocalDateString(dateObj);
     const isToday = (dateStr === TODAY_STR);
 
-    const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
-    const dayNum = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const weekdayShort = dateObj.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+    const dayNumber = dateObj.getDate();
+    const monthShort = dateObj.toLocaleDateString('en-US', { month: 'short' });
 
     const dayTasks = window.SpanPlanState.tasks.filter(t => {
       const dateMatch = (t.date === dateStr);
@@ -607,9 +608,12 @@ function renderPlanGrid(forceRebuild = false) {
       <div class="day-header">
         <div class="day-header-top">
           <div class="day-title-wrap">
-            <span class="day-name">${isToday ? 'Today' : dayName}</span>
-            <span class="day-date">${dayNum}</span>
+            <span class="day-name">${isToday ? 'TODAY' : weekdayShort}</span>
+            <div class="day-date-disc ${isToday ? 'is-today-disc' : ''}">
+              <span class="day-date-number">${dayNumber}</span>
+            </div>
           </div>
+          <span class="day-month-sub">${monthShort}</span>
         </div>
         ${renderDayCapacityHtml(timedTasks)}
       </div>
@@ -781,10 +785,10 @@ function renderTimedBlocks(tasks, dateStr) {
     const isSelected = selectedTaskIds.has(task.id);
     const isLiveNow = (dateStr === TODAY_STR && currentMinutes >= start && currentMinutes < (start + duration));
     const startMinutes = START_HOUR * 60;
-    let top = ((start - startMinutes) / 60) * HOUR_HEIGHT;
+    let top = Math.round(((start - startMinutes) / 60) * HOUR_HEIGHT) + 1;
     top = Math.max(0, top);
 
-    const height = Math.max(34, (duration / 60) * HOUR_HEIGHT);
+    const height = Math.max(22, Math.round((duration / 60) * HOUR_HEIGHT) - 2);
 
     const endTotal = start + duration;
     const endH = String(Math.floor(endTotal / 60)).padStart(2, '0');
@@ -796,6 +800,8 @@ function renderTimedBlocks(tasks, dateStr) {
     const eventClass = isEvent ? 'is-event' : '';
     const selectedClass = isSelected ? 'is-selected' : '';
     const liveClass = isLiveNow ? 'is-live-now' : '';
+    const completedClass = task.completed ? 'is-completed' : '';
+    const isCompact = height < 38;
 
     // Gestion propre des colonnes de chevauchement
     let positionStyle = `top: ${top}px; height: ${height}px;`;
@@ -806,16 +812,16 @@ function renderTimedBlocks(tasks, dateStr) {
     const childSubtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
     const doneSubCount = childSubtasks.filter(s => s.completed).length;
     const progressPillHtml = childSubtasks.length > 0 
-      ? `<span class="event-progress-pill" onclick="event.stopPropagation(); openSubtasksModal('${task.id}')" title="Subtasks (${doneSubCount}/${childSubtasks.length})">${doneSubCount}/${childSubtasks.length}</span>` 
+      ? `<span class="event-progress-pill" onclick="event.stopPropagation(); openSubtasksModal('${task.id}')" title="Subtasks (${doneSubCount}/${childSubtasks.length})">☑ ${doneSubCount}/${childSubtasks.length}</span>` 
       : '';
 
     let subtasksHtml = '';
-    const hasSubtasksRendered = childSubtasks.length > 0 && height >= 50;
+    const hasSubtasksRendered = childSubtasks.length > 0 && height >= 75;
     if (hasSubtasksRendered) {
       let maxFit = 1;
-      if (height >= 95) {
-        maxFit = 3; // Capped at 3 maximum for clean, uncluttered cards
-      } else if (height >= 70) {
+      if (height >= 105) {
+        maxFit = 3;
+      } else if (height >= 85) {
         maxFit = 2;
       } else {
         maxFit = 1;
@@ -839,8 +845,48 @@ function renderTimedBlocks(tasks, dateStr) {
       `;
     }
 
+    let innerContentHtml = '';
+    if (isCompact) {
+      innerContentHtml = `
+        <div class="schedule-block-compact-row">
+          ${!isEvent ? `
+            <div class="checkbox ${task.completed ? 'checked' : ''}" 
+                 onclick="event.stopPropagation(); toggleTaskCompletion('${task.id}')" 
+                 title="${task.completed ? 'Mark incomplete' : 'Mark completed'}">
+              ${task.completed ? '✓' : ''}
+            </div>
+          ` : ''}
+          <span class="compact-time">${task.time}</span>
+          <span class="schedule-block-title">${rolloverPrefix}${renderTitleWithTagsHtml(task.title)}</span>
+          ${progressPillHtml}
+          ${isLiveNow ? '<span class="live-pulse-dot" title="Happening right now"></span>' : ''}
+          <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
+        </div>
+      `;
+    } else {
+      innerContentHtml = `
+        <div class="schedule-block-top">
+          ${!isEvent ? `
+            <div class="checkbox ${task.completed ? 'checked' : ''}" 
+                 onclick="event.stopPropagation(); toggleTaskCompletion('${task.id}')" 
+                 title="${task.completed ? 'Mark incomplete' : 'Mark completed'}">
+              ${task.completed ? '✓' : ''}
+            </div>
+          ` : ''}
+          <span class="schedule-block-title">${rolloverPrefix}${renderTitleWithTagsHtml(task.title)}</span>
+          ${progressPillHtml}
+          ${isLiveNow ? '<span class="live-pulse-dot" title="Happening right now"></span>' : ''}
+          <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
+        </div>
+        <div class="schedule-block-meta">
+          <span class="schedule-block-time">${timeRangeStr}</span>
+        </div>
+        ${subtasksHtml}
+      `;
+    }
+
     return `
-      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass}" 
+      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass} ${completedClass} ${isCompact ? 'is-compact' : ''}" 
            id="block_${task.id}"
            data-task-id="${task.id}"
            data-date="${dateStr}"
@@ -852,25 +898,7 @@ function renderTimedBlocks(tasks, dateStr) {
            ondragleave="handleBlockDragLeave(event, '${task.id}')"
            ondrop="handleBlockDrop(event, '${task.id}')"
            title="${isEvent ? '📅 Event: ' : '📋 Task: '}${task.title} (${timeRangeStr})">
-        <div class="schedule-block-top">
-          <div class="block-time-badge" title="${timeRangeStr}">
-            <span class="badge-start">${task.time}</span>
-            <span class="badge-end">${endH}:${endM}</span>
-          </div>
-          ${isEvent ? `
-            <span class="event-icon" title="Event (non-checkable)">📅</span>
-          ` : `
-            <div class="checkbox" onclick="event.stopPropagation(); toggleTaskCompletion('${task.id}')" title="Toggle completion">
-              ${task.completed ? '✓' : ''}
-            </div>
-          `}
-          <span class="schedule-block-title">${rolloverPrefix}${renderTitleWithTagsHtml(task.title)}</span>
-          ${progressPillHtml}
-          ${isLiveNow ? '<span class="live-pulse-badge">● LIVE</span>' : ''}
-          <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
-        </div>
-        ${subtasksHtml}
-        
+        ${innerContentHtml}
         <div class="resize-handle" 
              onmousedown="startResize(event, '${task.id}')"
              ontouchstart="startResize(event, '${task.id}')"
@@ -1523,7 +1551,7 @@ function handleCanvasPointerUp(e) {
     const m = String(totalMinutes % 60).padStart(2, '0');
     const clickedTime = `${h}:${m}`;
 
-    openCreateModalWithDefaults(dateStr, clickedTime);
+    openQuickAddPopover(dateStr, clickedTime, e.clientX, e.clientY);
   }
 }
 
@@ -1855,6 +1883,16 @@ document.addEventListener('click', (e) => {
   if (!e.target.closest('#taskPopoverMenu') && !e.target.closest('.btn-task-menu')) {
     closeTaskPopover();
   }
+  if (!e.target.closest('#calendarQuickAddPopover') && !e.target.closest('.schedule-grid-canvas')) {
+    closeQuickAddPopover();
+  }
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeQuickAddPopover();
+    closeTaskPopover();
+  }
 });
 
 function popoverAction(action) {
@@ -2106,7 +2144,7 @@ function handleCanvasClick(e, dateStr) {
   const m = String(totalMinutes % 60).padStart(2, '0');
   const clickedTime = `${h}:${m}`;
 
-  openCreateModalWithDefaults(dateStr, clickedTime);
+  openQuickAddPopover(dateStr, clickedTime, e.clientX, e.clientY);
 }
 
 // AJOUT RAPIDE INLINE DIRECTEMENT DANS LE DOCK DU JOUR
@@ -2542,6 +2580,175 @@ function openShortcutsModal() {
 function closeShortcutsModal() {
   const modal = document.getElementById('shortcutsModalOverlay');
   if (modal) modal.style.display = 'none';
+}
+
+// ==============================================================
+// QUICK-ADD POPOVER (GOOGLE CALENDAR SIGNATURE EXPERIENCE)
+// ==============================================================
+let quickAddState = {
+  dateStr: TODAY_STR,
+  timeStr: '09:00',
+  type: 'event',
+  context: 'work'
+};
+
+function openQuickAddPopover(dateStr, timeStr, clickX, clickY) {
+  closeQuickAddPopover();
+  if (selectedTaskIds.size > 0 && marqueeMoved) return;
+
+  const popover = document.getElementById('calendarQuickAddPopover');
+  if (!popover) {
+    openCreateModalWithDefaults(dateStr, timeStr);
+    return;
+  }
+
+  quickAddState.dateStr = dateStr || TODAY_STR;
+  quickAddState.timeStr = timeStr || '09:00';
+  quickAddState.type = 'event';
+  quickAddState.context = currentContextFilter === 'all' ? 'work' : normalizePlanContext(currentContextFilter);
+
+  // Preview date & horaire
+  const [hStr, mStr] = (quickAddState.timeStr || '09:00').split(':');
+  const startMin = parseInt(hStr, 10) * 60 + parseInt(mStr, 10);
+  const endMin = Math.min(23 * 60 + 59, startMin + 45);
+  const endH = String(Math.floor(endMin / 60)).padStart(2, '0');
+  const endM = String(endMin % 60).padStart(2, '0');
+  const timeRangePreview = `${quickAddState.timeStr} – ${endH}:${endM}`;
+
+  let dateLabel = 'Today';
+  try {
+    const [y, m, d] = quickAddState.dateStr.split('-').map(Number);
+    const dObj = new Date(y, m - 1, d);
+    const dayName = dObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    dateLabel = (quickAddState.dateStr === TODAY_STR) ? `Today (${dayName})` : dayName;
+  } catch (err) {
+    dateLabel = quickAddState.dateStr;
+  }
+
+  const timePreviewEl = document.getElementById('quickAddTimePreview');
+  if (timePreviewEl) {
+    timePreviewEl.textContent = `${dateLabel} • ${timeRangePreview}`;
+  }
+
+  const titleInput = document.getElementById('quickAddTitleInput');
+  if (titleInput) {
+    titleInput.value = '';
+  }
+
+  updateQuickAddTypeVisuals();
+  updateQuickAddCategoryVisuals();
+
+  // Positionnement du popover (clamped à la fenêtre)
+  const popWidth = 320;
+  const popHeight = 185;
+  let left = (clickX || window.innerWidth / 2) + 14;
+  let top = (clickY || window.innerHeight / 2) - 40;
+
+  if (left + popWidth > window.innerWidth - 16) {
+    left = (clickX || window.innerWidth / 2) - popWidth - 14;
+  }
+  if (left < 16) left = 16;
+
+  if (top + popHeight > window.innerHeight - 16) {
+    top = window.innerHeight - popHeight - 16;
+  }
+  if (top < 65) top = 65;
+
+  popover.style.left = `${left}px`;
+  popover.style.top = `${top}px`;
+  popover.style.display = 'flex';
+
+  setTimeout(() => {
+    if (titleInput) {
+      titleInput.focus();
+      titleInput.select();
+    }
+  }, 40);
+}
+
+function closeQuickAddPopover() {
+  const popover = document.getElementById('calendarQuickAddPopover');
+  if (popover) {
+    popover.style.display = 'none';
+  }
+}
+
+function setQuickAddType(type) {
+  quickAddState.type = (type === 'event') ? 'event' : 'task';
+  updateQuickAddTypeVisuals();
+}
+
+function updateQuickAddTypeVisuals() {
+  const btnEvent = document.getElementById('quickTypeEvent');
+  const btnTask = document.getElementById('quickTypeTask');
+  if (btnEvent && btnTask) {
+    btnEvent.classList.toggle('active', quickAddState.type === 'event');
+    btnTask.classList.toggle('active', quickAddState.type === 'task');
+  }
+}
+
+function setQuickAddCategory(cat) {
+  quickAddState.context = normalizePlanContext(cat);
+  updateQuickAddCategoryVisuals();
+}
+
+function updateQuickAddCategoryVisuals() {
+  document.querySelectorAll('#quickAddCatChips .quick-cat-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.context === quickAddState.context);
+  });
+}
+
+function saveQuickAdd() {
+  const titleInput = document.getElementById('quickAddTitleInput');
+  const title = (titleInput ? titleInput.value : '').trim();
+  if (!title) {
+    if (titleInput) titleInput.focus();
+    return;
+  }
+
+  const date = quickAddState.dateStr || TODAY_STR;
+  const time = quickAddState.timeStr || '09:00';
+  const duration = 45;
+  const type = quickAddState.type || 'event';
+  const context = quickAddState.context || 'work';
+
+  const newItem = {
+    id: 'plan_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+    title: title,
+    date: date,
+    time: time,
+    duration: duration,
+    context: context,
+    type: type,
+    completed: false,
+    subtasks: []
+  };
+
+  window.SpanPlanState.tasks.push(newItem);
+  savePlanState();
+  closeQuickAddPopover();
+  if (typeof showToast === 'function') {
+    showToast(`${type === 'event' ? '📅 Event' : '📋 Task'} added at ${time}`, 'success');
+  }
+}
+
+function openFullEditFromQuickAdd() {
+  const titleInput = document.getElementById('quickAddTitleInput');
+  const title = (titleInput ? titleInput.value : '').trim();
+  const date = quickAddState.dateStr || TODAY_STR;
+  const time = quickAddState.timeStr || '09:00';
+  const type = quickAddState.type || 'event';
+  const context = quickAddState.context || 'work';
+
+  closeQuickAddPopover();
+
+  openCreateModalWithDefaults(date, time);
+  if (title) {
+    const editTitle = document.getElementById('editTaskTitle');
+    if (editTitle) editTitle.value = title;
+  }
+  selectModalType(type);
+  selectEditContext(context);
 }
 
 // ==============================================================
