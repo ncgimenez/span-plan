@@ -13,7 +13,7 @@
   <link rel="icon" type="image/png" href="span-logo.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
-  <link rel="stylesheet" href="style.css?v=7.2">
+  <link rel="stylesheet" href="style.css?v=7.3">
 </head>
 <body>
 
@@ -315,84 +315,186 @@
     </div>
   </div>
 
-  <!-- SETTINGS MODAL -->
+  <!-- SETTINGS MODAL (TABBED & CATEGORIZED) -->
   <div class="modal-overlay" id="settingsModalOverlay" onclick="handleBackdropClick(event, 'settingsModalOverlay')">
-    <div class="modal-card" onclick="event.stopPropagation()">
+    <div class="modal-card settings-modal-card" onclick="event.stopPropagation()">
       <div class="modal-header">
-        <span>Span Plan Settings</span>
+        <div class="settings-header-brand">
+          <span class="settings-header-icon">⚙️</span>
+          <span class="settings-header-title">Settings</span>
+        </div>
         <button class="modal-close" onclick="closeSettingsModal()">✕</button>
       </div>
-      <div class="modal-body">
-        <div class="setting-item">
-          <div>
-            <div style="font-size: 14px; font-weight: 500;">Theme</div>
-            <div style="font-size: 12px; color: var(--text-muted);">Dark mode by default</div>
-          </div>
-          <button class="btn-theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">Dark</button>
-        </div>
 
-        <div style="margin-top: 14px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Multi-Device Sync (Supabase)</div>
+      <!-- CATEGORY TABS BAR -->
+      <div class="settings-nav-tabs" id="settingsNavTabs">
+        <button class="settings-tab-btn active" data-tab="sync" onclick="switchSettingsTab('sync')">
+          <span class="tab-icon">🔄</span>
+          <span class="tab-label">Sync</span>
+        </button>
+        <button class="settings-tab-btn" data-tab="calendars" onclick="switchSettingsTab('calendars')">
+          <span class="tab-icon">📅</span>
+          <span class="tab-label">Calendars</span>
+        </button>
+        <button class="settings-tab-btn" data-tab="data" onclick="switchSettingsTab('data')">
+          <span class="tab-icon">💾</span>
+          <span class="tab-label">Data</span>
+        </button>
+        <button class="settings-tab-btn" data-tab="appearance" onclick="switchSettingsTab('appearance')">
+          <span class="tab-icon">🎨</span>
+          <span class="tab-label">Appearance</span>
+        </button>
+        <button class="settings-tab-btn" data-tab="shortcuts" onclick="switchSettingsTab('shortcuts')">
+          <span class="tab-icon">⌨️</span>
+          <span class="tab-label">Shortcuts</span>
+        </button>
+      </div>
+
+      <div class="modal-body settings-modal-body">
         
-        <form id="keychainSyncForm" onsubmit="event.preventDefault(); handleLinkClick();" autocomplete="on" style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
-          <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-            <div style="font-size: 13px; color: var(--text-muted);">
-              Key: <strong id="displaySyncKey" style="color: var(--text-main); font-family: monospace;">...</strong>
+        <!-- PAGE 1: SYNC & CLOUD -->
+        <div class="settings-page-pane active" id="pane_sync" data-tab="sync">
+          <div class="settings-section-head">
+            <div class="settings-pane-title">Multi-Device Cloud Sync</div>
+            <div class="settings-pane-desc">Real-time bi-directional synchronization powered by Supabase across iPhone, Mac, and Span Focus.</div>
+          </div>
+
+          <div class="settings-card-box">
+            <div class="card-box-header">
+              <span class="card-box-title">Your Sync Key</span>
+              <button class="btn-theme-toggle mini" type="button" onclick="copyCurrentSyncKey()">📋 Copy</button>
             </div>
-            <button class="btn-theme-toggle" type="button" onclick="copyCurrentSyncKey()">Copy</button>
+            <div class="sync-key-display-pill">
+              <strong id="displaySyncKey">...</strong>
+            </div>
           </div>
-          
-          <div style="display: flex; gap: 6px; width: 100%;">
-            <input type="text" name="username" id="inputSyncKey" autocomplete="username" placeholder="Paste sync key from Span Focus..." style="flex: 1; background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-main); padding: 8px 10px; border-radius: 8px; font-size: 13px; outline: none;">
-            <input type="password" name="password" id="inputSyncSecret" autocomplete="current-password" style="display: none;">
-            <button class="btn-theme-toggle" type="submit">Link</button>
+
+          <div class="settings-card-box">
+            <div class="card-box-title">Link Another Device</div>
+            <div class="card-box-desc">Paste your existing sync key from another device to connect them:</div>
+            <form id="keychainSyncForm" onsubmit="event.preventDefault(); handleLinkClick();" autocomplete="on" style="display: flex; gap: 8px; margin-top: 8px;">
+              <input type="text" name="username" id="inputSyncKey" autocomplete="username" placeholder="Paste sync key (e.g. span_...)" class="settings-text-input">
+              <input type="password" name="password" id="inputSyncSecret" autocomplete="current-password" style="display: none;">
+              <button class="btn-primary-action" type="submit">Link</button>
+            </form>
           </div>
-        </form>
 
-        <div class="backup-section">
-          <button class="btn-backup" onclick="exportData()">Download JSON</button>
-          <label class="btn-backup" style="cursor: pointer;">
-            Import JSON
-            <input type="file" id="importFileInput" style="display: none;" onchange="importData(event)">
-          </label>
-        </div>
-
-        <div style="margin-top: 14px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Calendar Export (.ics)</div>
-        <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; margin-bottom: 8px;">
-          Export scheduled time-blocks to Apple Calendar, Google Calendar, or Outlook with minimalist category dots (🟣 Work, 🟢 Life, 🔴 Fun).
-        </div>
-        <div class="calendar-export-grid">
-          <button class="btn-backup btn-ics-all" onclick="exportIcsFile('all')">📅 Export All (.ics)</button>
-          <div class="ics-category-pills">
-            <button class="btn-backup mini-backup" onclick="exportIcsFile('work')" title="Export Work events only">🟣 Work</button>
-            <button class="btn-backup mini-backup" onclick="exportIcsFile('life')" title="Export Life events only">🟢 Life</button>
-            <button class="btn-backup mini-backup" onclick="exportIcsFile('fun')" title="Export Fun events only">🔴 Fun</button>
+          <div class="settings-bridge-row">
+            <span>Companion Ecosystem</span>
+            <button class="plan-bridge-btn" onclick="goToFocusApp()" title="Open Span Focus">Focus App ↗</button>
           </div>
         </div>
 
-        <div style="margin-top: 14px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Maintenance & Data</div>
-        <div class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-          <div style="font-size: 12px; color: var(--text-muted);">
-            Recover unscheduled or orphaned tasks to Today's To-do dock:
+        <!-- PAGE 2: CALENDARS -->
+        <div class="settings-page-pane" id="pane_calendars" data-tab="calendars">
+          <div class="settings-section-head">
+            <div class="settings-pane-title">Calendar Integrations</div>
+            <div class="settings-pane-desc">Connect and export your scheduled time blocks to your personal calendar.</div>
           </div>
-          <button class="btn-rescue" onclick="recoverMissingTasks()">
-            🔄 Recover tasks to Today
-          </button>
+
+          <div class="settings-card-box">
+            <div class="card-box-title">How Calendar Sync Works</div>
+            <div class="calendar-info-list">
+              <div class="info-row">
+                <span class="info-icon">🍏</span>
+                <div>
+                  <strong>Apple Calendar (iPhone & Mac)</strong>
+                  <p>Supports fast Webcal refresh (every 5 to 15 min). Best for near real-time.</p>
+                </div>
+              </div>
+              <div class="info-row">
+                <span class="info-icon">🌐</span>
+                <div>
+                  <strong>Google Calendar, Notion & Amie</strong>
+                  <p>Google caches external URLs for 8 to 24h. Use offline export below for instant updates.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-card-box">
+            <div class="card-box-title">iCalendar Export (.ics)</div>
+            <div class="card-box-desc">Download a snapshot of your timed blocks with category dots (🟣 Work, 🟢 Life, 🔴 Fun):</div>
+            <div class="calendar-export-grid" style="margin-top: 10px;">
+              <button class="btn-backup btn-ics-all" onclick="exportIcsFile('all')">📅 Export All (.ics)</button>
+              <div class="ics-category-pills">
+                <button class="btn-backup mini-backup" onclick="exportIcsFile('work')" title="Export Work events only">🟣 Work</button>
+                <button class="btn-backup mini-backup" onclick="exportIcsFile('life')" title="Export Life events only">🟢 Life</button>
+                <button class="btn-backup mini-backup" onclick="exportIcsFile('fun')" title="Export Fun events only">🔴 Fun</button>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="shortcuts-section-settings">
-          <div style="margin-top: 14px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Keyboard Shortcuts</div>
+        <!-- PAGE 3: DATA & BACKUPS -->
+        <div class="settings-page-pane" id="pane_data" data-tab="data">
+          <div class="settings-section-head">
+            <div class="settings-pane-title">Data & Maintenance</div>
+            <div class="settings-pane-desc">Manage local backups, JSON data sovereignty, and task recovery.</div>
+          </div>
+
+          <div class="settings-card-box">
+            <div class="card-box-title">JSON Database Backup</div>
+            <div class="card-box-desc">Download or restore all your tasks and events as a standard JSON file:</div>
+            <div class="backup-section" style="margin-top: 10px;">
+              <button class="btn-backup" onclick="exportData()">⬇ Download JSON</button>
+              <label class="btn-backup" style="cursor: pointer;">
+                ⬆ Import JSON
+                <input type="file" id="importFileInput" style="display: none;" onchange="importData(event)">
+              </label>
+            </div>
+          </div>
+
+          <div class="settings-card-box">
+            <div class="card-box-title">Task Recovery & Repair</div>
+            <div class="card-box-desc">Recover any unscheduled, lost, or orphaned tasks directly to Today's To-do dock:</div>
+            <button class="btn-rescue" onclick="recoverMissingTasks()" style="margin-top: 8px;">
+              🔄 Recover tasks to Today
+            </button>
+          </div>
+        </div>
+
+        <!-- PAGE 4: APPEARANCE -->
+        <div class="settings-page-pane" id="pane_appearance" data-tab="appearance">
+          <div class="settings-section-head">
+            <div class="settings-pane-title">Appearance & Display</div>
+            <div class="settings-pane-desc">Customize the visual theme and contrast of Span Plan.</div>
+          </div>
+
+          <div class="settings-card-box">
+            <div class="setting-item" style="border: none; padding: 0;">
+              <div>
+                <div style="font-size: 14px; font-weight: 600;">Theme Mode</div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Dark mode by default, optimized for OLED and focus.</div>
+              </div>
+              <button class="btn-theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">Dark</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAGE 5: SHORTCUTS -->
+        <div class="settings-page-pane" id="pane_shortcuts" data-tab="shortcuts">
+          <div class="settings-section-head">
+            <div class="settings-pane-title">Keyboard Shortcuts</div>
+            <div class="settings-pane-desc">Navigate and manage your schedule without taking your hands off the keyboard.</div>
+          </div>
+
           <div class="shortcuts-legend">
             <div class="shortcut-row"><kbd>⌘/Ctrl</kbd> + <kbd>K</kbd><span>Focus Quick Add bar</span></div>
             <div class="shortcut-row"><kbd>N</kbd> / <kbd>C</kbd><span>Create new task or event</span></div>
             <div class="shortcut-row"><kbd>T</kbd><span>Jump to Today</span></div>
-            <div class="shortcut-row"><kbd>←</kbd> / <kbd>→</kbd><span>Navigate days</span></div>
+            <div class="shortcut-row"><kbd>←</kbd> / <kbd>→</kbd><span>Previous / Next day</span></div>
             <div class="shortcut-row"><kbd>B</kbd> / <kbd>L</kbd><span>Toggle Backlog drawer</span></div>
             <div class="shortcut-row"><kbd>3</kbd>, <kbd>5</kbd>, <kbd>7</kbd><span>Switch visible days count</span></div>
+            <div class="shortcut-row"><kbd>Click</kbd><span>Select / Deselect item</span></div>
+            <div class="shortcut-row"><kbd>Double-click</kbd><span>Edit task details</span></div>
+            <div class="shortcut-row"><kbd>Enter</kbd><span>Edit selected item</span></div>
             <div class="shortcut-row"><kbd>Del</kbd> / <kbd>Backspace</kbd><span>Delete selected item(s)</span></div>
-            <div class="shortcut-row"><kbd>Esc</kbd><span>Deselect / Close modals</span></div>
+            <div class="shortcut-row"><kbd>Esc</kbd><span>Deselect / Close modal</span></div>
             <div class="shortcut-row"><kbd>?</kbd><span>Open full cheat sheet</span></div>
           </div>
         </div>
+
       </div>
     </div>
   </div>
@@ -413,8 +515,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=7.2"></script>
-  <script src="js/plan.js?v=7.2"></script>
-  <script src="js/app.js?v=7.2"></script>
+  <script src="js/sync.js?v=7.3"></script>
+  <script src="js/plan.js?v=7.3"></script>
+  <script src="js/app.js?v=7.3"></script>
 </body>
 </html>

@@ -14,9 +14,28 @@ function toggleTheme() {
   showToast(`Theme switched to ${next} mode`);
 }
 
-function openSettingsModal() {
+function switchSettingsTab(tabName) {
+  if (!tabName) tabName = 'sync';
+  const tabs = document.querySelectorAll('#settingsNavTabs .settings-tab-btn');
+  tabs.forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-tab') === tabName);
+  });
+
+  const panes = document.querySelectorAll('.settings-page-pane');
+  panes.forEach(pane => {
+    pane.classList.toggle('active', pane.getAttribute('data-tab') === tabName);
+  });
+}
+
+function openSettingsModal(defaultTab = 'sync') {
   const modal = document.getElementById('settingsModalOverlay');
-  if (modal) modal.style.display = 'flex';
+  if (modal) {
+    modal.style.display = 'flex';
+    switchSettingsTab(defaultTab);
+    if (typeof updateSyncKeyDisplay === 'function') {
+      updateSyncKeyDisplay();
+    }
+  }
 }
 
 function closeSettingsModal() {
