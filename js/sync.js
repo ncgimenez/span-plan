@@ -100,6 +100,34 @@ async function syncPlanToCloud() {
       });
     }
 
+    // Incorporer les mises à jour locales de span_tasks (notamment le déplacement de sous-tâches vers un nouveau parentEventId)
+    let localFocusItems = [];
+    try {
+      localFocusItems = JSON.parse(localStorage.getItem('span_tasks')) || [];
+    } catch (e) {}
+
+    if (Array.isArray(localFocusItems) && localFocusItems.length > 0) {
+      const localFocusMap = new Map();
+      localFocusItems.forEach(lft => {
+        if (lft && lft.id) localFocusMap.set(String(lft.id), lft);
+        if (lft && lft.title) localFocusMap.set('title:' + lft.title.trim().toLowerCase(), lft);
+      });
+
+      cleanedFocusItems.forEach(ft => {
+        if (!ft) return;
+        const match = localFocusMap.get(String(ft.id)) || (ft.title ? localFocusMap.get('title:' + ft.title.trim().toLowerCase()) : null);
+        if (match) {
+          if (match.parentEventId !== undefined) ft.parentEventId = match.parentEventId;
+          if (match.completed !== undefined) ft.completed = match.completed;
+          if (match.scheduledDate !== undefined) ft.scheduledDate = match.scheduledDate;
+          if (match.scheduledTime !== undefined) ft.scheduledTime = match.scheduledTime;
+          if (match.allDay !== undefined) ft.allDay = match.allDay;
+          if (match.date !== undefined) ft.date = match.date;
+          if (match.time !== undefined) ft.time = match.time;
+        }
+      });
+    }
+
     const updatedTasksObj = {
       ...existingTasksObj,
       items: cleanedFocusItems,
@@ -161,7 +189,6 @@ async function loadPlanFromCloud() {
         if (!t) return true;
         if (t.id && allDismissed.has(t.id)) return true;
         if (t.focusId && allDismissed.has(t.focusId)) return true;
-        if (t.title && allDismissed.has('title:' + t.title.trim().toLowerCase())) return true;
         return false;
       };
 
@@ -212,11 +239,35 @@ async function loadPlanFromCloud() {
               }
               return lsub;
             });
-            remoteSubtasks.forEach(rsub => {
-              if (rsub && !mergedSubtasks.some(lsub => String(lsub.id) === String(rsub.id) || (lsub.title && rsub.title && lsub.title.trim().toLowerCase() === rsub.title.trim().toLowerCase()))) {
-                mergedSubtasks.push(rsub);
-              }
-            });
+            const localIsNewer = Boolean(
+              localTask.updated_at && remoteTask.updated_at && 
+              new Date(localTask.updated_at).getTime() >= new Date(remoteTask.updated_at).getTime()
+            );
+
+            // N'intégrer des sous-tâches distantes supplémentaires QUE si le distant est plus récent
+            // et que ces sous-tâches n'existent pas déjà ailleurs dans le plan local
+            if (!localIsNewer) {
+              remoteSubtasks.forEach(rsub => {
+                const rTitle = (rsub.title || '').trim().toLowerCase();
+                const existsInMerged = mergedSubtasks.some(lsub => 
+                  String(lsub.id) === String(rsub.id) || 
+                  (lsub.title && rTitle && lsub.title.trim().toLowerCase() === rTitle)
+                );
+                if (existsInMerged) return;
+
+                const existsElsewhereInPlan = localTasks.some(otherTask => {
+                  if (otherTask.id === localTask.id || !Array.isArray(otherTask.subtasks)) return false;
+                  return otherTask.subtasks.some(ost => 
+                    String(ost.id) === String(rsub.id) || 
+                    (ost.title && rTitle && ost.title.trim().toLowerCase() === rTitle)
+                  );
+                });
+
+                if (!existsElsewhereInPlan) {
+                  mergedSubtasks.push(rsub);
+                }
+              });
+            }
 
             const remoteIsNewer = Boolean(
               remoteTask.updated_at && localTask.updated_at && 

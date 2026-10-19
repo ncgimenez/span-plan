@@ -291,7 +291,7 @@
 [data-theme="light"] .cal-day-disc.is-today-disc {
   background: #6366f1;
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+  box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.45), 0 2px 8px rgba(99, 102, 241, 0.35);
 }
 
 [data-theme="light"] .capacity-total-txt {
@@ -789,7 +789,7 @@ body {
   position: absolute;
   inset: 2px;
   border-radius: 5px;
-  border: 1.5px solid rgba(129, 140, 248, 0.5);
+  border: 1.5px solid rgba(245, 158, 11, 0.7);
 }
 
 .mini-cal-day.is-in-range {
@@ -1823,7 +1823,7 @@ body {
   background: #818cf8;
   color: #fff;
   font-weight: 700;
-  box-shadow: 0 2px 8px rgba(129, 140, 248, 0.35);
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.45), 0 2px 8px rgba(129, 140, 248, 0.35);
 }
 
 .cal-day-capacity-pill {
@@ -2614,28 +2614,39 @@ body {
 .event-progress-pill {
   font-size: 9px;
   font-weight: 750;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   padding: 1.5px 5.5px;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.14);
-  margin-left: 4px;
+  margin-left: auto;
   flex-shrink: 0;
   line-height: 1.2;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   transition: all 0.15s ease;
+  user-select: none;
 }
 
 .event-progress-pill:hover {
-  transform: scale(1.08);
-  box-shadow: 0 0 6px rgba(129, 140, 248, 0.5);
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-0.5px);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 [data-theme="light"] .event-progress-pill {
-  background: rgba(0, 0, 0, 0.06);
+  background: rgba(0, 0, 0, 0.05);
   color: #475569;
   border-color: rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="light"] .event-progress-pill:hover {
+  background: rgba(0, 0, 0, 0.09);
+  color: #0f172a;
 }
 
 /* ==============================================================
@@ -3245,33 +3256,47 @@ body.is-card-dragging * {
 
 .schedule-block-top {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  align-items: flex-start;
+  gap: 5px;
   width: 100%;
-  height: 20px;
-  min-height: 20px;
+  min-height: 18px;
+  flex-shrink: 0;
+}
+
+.schedule-block-top .checkbox {
+  margin-top: 1px;
   flex-shrink: 0;
 }
 
 .schedule-block-title {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   color: #f4f4f5;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.25;
   flex: 1;
   min-width: 0;
   letter-spacing: -0.01em;
-  line-height: 1.25;
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.schedule-block-item.is-short-block .schedule-block-title,
+.schedule-block-item.is-compact .schedule-block-title {
+  -webkit-line-clamp: 1;
+  white-space: nowrap;
 }
 
 .schedule-block-meta {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 1px;
+  gap: 5px;
+  margin-top: 2px;
   flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .schedule-block-time {
@@ -3279,6 +3304,20 @@ body.is-card-dragging * {
   font-weight: 550;
   color: rgba(255, 255, 255, 0.65);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.schedule-block-item.is-narrow-col .schedule-block-time {
+  font-size: 10px;
+}
+
+.schedule-block-item.is-narrow-col .event-progress-pill {
+  font-size: 8.5px;
+  padding: 1px 4px;
+}
+
+.schedule-block-item.is-narrow-col .schedule-block-title {
+  font-size: 11.5px;
 }
 
 .schedule-block-sub {
@@ -3516,16 +3555,47 @@ body.is-card-dragging * {
 }
 
 .schedule-block-item .btn-task-menu {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  padding: 0;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.15s ease, color 0.15s ease;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  z-index: 6;
+  font-size: 13px;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+[data-theme="light"] .schedule-block-item .btn-task-menu {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .schedule-block-item:hover .btn-task-menu,
 .schedule-block-item.is-selected .btn-task-menu,
 .schedule-block-item:focus-within .btn-task-menu {
-  opacity: 0.75;
+  opacity: 0.85;
   pointer-events: auto;
+}
+
+.schedule-block-item .btn-task-menu:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.75);
+  color: #ffffff;
+  transform: scale(1.06);
+}
+
+[data-theme="light"] .schedule-block-item .btn-task-menu:hover {
+  background: #ffffff;
+  color: #0f172a;
 }
 
 .task-inline-tag {
@@ -4794,25 +4864,44 @@ body.is-card-dragging * {
 }
 
 /* ==============================================================
-   BOUTON "+ TODAY" ÉPURÉ POUR LE TIROIR BACKLOG
+   BOUTON "+" JAUNE COMPACT POUR LE TIROIR BACKLOG
    ============================================================== */
 .btn-backlog-today {
   background: rgba(245, 158, 11, 0.14);
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  border: 1px solid rgba(245, 158, 11, 0.38);
   color: #fbbf24;
-  font-size: 11px;
-  font-weight: 650;
-  padding: 3.5px 8px;
-  border-radius: 7px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 0;
   transition: all 0.15s ease;
   flex-shrink: 0;
-  line-height: 1.2;
+  line-height: 1;
 }
 
 .btn-backlog-today:hover {
-  background: rgba(245, 158, 11, 0.28);
-  border-color: rgba(245, 158, 11, 0.55);
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #111827;
+  transform: scale(1.08);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.45);
+}
+
+[data-theme="light"] .btn-backlog-today {
+  background: rgba(217, 119, 6, 0.12);
+  border-color: rgba(217, 119, 6, 0.35);
+  color: #d97706;
+}
+
+[data-theme="light"] .btn-backlog-today:hover {
+  background: #d97706;
+  border-color: #d97706;
   color: #ffffff;
 }
 
