@@ -15,7 +15,7 @@
   <link rel="shortcut icon" href="favicon.ico?v=7.14">
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=7.14">
 
-  <link rel="stylesheet" href="style.css?v=7.24">
+  <link rel="stylesheet" href="style.css?v=7.27">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -452,31 +452,63 @@
             <label for="rolloverNewTitle">Titre du nouveau bloc</label>
             <input type="text" id="rolloverNewTitle" placeholder="Ex: Nom du bloc (suite)">
           </div>
+
+          <!-- Raccourcis rapides -->
           <div class="rollover-quick-destinations">
-            <button type="button" class="rollover-quick-btn" onclick="executeSubtasksRollover('tomorrow')">
+            <button type="button" class="rollover-quick-btn" onclick="executeSubtasksRollover('tomorrow')" title="Demain à la même heure">
               <span class="r-icon">☀️</span>
               <span class="r-title">Demain</span>
               <span class="r-desc">Même heure</span>
             </button>
-            <button type="button" class="rollover-quick-btn" onclick="executeSubtasksRollover('later_today')">
+            <button type="button" class="rollover-quick-btn" onclick="executeSubtasksRollover('later_today')" title="Plus tard aujourd'hui">
               <span class="r-icon">⏳</span>
               <span class="r-title">Plus tard</span>
               <span class="r-desc">Aujourd'hui</span>
             </button>
-            <button type="button" class="rollover-quick-btn" onclick="executeSubtasksRollover('allday_tomorrow')">
+            <button type="button" class="rollover-quick-btn" onclick="executeSubtasksRollover('allday_tomorrow')" title="Demain sur toute la journée">
               <span class="r-icon">📅</span>
               <span class="r-title">Demain</span>
               <span class="r-desc">Toute la journée</span>
             </button>
-            <button type="button" class="rollover-quick-btn" onclick="executeSubtasksRollover('backlog')">
+            <button type="button" class="rollover-quick-btn" onclick="executeSubtasksRollover('backlog')" title="Déplacer dans le Backlog à planifier plus tard">
               <span class="r-icon">📥</span>
               <span class="r-title">Backlog</span>
               <span class="r-desc">À planifier</span>
             </button>
           </div>
-          <label class="rollover-checkbox-label">
+
+          <!-- Sélecteur personnalisé de Date et Heure libre -->
+          <div class="rollover-custom-box">
+            <div class="rollover-custom-header">
+              <span>📅 Ou choisir un jour et une heure précis :</span>
+            </div>
+            <div class="rollover-custom-inputs-row">
+              <div class="rollover-input-group">
+                <label for="rolloverCustomDate">Date</label>
+                <input type="date" id="rolloverCustomDate">
+              </div>
+              <div class="rollover-input-group" id="rolloverTimeGroup">
+                <label for="rolloverCustomTime">Heure</label>
+                <input type="time" id="rolloverCustomTime">
+              </div>
+            </div>
+            <div class="rollover-custom-options">
+              <label class="rollover-mini-checkbox-label">
+                <input type="checkbox" id="rolloverCustomAllDay" onchange="toggleRolloverCustomTime(this.checked)">
+                <span>Toute la journée (sans heure)</span>
+              </label>
+              <button type="button" class="btn-rollover-custom-submit" onclick="executeCustomSubtasksRollover()">
+                <span>Créer à cette date</span>
+              </button>
+            </div>
+          </div>
+
+          <label class="rollover-checkbox-label rollover-mark-parent-label">
             <input type="checkbox" id="rolloverMarkParentDone" checked>
-            <span>Marquer le bloc actuel comme terminé</span>
+            <div class="rollover-mark-text">
+              <span class="mark-label-title">Marquer le bloc actuel comme terminé</span>
+              <span class="mark-label-sub">Le bloc actuel ne gardera que ses tâches déjà finies et sera validé pour aujourd'hui.</span>
+            </div>
           </label>
         </div>
 
@@ -782,9 +814,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=7.24"></script>
-  <script src="js/gcal.js?v=7.24"></script>
-  <script src="js/plan.js?v=7.24"></script>
-  <script src="js/app.js?v=7.24"></script>
+  <script src="js/sync.js?v=7.27"></script>
+  <script src="js/gcal.js?v=7.27"></script>
+  <script src="js/plan.js?v=7.27"></script>
+  <script src="js/app.js?v=7.27"></script>
 </body>
 </html>
