@@ -72,9 +72,10 @@ function exportData() {
 function exportIcsFile(category = 'all') {
   const allTasks = (window.SpanPlanState && window.SpanPlanState.tasks) || [];
   
-  // Exporter uniquement les blocs qui ont une date et une heure (time blocks réels)
+  // Exporter les blocs planifiés (avec date et soit heure, soit all-day)
   const scheduledTasks = allTasks.filter(t => {
-    if (!t || !t.date || !t.time) return false;
+    if (!t || !t.date) return false;
+    if (!t.allDay && !t.time) return false;
     if (category !== 'all' && (t.context || 'work').toLowerCase() !== category.toLowerCase()) {
       return false;
     }
@@ -108,13 +109,30 @@ function exportIcsFile(category = 'all') {
     return `${y}${m}${d}T${h}${min}00`;
   }
 
+  function formatIcsAllDayDate(dateStr) {
+    const [year, month, day] = dateStr.split('-');
+    return `${year}${month}${day}`;
+  }
+
+  function calculateIcsAllDayEndExclusive(startDateStr, endDateStr) {
+    // Dans RFC 5545, DTEND pour un événement ALL-DAY est exclusif (le jour d'après la fin)
+    const lastDateStr = endDateStr || startDateStr;
+    const [y, m, d] = lastDateStr.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    dt.setDate(dt.getDate() + 1);
+    const year = dt.getFullYear();
+    const month = String(dt.getMonth() + 1).padStart(2, '0');
+    const day = String(dt.getDate()).padStart(2, '0');
+    return `${year}${month}${day}`;
+  }
+
   function escapeIcsText(str) {
     if (!str) return '';
     return str
       .replace(/\\/g, '\\\\')
       .replace(/;/g, '\\;')
       .replace(/,/g, '\\,')
-      .replace(/\n/g, '\\n');
+      .replace(/\r?\n/g, '\\n');
   }
 
   const nowStamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
@@ -151,21 +169,54 @@ function exportIcsFile(category = 'all') {
 
     const cleanTitle = (task.title || 'Untitled task').trim();
     const summary = `${colorDot} ${cleanTitle}`;
-
-    const dtStart = formatIcsDateTime(task.date, task.time);
-    const dtEnd = calculateIcsEndDateTime(task.date, task.time, task.duration || 45);
     const uid = `${task.id || ('task_' + Math.random().toString(36).slice(2))}@spanplan.app`;
-
     const categoryName = context.charAt(0).toUpperCase() + context.slice(1);
-    const desc = `Context: ${categoryName}\\nPlanned in Span Plan`;
+
+    // Construction de la description riche (Notes + Checklist + Contexte)
+    let descParts = [];
+    if (task.notes && task.notes.trim()) {
+      descParts.push(task.notes.trim());
+    }
+    const childSubtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
+    if (childSubtasks.length > 0) {
+      const checklistStr = 'Checklist:\n' + childSubtasks.map(s => `[${s.completed ? 'x' : ' '}] ${s.title}`).join('\n');
+      descParts.push(checklistStr);
+    }
+    descParts.push(`Context: ${categoryName}\nPlanned in Span Plan`);
+    const fullDesc = descParts.join('\n\n');
+
+    const isAllDay = !!task.allDay || (!task.time && !!task.date);
 
     icsLines.push('BEGIN:VEVENT');
     icsLines.push(`UID:${uid}`);
     icsLines.push(`DTSTAMP:${nowStamp}`);
-    icsLines.push(`DTSTART:${dtStart}`);
-    icsLines.push(`DTEND:${dtEnd}`);
+
+    if (isAllDay) {
+      const dtStart = formatIcsAllDayDate(task.date);
+      const dtEnd = calculateIcsAllDayEndExclusive(task.date, task.endDate);
+      icsLines.push(`DTSTART;VALUE=DATE:${dtStart}`);
+      icsLines.push(`DTEND;VALUE=DATE:${dtEnd}`);
+    } else {
+      const dtStart = formatIcsDateTime(task.date, task.time);
+      const dtEnd = calculateIcsEndDateTime(task.date, task.time, task.duration || 45);
+      icsLines.push(`DTSTART:${dtStart}`);
+      icsLines.push(`DTEND:${dtEnd}`);
+    }
+
     icsLines.push(`SUMMARY:${escapeIcsText(summary)}`);
-    icsLines.push(`DESCRIPTION:${desc}`);
+
+    // Gestion du Lieu et Lien Web
+    if (task.location && task.location.trim()) {
+      const locClean = task.location.trim();
+      icsLines.push(`LOCATION:${escapeIcsText(locClean)}`);
+      const isUrl = /^https?:\/\//i.test(locClean) || /^www\./i.test(locClean) || locClean.includes('meet.google.com') || locClean.includes('zoom.us');
+      if (isUrl) {
+        const fullUrl = /^https?:\/\//i.test(locClean) ? locClean : `https://${locClean}`;
+        icsLines.push(`URL:${escapeIcsText(fullUrl)}`);
+      }
+    }
+
+    icsLines.push(`DESCRIPTION:${escapeIcsText(fullDesc)}`);
     icsLines.push(`CATEGORIES:${categoryName}`);
     icsLines.push('STATUS:CONFIRMED');
     icsLines.push('END:VEVENT');

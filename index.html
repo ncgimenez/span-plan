@@ -15,7 +15,7 @@
   <link rel="shortcut icon" href="favicon.ico?v=7.14">
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=7.14">
 
-  <link rel="stylesheet" href="style.css?v=7.30">
+  <link rel="stylesheet" href="style.css?v=7.31">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -385,6 +385,28 @@
           <button type="button" class="cat-pill cat-work" data-context="work" onclick="selectEditContext('work')">Work</button>
           <button type="button" class="cat-pill cat-life" data-context="life" onclick="selectEditContext('life')">Life</button>
           <button type="button" class="cat-pill cat-fun" data-context="fun" onclick="selectEditContext('fun')">Fun</button>
+        </div>
+
+        <!-- COLLAPSIBLE EXTRA DETAILS: LOCATION/LINK & NOTES -->
+        <div class="modal-collapsible-wrap">
+          <button type="button" class="btn-toggle-collapsible" id="btnToggleExtraDetails" onclick="toggleModalExtraDetails()">
+            <span class="collapsible-icon" id="extraDetailsToggleIcon">▸</span>
+            <span class="collapsible-text" id="extraDetailsToggleText">+ Lieu, Lien web & Notes</span>
+          </button>
+          <div class="modal-collapsible-content" id="extraDetailsContent" style="display: none;">
+            <div class="form-row" style="margin-top: 10px;">
+              <div class="form-col">
+                <label class="modal-label">Lieu ou Lien web (Meet, Zoom, URL...)</label>
+                <input type="text" class="modal-input" id="editTaskLocation" placeholder="📍 ex: 10 rue de la Paix ou https://meet.google.com/...">
+              </div>
+            </div>
+            <div class="form-row" style="margin-top: 10px;">
+              <div class="form-col">
+                <label class="modal-label">Notes & Description</label>
+                <textarea class="modal-textarea" id="editTaskNotes" rows="3" placeholder="📝 Ordre du jour, contexte, liens supplémentaires..."></textarea>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -814,9 +836,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=7.30"></script>
-  <script src="js/gcal.js?v=7.30"></script>
-  <script src="js/plan.js?v=7.30"></script>
-  <script src="js/app.js?v=7.30"></script>
+  <script src="js/sync.js?v=7.31"></script>
+  <script src="js/gcal.js?v=7.31"></script>
+  <script src="js/plan.js?v=7.31"></script>
+  <script src="js/app.js?v=7.31"></script>
 </body>
 </html>

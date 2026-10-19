@@ -859,6 +859,18 @@ function renderAllDayContinuousRibbonHtml(visibleDates) {
       endsAfter ? 'ends-after' : ''
     ].filter(Boolean).join(' ');
 
+    let alldayLocHtml = '';
+    if (task.location && task.location.trim()) {
+      const locRaw = task.location.trim();
+      const isUrl = /^https?:\/\//i.test(locRaw) || /^www\./i.test(locRaw) || locRaw.includes('meet.google.com') || locRaw.includes('zoom.us');
+      const safeHref = /^https?:\/\//i.test(locRaw) ? locRaw : `https://${locRaw}`;
+      if (isUrl) {
+        alldayLocHtml = `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="ribbon-link-pill" onclick="event.stopPropagation()" title="Ouvrir : ${escapeHtml(locRaw)}">🔗</a>`;
+      } else {
+        alldayLocHtml = `<span class="ribbon-location-pill" title="Lieu : ${escapeHtml(locRaw)}">📍</span>`;
+      }
+    }
+
     return `
       <div class="cal-allday-ribbon cat-${task.context || 'work'} ${task.completed ? 'completed' : ''} ${multiDayClasses}"
            id="allday_${task.id}"
@@ -877,6 +889,7 @@ function renderAllDayContinuousRibbonHtml(visibleDates) {
           ` : '<span style="font-size:10.5px; flex-shrink:0;">📅</span>'}
           <span class="ribbon-title">${recIcon}${renderTitleWithTagsHtml(task.title)}</span>
           ${dateRangeLabel}
+          ${alldayLocHtml}
           ${progressPillHtml}
         </div>
       </div>
@@ -1379,6 +1392,59 @@ function renderTimedBlocks(tasks, dateStr) {
       `;
     }
 
+    let locationHtml = '';
+    if (task.location && task.location.trim()) {
+      const locRaw = task.location.trim();
+      const isUrl = /^https?:\/\//i.test(locRaw) || /^www\./i.test(locRaw) || locRaw.includes('meet.google.com') || locRaw.includes('zoom.us') || locRaw.includes('teams.microsoft.com');
+      const safeHref = /^https?:\/\//i.test(locRaw) ? locRaw : `https://${locRaw}`;
+
+      if (isUrl) {
+        let linkLabel = 'Lien';
+        if (locRaw.includes('meet.google.com')) linkLabel = 'Meet';
+        else if (locRaw.includes('zoom.us')) linkLabel = 'Zoom';
+        else if (locRaw.includes('teams.microsoft.com')) linkLabel = 'Teams';
+        else {
+          try {
+            const domain = new URL(safeHref).hostname.replace(/^www\./, '');
+            linkLabel = domain.length > 14 ? domain.slice(0, 12) + '…' : domain;
+          } catch (e) {
+            linkLabel = 'Lien';
+          }
+        }
+        locationHtml = `
+          <a href="${safeHref}" target="_blank" rel="noopener noreferrer" 
+             class="block-link-pill" 
+             onpointerdown="event.stopPropagation()"
+             onclick="event.stopPropagation()" 
+             title="Ouvrir le lien (${escapeHtml(locRaw)})">
+            🔗 ${escapeHtml(linkLabel)} ↗
+          </a>
+        `;
+      } else {
+        locationHtml = `
+          <span class="block-location-pill" 
+                onpointerdown="event.stopPropagation()"
+                onclick="event.stopPropagation(); openEditModal('${task.id}')" 
+                title="Lieu : ${escapeHtml(locRaw)}">
+            📍 ${escapeHtml(locRaw)}
+          </span>
+        `;
+      }
+    }
+
+    let notesHtml = '';
+    if (task.notes && task.notes.trim()) {
+      const cleanNotesPreview = task.notes.trim().slice(0, 150);
+      notesHtml = `
+        <span class="block-notes-pill" 
+              onpointerdown="event.stopPropagation()"
+              onclick="event.stopPropagation(); openEditModal('${task.id}')" 
+              title="Notes : ${escapeHtml(cleanNotesPreview)}">
+          📝
+        </span>
+      `;
+    }
+
     let innerContentHtml = '';
     if (isCompact) {
       innerContentHtml = `
@@ -1393,6 +1459,8 @@ function renderTimedBlocks(tasks, dateStr) {
           <span class="compact-time">${task.time}</span>
           <span class="schedule-block-title">${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
           ${progressPillHtml}
+          ${locationHtml}
+          ${notesHtml}
           ${isLiveNow ? `
             <span class="live-status-pill mini"><span class="live-status-dot"></span>LIVE</span>
             <span class="live-meta-remaining">${remainingMinutes}m</span>
@@ -1422,6 +1490,8 @@ function renderTimedBlocks(tasks, dateStr) {
             <span class="live-status-pill mini"><span class="live-status-dot"></span>LIVE</span>
             <span class="live-meta-remaining">${remainingMinutes}m</span>
           ` : ''}
+          ${locationHtml}
+          ${notesHtml}
         </div>
         ${subtasksHtml}
       `;
@@ -1430,6 +1500,8 @@ function renderTimedBlocks(tasks, dateStr) {
     const hasSubtasksClass = childSubtasks.length > 0 ? 'has-subtasks' : '';
     const shortBlockClass = height < 75 ? 'is-short-block' : '';
     const overflowAttr = childSubtasks.length > 0 ? `data-overflow-count="${overflowCount}"` : '';
+    const notesTooltip = (task.notes && task.notes.trim()) ? `\n📝 ${task.notes.trim().slice(0, 100)}` : '';
+    const locTooltip = (task.location && task.location.trim()) ? `\n📍 ${task.location.trim()}` : '';
 
     return `
       <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass} ${completedClass} ${isCompact ? 'is-compact' : ''} ${hasSubtasksClass} ${shortBlockClass} ${expandedClass} ${narrowColClass}" 
@@ -1444,7 +1516,7 @@ function renderTimedBlocks(tasks, dateStr) {
            ondragover="handleBlockDragOver(event, '${task.id}')"
            ondragleave="handleBlockDragLeave(event, '${task.id}')"
            ondrop="handleBlockDrop(event, '${task.id}')"
-           title="${isEvent ? '📅 Event: ' : '📋 Task: '}${task.title} (${timeRangeStr})">
+           title="${isEvent ? '📅 Event: ' : '📋 Task: '}${escapeHtml(task.title)} (${timeRangeStr})${locTooltip}${notesTooltip}">
         ${innerContentHtml}
         <div class="resize-handle" 
              onmousedown="startResize(event, '${task.id}')"
@@ -4922,11 +4994,26 @@ function handleModalEndTimeChange() {
   }
 }
 
+function toggleModalExtraDetails(forceState) {
+  const content = document.getElementById('extraDetailsContent');
+  const icon = document.getElementById('extraDetailsToggleIcon');
+  const text = document.getElementById('extraDetailsToggleText');
+  if (!content) return;
+
+  const isCurrentlyOpen = content.style.display !== 'none';
+  const shouldOpen = forceState !== undefined ? forceState : !isCurrentlyOpen;
+
+  content.style.display = shouldOpen ? 'block' : 'none';
+  if (icon) icon.textContent = shouldOpen ? '▾' : '▸';
+  if (text) text.textContent = shouldOpen ? 'Masquer lieu & notes' : '+ Lieu, Lien web & Notes';
+}
+
 window.toggleModalAllDay = toggleModalAllDay;
 window.handleModalStartDateChange = handleModalStartDateChange;
 window.handleModalEndDateChange = handleModalEndDateChange;
 window.handleModalStartTimeChange = handleModalStartTimeChange;
 window.handleModalEndTimeChange = handleModalEndTimeChange;
+window.toggleModalExtraDetails = toggleModalExtraDetails;
 
 function openCreateModalWithDefaults(dateStr = TODAY_STR, timeStr = '') {
   editingTaskId = null;
@@ -4941,6 +5028,14 @@ function openCreateModalWithDefaults(dateStr = TODAY_STR, timeStr = '') {
 
   const titleEl = document.getElementById('editTaskTitle');
   if (titleEl) titleEl.value = '';
+
+  const locEl = document.getElementById('editTaskLocation');
+  if (locEl) locEl.value = '';
+
+  const notesEl = document.getElementById('editTaskNotes');
+  if (notesEl) notesEl.value = '';
+
+  toggleModalExtraDetails(false);
 
   const dateEl = document.getElementById('editTaskDate');
   if (dateEl) dateEl.value = dateStr || TODAY_STR;
@@ -5001,6 +5096,15 @@ function openEditModal(id) {
 
   const endDateEl = document.getElementById('editTaskEndDate');
   if (endDateEl) endDateEl.value = task.endDate || task.date || '';
+
+  const locEl = document.getElementById('editTaskLocation');
+  if (locEl) locEl.value = task.location || '';
+
+  const notesEl = document.getElementById('editTaskNotes');
+  if (notesEl) notesEl.value = task.notes || '';
+
+  const hasExtra = Boolean((task.location && task.location.trim()) || (task.notes && task.notes.trim()));
+  toggleModalExtraDetails(hasExtra);
 
   const recEl = document.getElementById('editTaskRecurrence');
   if (recEl) recEl.value = task.recurrence || 'none';
@@ -5083,6 +5187,12 @@ function saveTaskModal() {
   const recEl = document.getElementById('editTaskRecurrence');
   const recurrenceVal = recEl ? recEl.value : 'none';
 
+  const locEl = document.getElementById('editTaskLocation');
+  const locationVal = locEl ? locEl.value.trim() : '';
+
+  const notesEl = document.getElementById('editTaskNotes');
+  const notesVal = notesEl ? notesEl.value.trim() : '';
+
   if (editingTaskId) {
     const task = window.SpanPlanState.tasks.find(t => t.id === editingTaskId);
     if (task) {
@@ -5096,6 +5206,8 @@ function saveTaskModal() {
       task.endTime = endTimeVal;
       task.duration = durationVal;
       task.context = editingContext;
+      task.location = locationVal;
+      task.notes = notesVal;
       task.updated_at = new Date().toISOString();
     }
     if (typeof showToast === 'function') {
@@ -5117,6 +5229,8 @@ function saveTaskModal() {
       endTime: endTimeVal,
       duration: durationVal,
       context: editingContext,
+      location: locationVal,
+      notes: notesVal,
       completed: false,
       isRollover: false,
       created_at: nowIso,

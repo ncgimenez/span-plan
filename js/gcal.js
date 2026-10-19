@@ -285,14 +285,20 @@ async function pushSpanBlocksToGoogle(calendarId) {
     const endIso = `${task.date}T${endH}:${endM}:00`;
 
     const subtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
-    let description = task.type === 'event' ? '📅 Span Event' : '📋 Span Task';
-    if (subtasks.length > 0) {
-      description += '\n\nChecklist:\n' + subtasks.map(s => `[${s.completed ? 'x' : ' '}] ${s.title}`).join('\n');
+    let descParts = [];
+    if (task.notes && task.notes.trim()) {
+      descParts.push(task.notes.trim());
     }
+    if (subtasks.length > 0) {
+      descParts.push('Checklist:\n' + subtasks.map(s => `[${s.completed ? 'x' : ' '}] ${s.title}`).join('\n'));
+    }
+    descParts.push(task.type === 'event' ? '📅 Span Event' : '📋 Span Task');
+    const description = descParts.join('\n\n');
 
     const payload = {
       summary: `${getCategoryDot(task.context)} ${task.title}`,
       description: description,
+      location: task.location || '',
       colorId: getGcalColorIdForContext(task.context),
       start: { dateTime: new Date(startIso).toISOString(), timeZone: timeZone },
       end: { dateTime: new Date(endIso).toISOString(), timeZone: timeZone }
@@ -390,6 +396,8 @@ async function pullGoogleEventsToSpan(calendarId) {
         time: timeStr,
         duration: duration,
         context: context,
+        location: evt.location || '',
+        notes: evt.description || '',
         completed: false,
         subtasks: []
       };
