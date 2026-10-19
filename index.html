@@ -15,7 +15,7 @@
   <link rel="shortcut icon" href="favicon.ico?v=7.14">
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=7.14">
 
-  <link rel="stylesheet" href="style.css?v=7.18">
+  <link rel="stylesheet" href="style.css?v=7.21">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -278,6 +278,7 @@
   <!-- CONTEXT MENU POPOVER FOR TASK (⋮) -->
   <div class="task-popover-menu" id="taskPopoverMenu" style="display: none;">
     <button type="button" class="popover-item" onclick="popoverAction('edit')">✏️ Edit Details</button>
+    <button type="button" class="popover-item" id="popoverItemRollover" onclick="popoverAction('rollover')" style="display: none;">⟳ Reporter les sous-tâches...</button>
     <button type="button" class="popover-item" onclick="popoverAction('toggle-type')">🔄 Switch Task / Event</button>
     <button type="button" class="popover-item" onclick="popoverAction('focus')">🎯 Focus in Spotlight</button>
     <button type="button" class="popover-item" onclick="popoverAction('today')">☀️ Schedule for Today</button>
@@ -423,6 +424,62 @@
             <div class="subtasks-progress-fill" id="subtasksProgressFill" style="width: 0%;"></div>
           </div>
         </div>
+
+        <!-- ROLLOVER & BATCH ACTION BAR -->
+        <div class="subtasks-rollover-action-bar" id="subtasksRolloverActionBar" style="display: none;">
+          <button type="button" class="btn-subtasks-rollover-action" onclick="toggleSubtasksRolloverPanel()">
+            <span class="rollover-action-icon">⟳</span>
+            <span id="subtasksRolloverBtnText">Reporter les restantes...</span>
+          </button>
+          <span class="subtasks-batch-drag-pill" 
+                id="subtasksBatchDragPill" 
+                draggable="true" 
+                ondragstart="handleBatchSubtasksDragStart(event, currentSubtasksParentId)"
+                ondragend="handleBatchSubtasksDragEnd(event)"
+                title="Glissez ce badge pour déplacer toutes les restantes vers un autre bloc ou vers le calendrier">
+            <span class="batch-drag-icon">⠿</span>
+            <span id="subtasksBatchDragCount">0 restantes</span>
+          </span>
+        </div>
+
+        <!-- ROLLOVER PANEL (COLLAPSIBLE) -->
+        <div class="subtasks-rollover-panel" id="subtasksRolloverPanel" style="display: none;">
+          <div class="rollover-panel-header">
+            <span>Créer une suite avec les tâches restantes</span>
+            <button type="button" class="rollover-close-btn" onclick="toggleSubtasksRolloverPanel(false)">✕</button>
+          </div>
+          <div class="rollover-title-field">
+            <label for="rolloverNewTitle">Titre du nouveau bloc</label>
+            <input type="text" id="rolloverNewTitle" placeholder="Ex: Nom du bloc (suite)">
+          </div>
+          <div class="rollover-quick-destinations">
+            <button type="button" class="rollover-quick-btn" onclick="executeSubtasksRollover('tomorrow')">
+              <span class="r-icon">☀️</span>
+              <span class="r-title">Demain</span>
+              <span class="r-desc">Même heure</span>
+            </button>
+            <button type="button" class="rollover-quick-btn" onclick="executeSubtasksRollover('later_today')">
+              <span class="r-icon">⏳</span>
+              <span class="r-title">Plus tard</span>
+              <span class="r-desc">Aujourd'hui</span>
+            </button>
+            <button type="button" class="rollover-quick-btn" onclick="executeSubtasksRollover('allday_tomorrow')">
+              <span class="r-icon">📅</span>
+              <span class="r-title">Demain</span>
+              <span class="r-desc">Toute la journée</span>
+            </button>
+            <button type="button" class="rollover-quick-btn" onclick="executeSubtasksRollover('backlog')">
+              <span class="r-icon">📥</span>
+              <span class="r-title">Backlog</span>
+              <span class="r-desc">À planifier</span>
+            </button>
+          </div>
+          <label class="rollover-checkbox-label">
+            <input type="checkbox" id="rolloverMarkParentDone" checked>
+            <span>Marquer le bloc actuel comme terminé</span>
+          </label>
+        </div>
+
         <div class="subtasks-checklist-items" id="subtasksChecklistItems">
           <!-- Populated dynamically -->
         </div>
@@ -725,9 +782,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=7.18"></script>
-  <script src="js/gcal.js?v=7.18"></script>
-  <script src="js/plan.js?v=7.18"></script>
-  <script src="js/app.js?v=7.18"></script>
+  <script src="js/sync.js?v=7.21"></script>
+  <script src="js/gcal.js?v=7.21"></script>
+  <script src="js/plan.js?v=7.21"></script>
+  <script src="js/app.js?v=7.21"></script>
 </body>
 </html>

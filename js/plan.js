@@ -949,8 +949,7 @@ function renderPlanGrid(forceRebuild = false) {
              onpointerleave="handleCanvasHoverLeave(event)"
              ondragover="allowCanvasDrop(event)" 
              ondragleave="removeCanvasDropHighlight(event)"
-             ondrop="handleCanvasDrop(event, '${dateStr}')"
-             title="Click to create task or event at this time">
+             ondrop="handleCanvasDrop(event, '${dateStr}')">
           <div class="cal-marquee"></div>
           ${renderTimedBlocks(timedTasks, dateStr)}
           ${isToday ? renderNowLineHtml() : ''}
@@ -1313,38 +1312,51 @@ function renderTimedBlocks(tasks, dateStr) {
 
     const childSubtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
     const doneSubCount = childSubtasks.filter(s => s.completed).length;
-    const progressPillHtml = childSubtasks.length > 0 
-      ? `<span class="event-progress-pill" onclick="event.stopPropagation(); openSubtasksModal('${task.id}')" title="Subtasks (${doneSubCount}/${childSubtasks.length})">☑ ${doneSubCount}/${childSubtasks.length}</span>` 
-      : '';
+    const sortedSubtasks = [...childSubtasks].sort((a, b) => (a.completed ? 1 : 0) - (b.completed ? 1 : 0));
 
     const remainingMinutes = Math.max(0, endTotal - currentMinutes);
 
-    let subtasksHtml = '';
-    const hasSubtasksRendered = childSubtasks.length > 0 && height >= 75;
-    if (hasSubtasksRendered) {
-      let maxFit = 1;
-      if (height >= 115) {
-        maxFit = 3;
-      } else if (height >= 95) {
-        maxFit = 2;
-      } else {
-        maxFit = 1;
-      }
-      const visibleSubtasks = childSubtasks.slice(0, maxFit);
+    let subtasksStripHtml = '';
+    if (childSubtasks.length > 0) {
+      const allDone = doneSubCount === childSubtasks.length;
+      const catClass = task.context || 'work';
 
-      subtasksHtml = `
-        <div class="block-subtasks-container">
-          ${visibleSubtasks.map(sub => `
-            <div class="block-subtask-row subtask-cat-${sub.context || 'work'} ${sub.completed ? 'completed' : ''}" 
-                 onclick="event.stopPropagation(); toggleSubtaskCompletion('${task.id}', '${sub.id}')"
-                 title="${sub.completed ? 'Mark incomplete' : 'Mark completed'}">
-              <span class="subtask-cat-indicator cat-${sub.context || 'work'}"></span>
-              <div class="subtask-mini-checkbox ${sub.completed ? 'checked' : ''}">
-                ${sub.completed ? '✓' : ''}
-              </div>
-              <span class="subtask-row-title">${renderTitleWithTagsHtml(sub.title)}</span>
+      const previewItemsHtml = sortedSubtasks.slice(0, 5).map(sub => `
+        <div class="hover-deck-item ${sub.completed ? 'is-done' : ''}" 
+             draggable="true" 
+             ondragstart="handleSubtaskDragStart(event, '${task.id}', '${sub.id}')" 
+             ondragend="handleSubtaskDragEnd(event)"
+             title="Glisser vers un autre bloc ou vers le jour">
+          <span class="hover-deck-drag-handle">⠿</span>
+          <span class="hover-deck-check">${sub.completed ? '✓' : '○'}</span>
+          <span class="hover-deck-title">${escapeHtml(sub.title)}</span>
+        </div>
+      `).join('');
+      const moreCount = childSubtasks.length - 5;
+      const moreHtml = moreCount > 0 ? `<div class="hover-deck-more">+${moreCount} autre${moreCount > 1 ? 's' : ''}...</div>` : '';
+
+      subtasksStripHtml = `
+        <div class="block-subtasks-strip ${allDone ? 'is-all-done' : ''}" 
+             onclick="event.stopPropagation(); openSubtasksModal('${task.id}')" 
+             title="Sous-tâches: ${doneSubCount}/${childSubtasks.length} (Cliquer pour gérer)">
+          <div class="subtasks-strip-segments">
+            ${childSubtasks.map(s => `
+              <span class="subtask-segment ${s.completed ? 'is-done' : ''} seg-${s.context || catClass}"></span>
+            `).join('')}
+          </div>
+          <span class="subtasks-strip-count">${doneSubCount}/${childSubtasks.length}</span>
+          
+          <div class="subtasks-hover-deck" onclick="event.stopPropagation()">
+            <div class="hover-deck-header">
+              <span class="hover-deck-badge">Sous-tâches</span>
+              <span class="hover-deck-ratio">${doneSubCount}/${childSubtasks.length}</span>
             </div>
-          `).join('')}
+            <div class="hover-deck-list">
+              ${previewItemsHtml}
+              ${moreHtml}
+            </div>
+            <div class="hover-deck-footer">Glisser vers un bloc / le jour • ✎</div>
+          </div>
         </div>
       `;
     }
@@ -1362,7 +1374,7 @@ function renderTimedBlocks(tasks, dateStr) {
           ` : ''}
           <span class="compact-time">${task.time}</span>
           <span class="schedule-block-title">${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
-          ${progressPillHtml}
+          ${subtasksStripHtml}
           ${isLiveNow ? `
             <span class="live-status-pill mini"><span class="live-status-dot"></span>LIVE</span>
             <span class="live-meta-remaining">${remainingMinutes}m left</span>
@@ -1381,18 +1393,17 @@ function renderTimedBlocks(tasks, dateStr) {
             </div>
           ` : ''}
           <span class="schedule-block-title">${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
-          ${progressPillHtml}
           <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
         </div>
         <div class="schedule-block-meta">
           <span class="schedule-block-time">${timeRangeStr}</span>
+          ${subtasksStripHtml}
           ${isLiveNow ? `
             <span class="live-meta-divider">•</span>
             <span class="live-status-pill mini"><span class="live-status-dot"></span>LIVE</span>
             <span class="live-meta-remaining">${remainingMinutes}m left</span>
           ` : ''}
         </div>
-        ${subtasksHtml}
       `;
     }
 
@@ -2082,8 +2093,10 @@ function handleCanvasPointerUp(e) {
   }
 }
 
-// DRAG & DROP HTML5 POUR LE DOCK / BACKLOG
+// DRAG & DROP HTML5 POUR LE DOCK / BACKLOG / SOUS-TÂCHES
 let draggedTaskId = null;
+window.draggedSubtaskInfo = null;
+window.draggedBatchSubtasksInfo = null;
 
 function handleDragStart(e, id) {
   draggedTaskId = id;
@@ -2095,20 +2108,728 @@ function handleDragStart(e, id) {
   if (blockEl) blockEl.classList.add('dragging');
 }
 
+function handleSubtaskDragStart(e, parentId, subtaskId) {
+  e.stopPropagation();
+  const allTasks = window.SpanPlanState.tasks;
+  const parent = allTasks.find(t => t.id === parentId);
+  if (!parent || !Array.isArray(parent.subtasks)) return;
+
+  const sub = parent.subtasks.find(s => String(s.id) === String(subtaskId));
+  if (!sub) return;
+
+  window.draggedSubtaskInfo = {
+    parentId,
+    subtaskId,
+    subtask: { ...sub }
+  };
+
+  if (e.dataTransfer) {
+    e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'subtask', parentId, subtaskId }));
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  const overlay = document.getElementById('subtasksModalOverlay');
+  if (overlay) {
+    overlay.classList.add('dragging-subtask-active');
+  }
+  document.body.classList.add('is-dragging-subtask');
+}
+
+function handleSubtaskDragEnd(e) {
+  const overlay = document.getElementById('subtasksModalOverlay');
+  if (overlay) {
+    overlay.classList.remove('dragging-subtask-active');
+  }
+  document.body.classList.remove('is-dragging-subtask');
+  document.querySelectorAll('.schedule-block-item.subtask-drop-target').forEach(b => b.classList.remove('subtask-drop-target'));
+  document.querySelectorAll('.schedule-grid-canvas.drag-over').forEach(c => c.classList.remove('drag-over'));
+  document.querySelectorAll('.day-dock.drag-over').forEach(d => d.classList.remove('drag-over'));
+  document.querySelectorAll('.cal-allday-drop-cell.drag-over').forEach(d => d.classList.remove('drag-over'));
+  window.draggedSubtaskInfo = null;
+}
+
+function handleBatchSubtasksDragStart(e, parentId) {
+  e.stopPropagation();
+  const allTasks = window.SpanPlanState.tasks;
+  const parent = allTasks.find(t => t.id === parentId);
+  if (!parent || !Array.isArray(parent.subtasks)) return;
+
+  const unfinished = parent.subtasks.filter(s => !s.completed);
+  if (unfinished.length === 0) return;
+
+  window.draggedBatchSubtasksInfo = {
+    parentId,
+    subtasks: unfinished.map(s => ({ ...s }))
+  };
+
+  if (e.dataTransfer) {
+    e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'batch_subtasks', parentId, count: unfinished.length }));
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  const overlay = document.getElementById('subtasksModalOverlay');
+  if (overlay) {
+    overlay.classList.add('dragging-subtask-active');
+  }
+  document.body.classList.add('is-dragging-subtask');
+}
+
+function handleBatchSubtasksDragEnd(e) {
+  const overlay = document.getElementById('subtasksModalOverlay');
+  if (overlay) {
+    overlay.classList.remove('dragging-subtask-active');
+  }
+  document.body.classList.remove('is-dragging-subtask');
+  document.querySelectorAll('.schedule-block-item.subtask-drop-target').forEach(b => b.classList.remove('subtask-drop-target'));
+  document.querySelectorAll('.schedule-grid-canvas.drag-over').forEach(c => c.classList.remove('drag-over'));
+  document.querySelectorAll('.day-dock.drag-over').forEach(d => d.classList.remove('drag-over'));
+  document.querySelectorAll('.cal-allday-drop-cell.drag-over').forEach(d => d.classList.remove('drag-over'));
+  window.draggedBatchSubtasksInfo = null;
+}
+
 function handleDragEnd(e) {
   if (draggedTaskId) {
     const blockEl = document.getElementById(`block_${draggedTaskId}`);
     if (blockEl) blockEl.classList.remove('dragging');
   }
+  if (window.draggedSubtaskInfo) {
+    handleSubtaskDragEnd(e);
+  }
+  if (window.draggedBatchSubtasksInfo) {
+    handleBatchSubtasksDragEnd(e);
+  }
   const ghost = document.getElementById('canvasDragGhost');
   if (ghost) ghost.remove();
   document.querySelectorAll('.schedule-grid-canvas.drag-over').forEach(c => c.classList.remove('drag-over'));
   document.querySelectorAll('.day-dock.drag-over').forEach(d => d.classList.remove('drag-over'));
+  document.querySelectorAll('.cal-allday-drop-cell.drag-over').forEach(d => d.classList.remove('drag-over'));
   document.querySelectorAll('.schedule-block-item.subtask-drop-target').forEach(b => b.classList.remove('subtask-drop-target'));
   draggedTaskId = null;
 }
 
 window.addEventListener('dragend', handleDragEnd);
+
+function handleSubtaskDropOnBlock(e, targetBlockId) {
+  if (!window.draggedSubtaskInfo) return;
+  const { parentId, subtaskId, subtask } = window.draggedSubtaskInfo;
+
+  if (parentId === targetBlockId) {
+    handleSubtaskDragEnd(e);
+    return;
+  }
+
+  const allTasks = window.SpanPlanState.tasks;
+  const sourceParent = allTasks.find(t => t.id === parentId);
+  const targetParent = allTasks.find(t => t.id === targetBlockId);
+
+  if (!sourceParent || !targetParent) {
+    handleSubtaskDragEnd(e);
+    return;
+  }
+
+  // 1. Retirer la sous-tâche du parent source
+  sourceParent.subtasks = (sourceParent.subtasks || []).filter(s => String(s.id) !== String(subtaskId));
+  sourceParent.updated_at = new Date().toISOString();
+
+  // 2. L'ajouter au parent cible
+  if (!Array.isArray(targetParent.subtasks)) {
+    targetParent.subtasks = [];
+  }
+  const alreadyExists = targetParent.subtasks.some(s => 
+    (s.title || '').trim().toLowerCase() === (subtask.title || '').trim().toLowerCase()
+  );
+  if (!alreadyExists) {
+    targetParent.subtasks.push({
+      ...subtask,
+      context: subtask.context || targetParent.context || 'work'
+    });
+  }
+  targetParent.updated_at = new Date().toISOString();
+
+  // 3. Mettre à jour Focus pour lier au nouveau parent
+  try {
+    let focusTasks = JSON.parse(localStorage.getItem('span_tasks')) || [];
+    if (Array.isArray(focusTasks)) {
+      const ftIndex = focusTasks.findIndex(ft => String(ft.id) === String(subtaskId) || (ft.title && ft.title.trim().toLowerCase() === (subtask.title || '').trim().toLowerCase()));
+      if (ftIndex !== -1) {
+        focusTasks[ftIndex].parentEventId = targetParent.focusId || targetParent.id;
+        localStorage.setItem('span_tasks', JSON.stringify(focusTasks));
+      }
+    }
+  } catch (err) {}
+
+  handleSubtaskDragEnd(e);
+
+  savePlanState();
+  syncSubtasksToFocus(sourceParent);
+  syncSubtasksToFocus(targetParent);
+  if (typeof syncPlanToCloud === 'function') syncPlanToCloud();
+
+  if (currentSubtasksParentId) {
+    if (sourceParent.subtasks.length === 0) {
+      closeSubtasksModal();
+    } else {
+      renderSubtasksModalList();
+    }
+  }
+
+  if (typeof showToast === 'function') {
+    showToast(`Sous-tâche déplacée dans "${targetParent.title}"`, 'success');
+  }
+}
+
+function handleSubtaskDropToDay(targetDate) {
+  if (!window.draggedSubtaskInfo) return;
+  const { parentId, subtaskId, subtask } = window.draggedSubtaskInfo;
+
+  const allTasks = window.SpanPlanState.tasks;
+  const sourceParent = allTasks.find(t => t.id === parentId);
+  if (!sourceParent) {
+    handleSubtaskDragEnd();
+    return;
+  }
+
+  // 1. Retirer la sous-tâche du parent source
+  sourceParent.subtasks = (sourceParent.subtasks || []).filter(s => String(s.id) !== String(subtaskId));
+  sourceParent.updated_at = new Date().toISOString();
+
+  // 2. Créer un nouvel événement lié au jour sans heure précise
+  const newEventId = 'task_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36);
+  const newEvent = {
+    id: newEventId,
+    title: (subtask.title || 'Untitled event').trim(),
+    date: targetDate,
+    endDate: targetDate,
+    time: '',
+    allDay: true,
+    type: 'event', // Événement lié au jour sans heure précise
+    context: subtask.context || sourceParent.context || 'work',
+    completed: !!subtask.completed,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  allTasks.push(newEvent);
+
+  // 3. Mettre à jour Focus : détacher de parentEventId et passer en événement lié au jour
+  try {
+    let focusTasks = JSON.parse(localStorage.getItem('span_tasks')) || [];
+    if (Array.isArray(focusTasks)) {
+      const ftIndex = focusTasks.findIndex(ft => String(ft.id) === String(subtaskId) || (ft.title && ft.title.trim().toLowerCase() === (subtask.title || '').trim().toLowerCase()));
+      if (ftIndex !== -1) {
+        focusTasks[ftIndex].parentEventId = null;
+        focusTasks[ftIndex].date = targetDate;
+        focusTasks[ftIndex].allDay = true;
+        focusTasks[ftIndex].time = null;
+        focusTasks[ftIndex].type = 'event';
+        localStorage.setItem('span_tasks', JSON.stringify(focusTasks));
+      }
+    }
+  } catch (err) {}
+
+  handleSubtaskDragEnd();
+
+  savePlanState();
+  syncSubtasksToFocus(sourceParent);
+  if (typeof syncPlanToCloud === 'function') syncPlanToCloud();
+
+  if (currentSubtasksParentId) {
+    if (sourceParent.subtasks.length === 0) {
+      closeSubtasksModal();
+    } else {
+      renderSubtasksModalList();
+    }
+  }
+
+  if (typeof showToast === 'function') {
+    showToast(`Sous-tâche convertie en événement toute la journée (${targetDate})`, 'success');
+  }
+}
+
+function detachSubtaskToDay(subtaskId) {
+  if (!currentSubtasksParentId) return;
+  const parent = window.SpanPlanState.tasks.find(t => t.id === currentSubtasksParentId);
+  if (!parent || !Array.isArray(parent.subtasks)) return;
+
+  const sub = parent.subtasks.find(s => String(s.id) === String(subtaskId));
+  if (!sub) return;
+
+  const targetDate = parent.date || TODAY_STR;
+  window.draggedSubtaskInfo = {
+    parentId: currentSubtasksParentId,
+    subtaskId,
+    subtask: { ...sub }
+  };
+  handleSubtaskDropToDay(targetDate);
+}
+
+function handleBatchSubtasksDropOnBlock(e, targetBlockId) {
+  if (!window.draggedBatchSubtasksInfo) return;
+  const { parentId, subtasks } = window.draggedBatchSubtasksInfo;
+
+  if (parentId === targetBlockId) {
+    handleBatchSubtasksDragEnd(e);
+    return;
+  }
+
+  const allTasks = window.SpanPlanState.tasks;
+  const sourceParent = allTasks.find(t => t.id === parentId);
+  const targetParent = allTasks.find(t => t.id === targetBlockId);
+
+  if (!sourceParent || !targetParent) {
+    handleBatchSubtasksDragEnd(e);
+    return;
+  }
+
+  const movedIds = new Set(subtasks.map(s => String(s.id)));
+  sourceParent.subtasks = (sourceParent.subtasks || []).filter(s => !movedIds.has(String(s.id)));
+  sourceParent.updated_at = new Date().toISOString();
+
+  if (!Array.isArray(targetParent.subtasks)) {
+    targetParent.subtasks = [];
+  }
+  subtasks.forEach(s => {
+    targetParent.subtasks.push({
+      ...s,
+      context: targetParent.context || s.context || 'work'
+    });
+  });
+  targetParent.updated_at = new Date().toISOString();
+
+  try {
+    let focusTasks = JSON.parse(localStorage.getItem('span_tasks')) || [];
+    if (Array.isArray(focusTasks)) {
+      focusTasks.forEach(ft => {
+        if (movedIds.has(String(ft.id))) {
+          ft.parentEventId = targetParent.focusId || targetParent.id;
+        }
+      });
+      localStorage.setItem('span_tasks', JSON.stringify(focusTasks));
+    }
+  } catch (err) {}
+
+  handleBatchSubtasksDragEnd(e);
+
+  savePlanState();
+  syncSubtasksToFocus(sourceParent);
+  syncSubtasksToFocus(targetParent);
+  if (typeof syncPlanToCloud === 'function') syncPlanToCloud();
+
+  if (currentSubtasksParentId) {
+    if (sourceParent.subtasks.length === 0) {
+      closeSubtasksModal();
+    } else {
+      renderSubtasksModalList();
+    }
+  }
+
+  if (typeof showToast === 'function') {
+    showToast(`${subtasks.length} sous-tâche${subtasks.length > 1 ? 's' : ''} déplacée${subtasks.length > 1 ? 's' : ''} dans "${targetParent.title}"`, 'success');
+  }
+}
+
+function handleBatchSubtasksDropToCanvas(e, targetDate) {
+  if (!window.draggedBatchSubtasksInfo) return;
+  const { parentId, subtasks } = window.draggedBatchSubtasksInfo;
+
+  const allTasks = window.SpanPlanState.tasks;
+  const sourceParent = allTasks.find(t => t.id === parentId);
+  if (!sourceParent) {
+    handleBatchSubtasksDragEnd(e);
+    return;
+  }
+
+  const canvas = e.currentTarget;
+  const rect = canvas.getBoundingClientRect();
+  const offsetY = Math.max(0, e.clientY - rect.top);
+  const hoursFraction = offsetY / HOUR_HEIGHT;
+  let totalMinutes = Math.round((START_HOUR * 60) + (hoursFraction * 60));
+  totalMinutes = Math.round(totalMinutes / 15) * 15;
+  totalMinutes = Math.max(0, Math.min(23 * 60 + 45, totalMinutes));
+
+  const h = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
+  const m = String(totalMinutes % 60).padStart(2, '0');
+  const newTime = `${h}:${m}`;
+
+  const movedIds = new Set(subtasks.map(s => String(s.id)));
+  sourceParent.subtasks = (sourceParent.subtasks || []).filter(s => !movedIds.has(String(s.id)));
+  sourceParent.updated_at = new Date().toISOString();
+
+  const newTaskId = 'task_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36);
+  const continuationTask = {
+    id: newTaskId,
+    title: `${sourceParent.title} (suite)`,
+    date: targetDate,
+    endDate: targetDate,
+    time: newTime,
+    duration: sourceParent.duration || 60,
+    allDay: false,
+    type: sourceParent.type || 'task',
+    context: sourceParent.context || 'work',
+    completed: false,
+    subtasks: subtasks.map(s => ({ ...s, completed: false })),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  allTasks.push(continuationTask);
+
+  try {
+    let focusTasks = JSON.parse(localStorage.getItem('span_tasks')) || [];
+    if (Array.isArray(focusTasks)) {
+      focusTasks.forEach(ft => {
+        if (movedIds.has(String(ft.id))) {
+          ft.parentEventId = continuationTask.id;
+          ft.date = targetDate;
+          ft.time = newTime;
+        }
+      });
+      localStorage.setItem('span_tasks', JSON.stringify(focusTasks));
+    }
+  } catch (err) {}
+
+  handleBatchSubtasksDragEnd(e);
+
+  savePlanState();
+  syncSubtasksToFocus(sourceParent);
+  syncSubtasksToFocus(continuationTask);
+  if (typeof syncPlanToCloud === 'function') syncPlanToCloud();
+
+  if (currentSubtasksParentId) {
+    closeSubtasksModal();
+  }
+
+  if (typeof showToast === 'function') {
+    showToast(`Suite créée : "${continuationTask.title}" (${newTime})`, 'success');
+  }
+}
+
+function handleBatchSubtasksDropToDock(e, targetDate) {
+  if (!window.draggedBatchSubtasksInfo) return;
+  const { parentId, subtasks } = window.draggedBatchSubtasksInfo;
+
+  const allTasks = window.SpanPlanState.tasks;
+  const sourceParent = allTasks.find(t => t.id === parentId);
+  if (!sourceParent) {
+    handleBatchSubtasksDragEnd(e);
+    return;
+  }
+
+  const movedIds = new Set(subtasks.map(s => String(s.id)));
+  sourceParent.subtasks = (sourceParent.subtasks || []).filter(s => !movedIds.has(String(s.id)));
+  sourceParent.updated_at = new Date().toISOString();
+
+  const newTaskId = 'task_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36);
+  const continuationTask = {
+    id: newTaskId,
+    title: `${sourceParent.title} (suite)`,
+    date: targetDate,
+    endDate: targetDate,
+    time: '',
+    allDay: true,
+    type: 'task',
+    context: sourceParent.context || 'work',
+    completed: false,
+    subtasks: subtasks.map(s => ({ ...s, completed: false })),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  allTasks.push(continuationTask);
+
+  try {
+    let focusTasks = JSON.parse(localStorage.getItem('span_tasks')) || [];
+    if (Array.isArray(focusTasks)) {
+      focusTasks.forEach(ft => {
+        if (movedIds.has(String(ft.id))) {
+          ft.parentEventId = continuationTask.id;
+          ft.date = targetDate;
+          ft.time = null;
+          ft.allDay = true;
+        }
+      });
+      localStorage.setItem('span_tasks', JSON.stringify(focusTasks));
+    }
+  } catch (err) {}
+
+  handleBatchSubtasksDragEnd(e);
+
+  savePlanState();
+  syncSubtasksToFocus(sourceParent);
+  syncSubtasksToFocus(continuationTask);
+  if (typeof syncPlanToCloud === 'function') syncPlanToCloud();
+
+  if (currentSubtasksParentId) {
+    closeSubtasksModal();
+  }
+
+  if (typeof showToast === 'function') {
+    showToast(`Suite toute la journée créée : "${continuationTask.title}" (${targetDate})`, 'success');
+  }
+}
+
+function handleBatchSubtasksDropToBacklog(e) {
+  if (!window.draggedBatchSubtasksInfo) return;
+  const { parentId, subtasks } = window.draggedBatchSubtasksInfo;
+
+  const allTasks = window.SpanPlanState.tasks;
+  const sourceParent = allTasks.find(t => t.id === parentId);
+  if (!sourceParent) {
+    handleBatchSubtasksDragEnd(e);
+    return;
+  }
+
+  const movedIds = new Set(subtasks.map(s => String(s.id)));
+  sourceParent.subtasks = (sourceParent.subtasks || []).filter(s => !movedIds.has(String(s.id)));
+  sourceParent.updated_at = new Date().toISOString();
+
+  const newTaskId = 'task_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36);
+  const continuationTask = {
+    id: newTaskId,
+    title: `${sourceParent.title} (suite)`,
+    date: null,
+    endDate: null,
+    time: '',
+    allDay: false,
+    type: 'task',
+    context: sourceParent.context || 'work',
+    completed: false,
+    subtasks: subtasks.map(s => ({ ...s, completed: false })),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  allTasks.push(continuationTask);
+
+  try {
+    let focusTasks = JSON.parse(localStorage.getItem('span_tasks')) || [];
+    if (Array.isArray(focusTasks)) {
+      focusTasks.forEach(ft => {
+        if (movedIds.has(String(ft.id))) {
+          ft.parentEventId = continuationTask.id;
+          ft.date = null;
+          ft.time = null;
+        }
+      });
+      localStorage.setItem('span_tasks', JSON.stringify(focusTasks));
+    }
+  } catch (err) {}
+
+  handleBatchSubtasksDragEnd(e);
+
+  savePlanState();
+  syncSubtasksToFocus(sourceParent);
+  syncSubtasksToFocus(continuationTask);
+  if (typeof syncPlanToCloud === 'function') syncPlanToCloud();
+
+  if (currentSubtasksParentId) {
+    closeSubtasksModal();
+  }
+
+  if (typeof showToast === 'function') {
+    showToast(`Suite déplacée dans le Backlog : "${continuationTask.title}"`, 'info');
+  }
+}
+
+function handleSubtaskDropToBacklog(e) {
+  if (!window.draggedSubtaskInfo) return;
+  const { parentId, subtaskId, subtask } = window.draggedSubtaskInfo;
+
+  const allTasks = window.SpanPlanState.tasks;
+  const sourceParent = allTasks.find(t => t.id === parentId);
+  if (!sourceParent) {
+    handleSubtaskDragEnd(e);
+    return;
+  }
+
+  sourceParent.subtasks = (sourceParent.subtasks || []).filter(s => String(s.id) !== String(subtaskId));
+  sourceParent.updated_at = new Date().toISOString();
+
+  const newTaskId = 'task_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36);
+  const newTask = {
+    id: newTaskId,
+    title: (subtask.title || 'Untitled task').trim(),
+    date: null,
+    endDate: null,
+    time: '',
+    allDay: false,
+    type: 'task',
+    context: subtask.context || sourceParent.context || 'work',
+    completed: !!subtask.completed,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  allTasks.push(newTask);
+
+  try {
+    let focusTasks = JSON.parse(localStorage.getItem('span_tasks')) || [];
+    if (Array.isArray(focusTasks)) {
+      const ftIndex = focusTasks.findIndex(ft => String(ft.id) === String(subtaskId) || (ft.title && ft.title.trim().toLowerCase() === (subtask.title || '').trim().toLowerCase()));
+      if (ftIndex !== -1) {
+        focusTasks[ftIndex].parentEventId = null;
+        focusTasks[ftIndex].date = null;
+        focusTasks[ftIndex].time = null;
+        localStorage.setItem('span_tasks', JSON.stringify(focusTasks));
+      }
+    }
+  } catch (err) {}
+
+  handleSubtaskDragEnd(e);
+
+  savePlanState();
+  syncSubtasksToFocus(sourceParent);
+  if (typeof syncPlanToCloud === 'function') syncPlanToCloud();
+
+  if (currentSubtasksParentId) {
+    if (sourceParent.subtasks.length === 0) {
+      closeSubtasksModal();
+    } else {
+      renderSubtasksModalList();
+    }
+  }
+
+  if (typeof showToast === 'function') {
+    showToast(`Sous-tâche déplacée dans le Backlog`, 'info');
+  }
+}
+
+function toggleSubtasksRolloverPanel(show) {
+  const panel = document.getElementById('subtasksRolloverPanel');
+  if (!panel) return;
+  const isHidden = panel.style.display === 'none' || !panel.style.display;
+  const willShow = (typeof show === 'boolean') ? show : isHidden;
+  panel.style.display = willShow ? 'flex' : 'none';
+  if (willShow) {
+    const titleInput = document.getElementById('rolloverNewTitle');
+    if (titleInput) {
+      if (!titleInput.value || titleInput.dataset.parentId !== currentSubtasksParentId) {
+        const parent = window.SpanPlanState.tasks.find(t => t.id === currentSubtasksParentId);
+        if (parent) titleInput.value = `${parent.title} (suite)`;
+        titleInput.dataset.parentId = currentSubtasksParentId;
+      }
+      setTimeout(() => titleInput.focus(), 50);
+    }
+  }
+}
+
+function executeSubtasksRollover(mode) {
+  if (!currentSubtasksParentId) return;
+  const allTasks = window.SpanPlanState.tasks;
+  const parent = allTasks.find(t => t.id === currentSubtasksParentId);
+  if (!parent || !Array.isArray(parent.subtasks)) return;
+
+  const unfinished = parent.subtasks.filter(s => !s.completed);
+  if (unfinished.length === 0) {
+    if (typeof showToast === 'function') showToast('Aucune sous-tâche restante à reporter', 'info');
+    return;
+  }
+
+  const completedSubtasks = parent.subtasks.filter(s => s.completed);
+  const markParentDone = document.getElementById('rolloverMarkParentDone') ? document.getElementById('rolloverMarkParentDone').checked : true;
+  const titleInput = document.getElementById('rolloverNewTitle');
+  const newTitle = (titleInput && titleInput.value.trim()) ? titleInput.value.trim() : `${parent.title} (suite)`;
+
+  let targetDate = parent.date || TODAY_STR;
+  let targetEndDate = targetDate;
+  let targetTime = parent.time || '09:00';
+  let targetAllDay = false;
+  let targetDesc = '';
+
+  const parentDateObj = parent.date ? new Date(parent.date + 'T00:00:00') : new Date();
+  const tomorrowObj = new Date(parentDateObj.getTime() + 86400000);
+  const tomorrowStr = formatDate(tomorrowObj);
+
+  if (mode === 'tomorrow') {
+    targetDate = tomorrowStr;
+    targetEndDate = tomorrowStr;
+    targetTime = parent.time || '09:00';
+    targetAllDay = !!parent.allDay;
+    targetDesc = `demain à ${targetTime || 'toute la journée'}`;
+  } else if (mode === 'later_today') {
+    targetDate = parent.date || TODAY_STR;
+    targetEndDate = targetDate;
+    targetAllDay = false;
+    if (parent.time) {
+      const parts = parent.time.split(':');
+      let startMins = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+      let endMins = startMins + (parent.duration || 60);
+      let laterMins = Math.min(23 * 60, endMins + 30);
+      let lh = String(Math.floor(laterMins / 60)).padStart(2, '0');
+      let lm = String(laterMins % 60).padStart(2, '0');
+      targetTime = `${lh}:${lm}`;
+    } else {
+      targetTime = '14:00';
+    }
+    targetDesc = `aujourd'hui à ${targetTime}`;
+  } else if (mode === 'allday_tomorrow') {
+    targetDate = tomorrowStr;
+    targetEndDate = tomorrowStr;
+    targetTime = '';
+    targetAllDay = true;
+    targetDesc = `demain (toute la journée)`;
+  } else if (mode === 'backlog') {
+    targetDate = null;
+    targetEndDate = null;
+    targetTime = '';
+    targetAllDay = false;
+    targetDesc = `dans le Backlog`;
+  }
+
+  // 1. Mettre à jour le parent : ne garder que les terminées et marquer done si souhaité
+  parent.subtasks = completedSubtasks;
+  if (markParentDone) {
+    parent.completed = true;
+  }
+  parent.updated_at = new Date().toISOString();
+
+  // 2. Créer le nouveau bloc pour la suite
+  const newTaskId = 'task_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36);
+  const continuationTask = {
+    id: newTaskId,
+    title: newTitle,
+    date: targetDate,
+    endDate: targetEndDate,
+    time: targetTime,
+    duration: parent.duration || 60,
+    allDay: targetAllDay,
+    type: parent.type || 'task',
+    context: parent.context || 'work',
+    completed: false,
+    subtasks: unfinished.map(s => ({ ...s, completed: false })),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  allTasks.push(continuationTask);
+
+  // 3. Mettre à jour Focus (span_tasks)
+  const movedIds = new Set(unfinished.map(s => String(s.id)));
+  try {
+    let focusTasks = JSON.parse(localStorage.getItem('span_tasks')) || [];
+    if (Array.isArray(focusTasks)) {
+      focusTasks.forEach(ft => {
+        if (movedIds.has(String(ft.id))) {
+          ft.parentEventId = continuationTask.id;
+          ft.date = targetDate;
+          ft.time = targetTime;
+        }
+      });
+      localStorage.setItem('span_tasks', JSON.stringify(focusTasks));
+    }
+  } catch (err) {}
+
+  savePlanState();
+  syncSubtasksToFocus(parent);
+  syncSubtasksToFocus(continuationTask);
+  if (typeof syncPlanToCloud === 'function') syncPlanToCloud();
+
+  closeSubtasksModal();
+
+  if (typeof showToast === 'function') {
+    showToast(`Suite créée : "${newTitle}" (${targetDesc})`, 'success');
+  }
+}
 
 function allowCanvasDrop(e) {
   e.preventDefault();
@@ -2174,10 +2895,14 @@ function removeCanvasDropHighlight(e) {
 }
 
 function handleBlockDragOver(e, targetBlockId) {
-  if (!draggedTaskId || draggedTaskId === targetBlockId) return;
+  const isDraggingTask = draggedTaskId && draggedTaskId !== targetBlockId;
+  const isDraggingSubtask = window.draggedSubtaskInfo && window.draggedSubtaskInfo.parentId !== targetBlockId;
+  const isDraggingBatch = window.draggedBatchSubtasksInfo && window.draggedBatchSubtasksInfo.parentId !== targetBlockId;
+
+  if (!isDraggingTask && !isDraggingSubtask && !isDraggingBatch) return;
   e.preventDefault();
   e.stopPropagation();
-  if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
 
   const ghost = document.getElementById('canvasDragGhost');
   if (ghost) ghost.remove();
@@ -2212,6 +2937,16 @@ function handleBlockDrop(e, targetBlockId) {
   const ghost = document.getElementById('canvasDragGhost');
   if (ghost) ghost.remove();
   document.querySelectorAll('.schedule-block-item.subtask-drop-target').forEach(b => b.classList.remove('subtask-drop-target'));
+
+  if (window.draggedBatchSubtasksInfo) {
+    handleBatchSubtasksDropOnBlock(e, targetBlockId);
+    return;
+  }
+
+  if (window.draggedSubtaskInfo) {
+    handleSubtaskDropOnBlock(e, targetBlockId);
+    return;
+  }
 
   if (!draggedTaskId || draggedTaskId === targetBlockId) return;
 
@@ -2295,6 +3030,16 @@ function handleCanvasDrop(e, targetDate) {
   const ghost = document.getElementById('canvasDragGhost');
   if (ghost) ghost.remove();
 
+  if (window.draggedBatchSubtasksInfo) {
+    handleBatchSubtasksDropToCanvas(e, targetDate);
+    return;
+  }
+
+  if (window.draggedSubtaskInfo) {
+    handleSubtaskDropToDay(targetDate);
+    return;
+  }
+
   if (!draggedTaskId) return;
 
   const canvas = e.currentTarget;
@@ -2346,6 +3091,16 @@ function handleDropToDock(e, targetDate) {
   const ghost = document.getElementById('canvasDragGhost');
   if (ghost) ghost.remove();
 
+  if (window.draggedBatchSubtasksInfo) {
+    handleBatchSubtasksDropToDock(e, targetDate);
+    return;
+  }
+
+  if (window.draggedSubtaskInfo) {
+    handleSubtaskDropToDay(targetDate);
+    return;
+  }
+
   if (!draggedTaskId) return;
 
   const task = window.SpanPlanState.tasks.find(t => t.id === draggedTaskId);
@@ -2370,6 +3125,16 @@ function handleDropToBacklog(e) {
   const ghost = document.getElementById('canvasDragGhost');
   if (ghost) ghost.remove();
 
+  if (window.draggedBatchSubtasksInfo) {
+    handleBatchSubtasksDropToBacklog(e);
+    return;
+  }
+
+  if (window.draggedSubtaskInfo) {
+    handleSubtaskDropToBacklog(e);
+    return;
+  }
+
   if (!draggedTaskId) return;
 
   const task = window.SpanPlanState.tasks.find(t => t.id === draggedTaskId);
@@ -2390,6 +3155,13 @@ function openTaskPopover(e, id) {
   popoverTargetTaskId = id;
   const menu = document.getElementById('taskPopoverMenu');
   if (!menu) return;
+
+  const rolloverItem = document.getElementById('popoverItemRollover');
+  if (rolloverItem) {
+    const task = window.SpanPlanState.tasks.find(t => t.id === id);
+    const hasUnfinishedSubtasks = task && Array.isArray(task.subtasks) && task.subtasks.some(s => !s.completed);
+    rolloverItem.style.display = hasUnfinishedSubtasks ? 'block' : 'none';
+  }
 
   const btnRect = e.currentTarget.getBoundingClientRect();
   menu.style.display = 'flex';
@@ -2487,6 +3259,10 @@ function popoverAction(action) {
 
   if (action === 'edit') {
     openEditModal(id);
+  } else if (action === 'rollover') {
+    openSubtasksModal(id);
+    setTimeout(() => toggleSubtasksRolloverPanel(true), 60);
+    return;
   } else if (action === 'today') {
     scheduleTaskDirectly(id, TODAY_STR);
     if (typeof showToast === 'function') {
@@ -2997,6 +3773,8 @@ function openSubtasksModal(taskId) {
 function closeSubtasksModal() {
   const overlay = document.getElementById('subtasksModalOverlay');
   if (overlay) overlay.style.display = 'none';
+  const rolloverPanel = document.getElementById('subtasksRolloverPanel');
+  if (rolloverPanel) rolloverPanel.style.display = 'none';
   currentSubtasksParentId = null;
 }
 
@@ -3014,18 +3792,50 @@ function renderSubtasksModalList() {
   const completedCount = subtasks.filter(s => s.completed).length;
   const totalCount = subtasks.length;
   const pct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  const sortedSubtasks = [...subtasks].sort((a, b) => (a.completed ? 1 : 0) - (b.completed ? 1 : 0));
 
   if (textEl) textEl.textContent = `${completedCount} of ${totalCount} completed`;
   if (pctEl) pctEl.textContent = `${pct}%`;
   if (fillEl) fillEl.style.width = `${pct}%`;
+
+  const unfinished = subtasks.filter(s => !s.completed);
+  const rolloverBar = document.getElementById('subtasksRolloverActionBar');
+  const rolloverBtnText = document.getElementById('subtasksRolloverBtnText');
+  const batchCountEl = document.getElementById('subtasksBatchDragCount');
+  const rolloverPanel = document.getElementById('subtasksRolloverPanel');
+  const rolloverTitleInput = document.getElementById('rolloverNewTitle');
+
+  if (rolloverBar) {
+    if (unfinished.length > 0) {
+      rolloverBar.style.display = 'flex';
+      if (rolloverBtnText) {
+        rolloverBtnText.textContent = `Reporter les ${unfinished.length} restante${unfinished.length > 1 ? 's' : ''}...`;
+      }
+      if (batchCountEl) {
+        batchCountEl.textContent = `${unfinished.length} restante${unfinished.length > 1 ? 's' : ''}`;
+      }
+      if (rolloverTitleInput && (!rolloverTitleInput.value || rolloverTitleInput.dataset.parentId !== currentSubtasksParentId)) {
+        rolloverTitleInput.value = `${parent.title} (suite)`;
+        rolloverTitleInput.dataset.parentId = currentSubtasksParentId;
+      }
+    } else {
+      rolloverBar.style.display = 'none';
+      if (rolloverPanel) rolloverPanel.style.display = 'none';
+    }
+  }
 
   if (subtasks.length === 0) {
     listEl.innerHTML = `<div style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 18px 0;">No subtasks yet</div>`;
     return;
   }
 
-  listEl.innerHTML = subtasks.map(sub => `
+  listEl.innerHTML = sortedSubtasks.map(sub => `
     <div class="subtask-interactive-row ${sub.completed ? 'completed' : ''}" data-subtask-id="${sub.id}">
+      <span class="subtask-drag-handle" 
+            draggable="true" 
+            ondragstart="handleSubtaskDragStart(event, '${currentSubtasksParentId}', '${sub.id}')" 
+            ondragend="handleSubtaskDragEnd(event)"
+            title="Glisser vers un autre bloc ou vers le jour">⠿</span>
       <button type="button" 
               class="subtask-cat-btn cat-${sub.context || parent.context || 'work'}" 
               onclick="event.stopPropagation(); cycleSubtaskContext('${sub.id}')" 
@@ -3043,6 +3853,10 @@ function renderSubtasksModalList() {
              onclick="event.stopPropagation()"
              onchange="updateSubtaskTitle('${sub.id}', this.value)"
              onkeydown="if(event.key==='Enter') { this.blur(); }">
+      <button type="button" 
+              class="subtask-detach-btn" 
+              onclick="event.stopPropagation(); detachSubtaskToDay('${sub.id}')" 
+              title="Détacher en événement toute la journée sans heure">📅</button>
       <button type="button" 
               class="subtask-delete-btn" 
               onclick="event.stopPropagation(); deleteSubtask('${sub.id}')" 
