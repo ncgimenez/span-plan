@@ -1312,51 +1312,39 @@ function renderTimedBlocks(tasks, dateStr) {
 
     const childSubtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
     const doneSubCount = childSubtasks.filter(s => s.completed).length;
-    const sortedSubtasks = [...childSubtasks].sort((a, b) => (a.completed ? 1 : 0) - (b.completed ? 1 : 0));
+    const progressPillHtml = childSubtasks.length > 0 
+      ? `<span class="event-progress-pill" onclick="event.stopPropagation(); openSubtasksModal('${task.id}')" title="Subtasks (${doneSubCount}/${childSubtasks.length})">☑ ${doneSubCount}/${childSubtasks.length}</span>` 
+      : '';
 
     const remainingMinutes = Math.max(0, endTotal - currentMinutes);
 
-    let subtasksStripHtml = '';
+    let subtasksHtml = '';
     if (childSubtasks.length > 0) {
-      const allDone = doneSubCount === childSubtasks.length;
-      const catClass = task.context || 'work';
+      const sortedSubtasks = [...childSubtasks].sort((a, b) => (a.completed ? 1 : 0) - (b.completed ? 1 : 0));
+      const baseVisibleLimit = height >= 95 ? 2 : (height >= 75 ? 1 : 0);
+      const hasOverflow = sortedSubtasks.length > baseVisibleLimit;
 
-      const previewItemsHtml = sortedSubtasks.slice(0, 5).map(sub => `
-        <div class="hover-deck-item ${sub.completed ? 'is-done' : ''}" 
-             draggable="true" 
-             ondragstart="handleSubtaskDragStart(event, '${task.id}', '${sub.id}')" 
-             ondragend="handleSubtaskDragEnd(event)"
-             title="Glisser vers un autre bloc ou vers le jour">
-          <span class="hover-deck-drag-handle">⠿</span>
-          <span class="hover-deck-check">${sub.completed ? '✓' : '○'}</span>
-          <span class="hover-deck-title">${escapeHtml(sub.title)}</span>
-        </div>
-      `).join('');
-      const moreCount = childSubtasks.length - 5;
-      const moreHtml = moreCount > 0 ? `<div class="hover-deck-more">+${moreCount} autre${moreCount > 1 ? 's' : ''}...</div>` : '';
-
-      subtasksStripHtml = `
-        <div class="block-subtasks-strip ${allDone ? 'is-all-done' : ''}" 
-             onclick="event.stopPropagation(); openSubtasksModal('${task.id}')" 
-             title="Sous-tâches: ${doneSubCount}/${childSubtasks.length} (Cliquer pour gérer)">
-          <div class="subtasks-strip-segments">
-            ${childSubtasks.map(s => `
-              <span class="subtask-segment ${s.completed ? 'is-done' : ''} seg-${s.context || catClass}"></span>
-            `).join('')}
-          </div>
-          <span class="subtasks-strip-count">${doneSubCount}/${childSubtasks.length}</span>
-          
-          <div class="subtasks-hover-deck" onclick="event.stopPropagation()">
-            <div class="hover-deck-header">
-              <span class="hover-deck-badge">Sous-tâches</span>
-              <span class="hover-deck-ratio">${doneSubCount}/${childSubtasks.length}</span>
+      subtasksHtml = `
+        <div class="block-subtasks-container accordion-subtasks" data-count="${sortedSubtasks.length}">
+          ${sortedSubtasks.map((sub, idx) => `
+            <div class="block-subtask-row subtask-cat-${sub.context || 'work'} ${sub.completed ? 'completed' : ''} ${idx >= baseVisibleLimit ? 'subtask-overflow-item' : ''}" 
+                 draggable="true"
+                 ondragstart="handleSubtaskDragStart(event, '${task.id}', '${sub.id}')"
+                 ondragend="handleSubtaskDragEnd(event)"
+                 onclick="event.stopPropagation(); toggleSubtaskCompletion('${task.id}', '${sub.id}')"
+                 title="${sub.completed ? 'Marquer comme non fait' : 'Marquer comme fait'} (glisser pour déplacer)">
+              <div class="subtask-mini-checkbox ${sub.completed ? 'checked' : ''}">
+                ${sub.completed ? '✓' : ''}
+              </div>
+              <span class="subtask-row-title">${renderTitleWithTagsHtml(sub.title)}</span>
             </div>
-            <div class="hover-deck-list">
-              ${previewItemsHtml}
-              ${moreHtml}
+          `).join('')}
+          ${hasOverflow && baseVisibleLimit > 0 ? `
+            <div class="subtasks-unfold-hint">
+              <span class="hint-count">+${sortedSubtasks.length - baseVisibleLimit} autre${sortedSubtasks.length - baseVisibleLimit > 1 ? 's' : ''}</span>
+              <span class="hint-arrow">▾</span>
             </div>
-            <div class="hover-deck-footer">Glisser vers un bloc / le jour • ✎</div>
-          </div>
+          ` : ''}
         </div>
       `;
     }
@@ -1374,13 +1362,14 @@ function renderTimedBlocks(tasks, dateStr) {
           ` : ''}
           <span class="compact-time">${task.time}</span>
           <span class="schedule-block-title">${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
-          ${subtasksStripHtml}
+          ${progressPillHtml}
           ${isLiveNow ? `
             <span class="live-status-pill mini"><span class="live-status-dot"></span>LIVE</span>
             <span class="live-meta-remaining">${remainingMinutes}m left</span>
           ` : ''}
           <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
         </div>
+        ${subtasksHtml}
       `;
     } else {
       innerContentHtml = `
@@ -1393,26 +1382,30 @@ function renderTimedBlocks(tasks, dateStr) {
             </div>
           ` : ''}
           <span class="schedule-block-title">${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
+          ${progressPillHtml}
           <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
         </div>
         <div class="schedule-block-meta">
           <span class="schedule-block-time">${timeRangeStr}</span>
-          ${subtasksStripHtml}
           ${isLiveNow ? `
             <span class="live-meta-divider">•</span>
             <span class="live-status-pill mini"><span class="live-status-dot"></span>LIVE</span>
             <span class="live-meta-remaining">${remainingMinutes}m left</span>
           ` : ''}
         </div>
+        ${subtasksHtml}
       `;
     }
 
+    const hasSubtasksClass = childSubtasks.length > 0 ? 'has-subtasks' : '';
+    const shortBlockClass = height < 75 ? 'is-short-block' : '';
+
     return `
-      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass} ${completedClass} ${isCompact ? 'is-compact' : ''}" 
+      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass} ${completedClass} ${isCompact ? 'is-compact' : ''} ${hasSubtasksClass} ${shortBlockClass}" 
            id="block_${task.id}"
            data-task-id="${task.id}"
            data-date="${dateStr}"
-           style="${positionStyle}"
+           style="--block-height: ${height}px; ${positionStyle}"
            onpointerdown="handleBlockPointerDown(event, '${task.id}', '${dateStr}')"
            ondblclick="event.stopPropagation(); openEditModal('${task.id}')"
            onclick="event.stopPropagation()"
