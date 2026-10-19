@@ -2785,53 +2785,68 @@ body {
 }
 
 /* ==============================================================
-   OPTION D : ACCORDÉON / DÉPLIAGE AU SURVOL DES SOUS-TÂCHES
+   ACCORDÉON DE SOUS-TÂCHES (SUR CLIC UNIQUEMENT - ZERO GÊNE AU REDIMENSIONNEMENT)
    ============================================================== */
 .schedule-block-item.has-subtasks {
   transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.18s ease,
-              border-color 0.18s ease;
+              box-shadow 0.16s ease,
+              border-color 0.16s ease;
 }
 
-/* Survol : la carte s'élève au-dessus des autres blocs et s'agrandit vers le bas si besoin */
+/* Au survol simple : aucune modification de hauteur, redimensionnement 100% stable */
 .schedule-block-item.has-subtasks:hover {
-  z-index: 60 !important;
+  z-index: 12;
+}
+
+/* Uniquement quand l'utilisateur a CLIQUÉ pour déplier (.is-expanded) */
+.schedule-block-item.is-expanded {
+  z-index: 70 !important;
   height: auto !important;
   min-height: var(--block-height, 40px);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.25) !important;
-  border-color: rgba(255, 255, 255, 0.28) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
   overflow: visible !important;
 }
 
-[data-theme="light"] .schedule-block-item.has-subtasks:hover {
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.08) !important;
-  border-color: rgba(0, 0, 0, 0.22) !important;
+[data-theme="light"] .schedule-block-item.is-expanded {
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.25) !important;
   background: #ffffff !important;
 }
 
-/* Blocs compacts ou courts (< 75px) au repos : cacher la liste pour ne garder que la ligne épurée */
-.schedule-block-item.is-compact:not(:hover) .accordion-subtasks,
-.schedule-block-item.is-short-block:not(:hover) .accordion-subtasks {
+/* Au repos (non déplié) sur blocs compacts ou courts (< 75px) : cacher la liste */
+.schedule-block-item.is-compact:not(.is-expanded) .accordion-subtasks,
+.schedule-block-item.is-short-block:not(.is-expanded) .accordion-subtasks {
   display: none !important;
 }
 
-/* Au repos sur les blocs normaux : masquer les sous-tâches au-delà du quota de base */
-.schedule-block-item:not(:hover) .subtask-overflow-item {
+/* Au repos (non déplié) sur blocs normaux : masquer les sous-tâches au-delà du quota visible */
+.schedule-block-item:not(.is-expanded) .subtask-overflow-item {
   display: none !important;
 }
 
-/* Indicateur "+N autres" discret au repos */
-.subtasks-unfold-hint {
+/* Quand déplié : afficher toutes les sous-tâches */
+.schedule-block-item.is-expanded .accordion-subtasks {
+  display: flex !important;
+}
+
+.schedule-block-item.is-expanded .subtask-overflow-item {
+  display: flex !important;
+  animation: fadeInDown 0.14s ease-out;
+}
+
+/* Bouton cliquable pour déplier / replier */
+.subtasks-unfold-btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   font-size: 10px;
   font-weight: 600;
   color: var(--text-muted);
-  padding: 1.5px 6px;
+  padding: 2px 7px;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   margin-top: 3px;
   width: fit-content;
   user-select: none;
@@ -2839,25 +2854,56 @@ body {
   transition: all 0.12s ease;
 }
 
-[data-theme="light"] .subtasks-unfold-hint {
+.subtasks-unfold-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="light"] .subtasks-unfold-btn {
   background: rgba(0, 0, 0, 0.04);
-  border-color: rgba(0, 0, 0, 0.08);
-  color: #64748b;
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #475569;
 }
 
-.subtasks-unfold-hint .hint-arrow {
+[data-theme="light"] .subtasks-unfold-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #0f172a;
+}
+
+.subtasks-unfold-btn .unfold-btn-arrow {
+  font-size: 8.5px;
+  opacity: 0.8;
+}
+
+/* Mini chevron pour les blocs compacts */
+.subtasks-mini-unfold-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--text-muted);
   font-size: 8px;
-  opacity: 0.7;
+  padding: 1.5px 4.5px;
+  border-radius: 3px;
+  cursor: pointer;
+  line-height: 1;
+  transition: all 0.12s ease;
+  margin-left: 2px;
 }
 
-/* Au survol : cacher le badge "+N autres" et afficher TOUTES les sous-tâches */
-.schedule-block-item:hover .subtasks-unfold-hint {
-  display: none !important;
+.subtasks-mini-unfold-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
 }
 
-.schedule-block-item:hover .subtask-overflow-item {
-  display: flex !important;
-  animation: fadeInDown 0.14s ease-out;
+[data-theme="light"] .subtasks-mini-unfold-btn {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #475569;
+}
+
+[data-theme="light"] .subtasks-mini-unfold-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #0f172a;
 }
 
 .accordion-subtasks {
@@ -2877,13 +2923,6 @@ body {
 
 [data-theme="light"] .accordion-subtasks::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.2);
-}
-
-/* En cours de redimensionnement ou déplacement : pas de dépliage pour ne pas gêner */
-body.is-resizing .schedule-block-item.has-subtasks:hover,
-body.is-dragging-block .schedule-block-item.has-subtasks:hover {
-  height: var(--block-height) !important;
-  box-shadow: none !important;
 }
 
 .badge-from-focus {

@@ -1316,13 +1316,18 @@ function renderTimedBlocks(tasks, dateStr) {
       ? `<span class="event-progress-pill" onclick="event.stopPropagation(); openSubtasksModal('${task.id}')" title="Subtasks (${doneSubCount}/${childSubtasks.length})">☑ ${doneSubCount}/${childSubtasks.length}</span>` 
       : '';
 
+    const isExpanded = window.expandedBlockAccordionIds && window.expandedBlockAccordionIds.has(task.id);
+    const expandedClass = isExpanded ? 'is-expanded' : '';
+
     const remainingMinutes = Math.max(0, endTotal - currentMinutes);
 
     let subtasksHtml = '';
+    const baseVisibleLimit = height >= 95 ? 2 : (height >= 75 ? 1 : 0);
+    const overflowCount = Math.max(0, childSubtasks.length - baseVisibleLimit);
+    const hasOverflow = overflowCount > 0;
+
     if (childSubtasks.length > 0) {
       const sortedSubtasks = [...childSubtasks].sort((a, b) => (a.completed ? 1 : 0) - (b.completed ? 1 : 0));
-      const baseVisibleLimit = height >= 95 ? 2 : (height >= 75 ? 1 : 0);
-      const hasOverflow = sortedSubtasks.length > baseVisibleLimit;
 
       subtasksHtml = `
         <div class="block-subtasks-container accordion-subtasks" data-count="${sortedSubtasks.length}">
@@ -1339,15 +1344,22 @@ function renderTimedBlocks(tasks, dateStr) {
               <span class="subtask-row-title">${renderTitleWithTagsHtml(sub.title)}</span>
             </div>
           `).join('')}
-          ${hasOverflow && baseVisibleLimit > 0 ? `
-            <div class="subtasks-unfold-hint">
-              <span class="hint-count">+${sortedSubtasks.length - baseVisibleLimit} autre${sortedSubtasks.length - baseVisibleLimit > 1 ? 's' : ''}</span>
-              <span class="hint-arrow">▾</span>
-            </div>
+          ${hasOverflow ? `
+            <button type="button" 
+                    class="subtasks-unfold-btn" 
+                    onclick="toggleBlockAccordion(event, '${task.id}')"
+                    title="${isExpanded ? 'Replier les sous-tâches' : 'Déplier toutes les sous-tâches'}">
+              <span class="unfold-btn-text">${isExpanded ? 'Moins' : `+${overflowCount} autre${overflowCount > 1 ? 's' : ''}`}</span>
+              <span class="unfold-btn-arrow">${isExpanded ? '▴' : '▾'}</span>
+            </button>
           ` : ''}
         </div>
       `;
     }
+
+    const miniUnfoldBtnHtml = (childSubtasks.length > 0 && (isCompact || height < 75))
+      ? `<button type="button" class="subtasks-mini-unfold-btn" onclick="toggleBlockAccordion(event, '${task.id}')" title="${isExpanded ? 'Replier' : 'Déplier sous-tâches'}">${isExpanded ? '▴' : '▾'}</button>`
+      : '';
 
     let innerContentHtml = '';
     if (isCompact) {
@@ -1363,6 +1375,7 @@ function renderTimedBlocks(tasks, dateStr) {
           <span class="compact-time">${task.time}</span>
           <span class="schedule-block-title">${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
           ${progressPillHtml}
+          ${miniUnfoldBtnHtml}
           ${isLiveNow ? `
             <span class="live-status-pill mini"><span class="live-status-dot"></span>LIVE</span>
             <span class="live-meta-remaining">${remainingMinutes}m left</span>
@@ -1383,6 +1396,7 @@ function renderTimedBlocks(tasks, dateStr) {
           ` : ''}
           <span class="schedule-block-title">${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
           ${progressPillHtml}
+          ${miniUnfoldBtnHtml}
           <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
         </div>
         <div class="schedule-block-meta">
@@ -1399,12 +1413,14 @@ function renderTimedBlocks(tasks, dateStr) {
 
     const hasSubtasksClass = childSubtasks.length > 0 ? 'has-subtasks' : '';
     const shortBlockClass = height < 75 ? 'is-short-block' : '';
+    const overflowAttr = childSubtasks.length > 0 ? `data-overflow-count="${overflowCount}"` : '';
 
     return `
-      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass} ${completedClass} ${isCompact ? 'is-compact' : ''} ${hasSubtasksClass} ${shortBlockClass}" 
+      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass} ${completedClass} ${isCompact ? 'is-compact' : ''} ${hasSubtasksClass} ${shortBlockClass} ${expandedClass}" 
            id="block_${task.id}"
            data-task-id="${task.id}"
            data-date="${dateStr}"
+           ${overflowAttr}
            style="--block-height: ${height}px; ${positionStyle}"
            onpointerdown="handleBlockPointerDown(event, '${task.id}', '${dateStr}')"
            ondblclick="event.stopPropagation(); openEditModal('${task.id}')"
@@ -1422,6 +1438,52 @@ function renderTimedBlocks(tasks, dateStr) {
       </div>
     `;
   }).join('');
+}
+
+window.expandedBlockAccordionIds = window.expandedBlockAccordionIds || new Set();
+
+function toggleBlockAccordion(event, taskId) {
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
+  if (!window.expandedBlockAccordionIds) {
+    window.expandedBlockAccordionIds = new Set();
+  }
+  const blockEl = document.getElementById(`block_${taskId}`);
+  const isExpanded = window.expandedBlockAccordionIds.has(taskId);
+  if (isExpanded) {
+    window.expandedBlockAccordionIds.delete(taskId);
+    if (blockEl) {
+      blockEl.classList.remove('is-expanded');
+      const btn = blockEl.querySelector('.subtasks-unfold-btn');
+      if (btn) {
+        const remaining = parseInt(blockEl.dataset.overflowCount || '1', 10);
+        btn.innerHTML = `<span class="unfold-btn-text">+${remaining} autre${remaining > 1 ? 's' : ''}</span><span class="unfold-btn-arrow">▾</span>`;
+        btn.title = 'Déplier toutes les sous-tâches';
+      }
+      const miniBtn = blockEl.querySelector('.subtasks-mini-unfold-btn');
+      if (miniBtn) {
+        miniBtn.textContent = '▾';
+        miniBtn.title = 'Déplier sous-tâches';
+      }
+    }
+  } else {
+    window.expandedBlockAccordionIds.add(taskId);
+    if (blockEl) {
+      blockEl.classList.add('is-expanded');
+      const btn = blockEl.querySelector('.subtasks-unfold-btn');
+      if (btn) {
+        btn.innerHTML = `<span class="unfold-btn-text">Moins</span><span class="unfold-btn-arrow">▴</span>`;
+        btn.title = 'Replier les sous-tâches';
+      }
+      const miniBtn = blockEl.querySelector('.subtasks-mini-unfold-btn');
+      if (miniBtn) {
+        miniBtn.textContent = '▴';
+        miniBtn.title = 'Replier';
+      }
+    }
+  }
 }
 
 function handleTaskRowClick(e, id) {
@@ -3184,6 +3246,25 @@ document.addEventListener('click', (e) => {
   if (!e.target.closest('#calendarQuickAddPopover') && !e.target.closest('.schedule-grid-canvas')) {
     closeQuickAddPopover();
   }
+  if (!e.target.closest('.schedule-block-item.is-expanded') && !e.target.closest('.subtasks-unfold-btn') && !e.target.closest('.subtasks-mini-unfold-btn')) {
+    if (window.expandedBlockAccordionIds && window.expandedBlockAccordionIds.size > 0) {
+      window.expandedBlockAccordionIds.clear();
+      document.querySelectorAll('.schedule-block-item.is-expanded').forEach(b => {
+        b.classList.remove('is-expanded');
+        const btn = b.querySelector('.subtasks-unfold-btn');
+        if (btn) {
+          const remaining = parseInt(b.dataset.overflowCount || '1', 10);
+          btn.innerHTML = `<span class="unfold-btn-text">+${remaining} autre${remaining > 1 ? 's' : ''}</span><span class="unfold-btn-arrow">▾</span>`;
+          btn.title = 'Déplier toutes les sous-tâches';
+        }
+        const miniBtn = b.querySelector('.subtasks-mini-unfold-btn');
+        if (miniBtn) {
+          miniBtn.textContent = '▾';
+          miniBtn.title = 'Déplier sous-tâches';
+        }
+      });
+    }
+  }
 });
 
 window.addEventListener('keydown', (e) => {
@@ -3193,6 +3274,10 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeQuickAddPopover();
     closeTaskPopover();
+    if (window.expandedBlockAccordionIds && window.expandedBlockAccordionIds.size > 0) {
+      window.expandedBlockAccordionIds.clear();
+      document.querySelectorAll('.schedule-block-item.is-expanded').forEach(b => b.classList.remove('is-expanded'));
+    }
     if (typeof closeEditModal === 'function') closeEditModal();
     if (typeof toggleQuickAddBar === 'function') toggleQuickAddBar(false);
     return;
