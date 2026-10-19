@@ -72,9 +72,10 @@ function exportData() {
 function exportIcsFile(category = 'all') {
   const allTasks = (window.SpanPlanState && window.SpanPlanState.tasks) || [];
   
-  // Exporter les blocs planifiés (avec date et soit heure, soit all-day)
+  // Exporter STRICTEMENT les événements réels (type === 'event')
   const scheduledTasks = allTasks.filter(t => {
     if (!t || !t.date) return false;
+    if (t.type !== 'event') return false; // Strictly events only (Option A)
     if (!t.allDay && !t.time) return false;
     if (category !== 'all' && (t.context || 'work').toLowerCase() !== category.toLowerCase()) {
       return false;
@@ -83,7 +84,7 @@ function exportIcsFile(category = 'all') {
   });
 
   if (scheduledTasks.length === 0) {
-    const label = category === 'all' ? 'scheduled tasks or events' : `${category} scheduled items`;
+    const label = category === 'all' ? 'scheduled events (📅)' : `${category} scheduled events (📅)`;
     showToast(`No ${label} found to export.`, 'info');
     return;
   }

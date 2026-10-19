@@ -270,19 +270,31 @@ function getCategoryDot(context) {
 
 async function pushSpanBlocksToGoogle(calendarId) {
   const allTasks = (window.SpanPlanState && window.SpanPlanState.tasks) || [];
-  const scheduledTasks = allTasks.filter(t => !!t.date && !!t.time);
+  // Exporter STRICTEMENT les événements réels (Option A)
+  const scheduledTasks = allTasks.filter(t => t.type === 'event' && !!t.date && (!!t.time || !!t.allDay));
 
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Paris';
 
   for (const task of scheduledTasks) {
-    // Calculer les heures ISO
-    const startIso = `${task.date}T${task.time}:00`;
-    const [h, m] = task.time.split(':').map(Number);
-    const duration = task.duration || 45;
-    const endMinutesTotal = h * 60 + m + duration;
-    const endH = String(Math.floor(endMinutesTotal / 60)).padStart(2, '0');
-    const endM = String(endMinutesTotal % 60).padStart(2, '0');
-    const endIso = `${task.date}T${endH}:${endM}:00`;
+    let startObj, endObj;
+
+    if (task.allDay || !task.time) {
+      const [y, m, d] = (task.endDate || task.date).split('-').map(Number);
+      const nextDay = new Date(y, m - 1, d + 1);
+      const endDStr = `${nextDay.getFullYear()}-${String(nextDay.getMonth() + 1).padStart(2, '0')}-${String(nextDay.getDate()).padStart(2, '0')}`;
+      startObj = { date: task.date };
+      endObj = { date: endDStr };
+    } else {
+      const startIso = `${task.date}T${task.time}:00`;
+      const [h, m] = task.time.split(':').map(Number);
+      const duration = task.duration || 45;
+      const endMinutesTotal = h * 60 + m + duration;
+      const endH = String(Math.floor(endMinutesTotal / 60)).padStart(2, '0');
+      const endM = String(endMinutesTotal % 60).padStart(2, '0');
+      const endIso = `${task.date}T${endH}:${endM}:00`;
+      startObj = { dateTime: new Date(startIso).toISOString(), timeZone: timeZone };
+      endObj = { dateTime: new Date(endIso).toISOString(), timeZone: timeZone };
+    }
 
     const subtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
     let descParts = [];
@@ -292,7 +304,7 @@ async function pushSpanBlocksToGoogle(calendarId) {
     if (subtasks.length > 0) {
       descParts.push('Checklist:\n' + subtasks.map(s => `[${s.completed ? 'x' : ' '}] ${s.title}`).join('\n'));
     }
-    descParts.push(task.type === 'event' ? '📅 Span Event' : '📋 Span Task');
+    descParts.push('📅 Span Event');
     const description = descParts.join('\n\n');
 
     const payload = {
@@ -300,8 +312,8 @@ async function pushSpanBlocksToGoogle(calendarId) {
       description: description,
       location: task.location || '',
       colorId: getGcalColorIdForContext(task.context),
-      start: { dateTime: new Date(startIso).toISOString(), timeZone: timeZone },
-      end: { dateTime: new Date(endIso).toISOString(), timeZone: timeZone }
+      start: startObj,
+      end: endObj
     };
 
     try {
