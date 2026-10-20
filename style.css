@@ -3649,47 +3649,141 @@ body.is-card-dragging * {
   color: var(--text-main);
 }
 
+/* ==============================================================
+   ACTIONS ET BOUTONS DU HAUT DU BLOC (MENU & AJOUT RAPIDE)
+   ============================================================== */
+.schedule-block-top-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  flex-shrink: 0;
+  z-index: 6;
+}
+
+.schedule-block-top-actions .event-progress-pill {
+  margin-left: 0;
+}
+
+.schedule-block-item .btn-block-quick-add-subtask,
 .schedule-block-item .btn-task-menu {
-  position: absolute;
-  top: 3px;
-  right: 4px;
-  width: 20px;
-  height: 20px;
-  display: flex;
+  position: static !important;
+  width: 19px;
+  height: 19px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 4px;
   padding: 0;
-  opacity: 0;
-  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(4px);
-  z-index: 6;
-  font-size: 13px;
-  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  font-size: 10px;
+  line-height: 1;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease, transform 0.12s ease;
 }
 
+.schedule-block-item .btn-task-menu {
+  font-size: 13px;
+}
+
+[data-theme="light"] .schedule-block-item .btn-block-quick-add-subtask,
 [data-theme="light"] .schedule-block-item .btn-task-menu {
   background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: #475569;
 }
 
+.schedule-block-item:hover .btn-block-quick-add-subtask,
 .schedule-block-item:hover .btn-task-menu,
+.schedule-block-item.is-selected .btn-block-quick-add-subtask,
 .schedule-block-item.is-selected .btn-task-menu,
+.schedule-block-item:focus-within .btn-block-quick-add-subtask,
 .schedule-block-item:focus-within .btn-task-menu {
   opacity: 0.85;
   pointer-events: auto;
 }
 
+.schedule-block-item .btn-block-quick-add-subtask:hover {
+  opacity: 1 !important;
+  background: rgba(16, 185, 129, 0.3) !important;
+  color: #10b981 !important;
+  border-color: rgba(16, 185, 129, 0.5) !important;
+  transform: scale(1.08);
+}
+
 .schedule-block-item .btn-task-menu:hover {
-  opacity: 1;
-  background: rgba(0, 0, 0, 0.75);
-  color: #ffffff;
-  transform: scale(1.06);
+  opacity: 1 !important;
+  background: rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+  transform: scale(1.08);
+}
+
+[data-theme="light"] .schedule-block-item .btn-block-quick-add-subtask:hover {
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #059669 !important;
+  border-color: #059669 !important;
 }
 
 [data-theme="light"] .schedule-block-item .btn-task-menu:hover {
-  background: #ffffff;
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* Quick add subtask button in task list / backlog items */
+.task-item .btn-block-quick-add-subtask {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0.7;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.task-item .btn-block-quick-add-subtask:hover {
+  opacity: 1;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+}
+
+.block-subtask-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: transparent;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: all 0.15s ease;
+}
+
+.block-subtask-add-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--text-main);
+}
+
+[data-theme="light"] .block-subtask-add-btn {
+  border-color: rgba(0, 0, 0, 0.15);
+  color: #64748b;
+}
+
+[data-theme="light"] .block-subtask-add-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
   color: #0f172a;
 }
 

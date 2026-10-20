@@ -1378,6 +1378,15 @@ function renderTimedBlocks(tasks, dateStr) {
               <span class="subtask-row-title">${renderTitleWithTagsHtml(sub.title)}</span>
             </div>
           `).join('')}
+          ${isExpanded ? `
+            <button type="button" 
+                    class="block-subtask-add-btn" 
+                    onpointerdown="event.stopPropagation()"
+                    onclick="event.stopPropagation(); quickAddSubtaskFromBlock('${task.id}')"
+                    title="Ajouter une sous-tâche">
+              + Ajouter sous-tâche
+            </button>
+          ` : ''}
           ${hasOverflow ? `
             <button type="button" 
                     class="subtasks-unfold-btn" 
@@ -1458,14 +1467,17 @@ function renderTimedBlocks(tasks, dateStr) {
           ` : ''}
           <span class="compact-time">${task.time}</span>
           <span class="schedule-block-title">${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
-          ${progressPillHtml}
           ${locationHtml}
           ${notesHtml}
           ${isLiveNow ? `
             <span class="live-status-pill mini"><span class="live-status-dot"></span>LIVE</span>
             <span class="live-meta-remaining">${remainingMinutes}m</span>
           ` : ''}
-          <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
+          <div class="schedule-block-top-actions">
+            ${progressPillHtml}
+            <button type="button" class="btn-block-quick-add-subtask" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); quickAddSubtaskFromBlock('${task.id}')" title="Ajouter une sous-tâche">➕</button>
+            <button type="button" class="btn-task-menu" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
+          </div>
         </div>
         ${subtasksHtml}
       `;
@@ -1480,8 +1492,11 @@ function renderTimedBlocks(tasks, dateStr) {
             </div>
           ` : ''}
           <span class="schedule-block-title">${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
-          ${progressPillHtml}
-          <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
+          <div class="schedule-block-top-actions">
+            ${progressPillHtml}
+            <button type="button" class="btn-block-quick-add-subtask" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); quickAddSubtaskFromBlock('${task.id}')" title="Ajouter une sous-tâche">➕</button>
+            <button type="button" class="btn-task-menu" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
+          </div>
         </div>
         <div class="schedule-block-meta">
           <span class="schedule-block-time">${timeRangeStr}</span>
@@ -1620,8 +1635,11 @@ function renderUnscheduledList(tasks) {
           <span class="task-text">
             ${rolloverPrefix}${renderTitleWithTagsHtml(task.title)}
           </span>
-          ${progressPillHtml}
-          <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
+          <div class="schedule-block-top-actions">
+            ${progressPillHtml}
+            <button type="button" class="btn-block-quick-add-subtask" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); quickAddSubtaskFromBlock('${task.id}')" title="Ajouter une sous-tâche">➕</button>
+            <button type="button" class="btn-task-menu" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
+          </div>
         </div>
       </li>
     `;
@@ -3914,9 +3932,12 @@ function renderBacklogDrawer() {
             </div>
           `}
           <span class="task-text ${completedClass}">${renderTitleWithTagsHtml(task.title)}</span>
-          ${progressPillHtml}
-          <button type="button" class="btn-backlog-today" onclick="event.stopPropagation(); scheduleTaskDirectly('${task.id}', '${TODAY_STR}')" title="Planifier pour aujourd'hui (${TODAY_STR})">+</button>
-          <button type="button" class="btn-task-menu" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
+          <div class="schedule-block-top-actions">
+            ${progressPillHtml}
+            <button type="button" class="btn-block-quick-add-subtask" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); quickAddSubtaskFromBlock('${task.id}')" title="Ajouter une sous-tâche">➕</button>
+            <button type="button" class="btn-backlog-today" onclick="event.stopPropagation(); scheduleTaskDirectly('${task.id}', '${TODAY_STR}')" title="Planifier pour aujourd'hui (${TODAY_STR})">+</button>
+            <button type="button" class="btn-task-menu" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
+          </div>
         </div>
       `;
       list.appendChild(li);
@@ -4302,7 +4323,7 @@ function addSidebarBacklogTask() {
 // ==============================================================
 let currentSubtasksParentId = null;
 
-function openSubtasksModal(taskId) {
+function openSubtasksModal(taskId, focusInput = false) {
   const task = window.SpanPlanState.tasks.find(t => t.id === taskId);
   if (!task) return;
 
@@ -4337,7 +4358,23 @@ function openSubtasksModal(taskId) {
 
   renderSubtasksModalList();
   if (overlay) overlay.style.display = 'flex';
+
+  if (focusInput) {
+    setTimeout(() => {
+      const input = document.getElementById('subtasksInlineAddInput');
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    }, 60);
+  }
 }
+window.openSubtasksModal = openSubtasksModal;
+
+function quickAddSubtaskFromBlock(taskId) {
+  openSubtasksModal(taskId, true);
+}
+window.quickAddSubtaskFromBlock = quickAddSubtaskFromBlock;
 
 function closeSubtasksModal() {
   const overlay = document.getElementById('subtasksModalOverlay');
@@ -4345,7 +4382,9 @@ function closeSubtasksModal() {
   const rolloverPanel = document.getElementById('subtasksRolloverPanel');
   if (rolloverPanel) rolloverPanel.style.display = 'none';
   currentSubtasksParentId = null;
+  renderCalendar();
 }
+window.closeSubtasksModal = closeSubtasksModal;
 
 function renderSubtasksModalList() {
   const listEl = document.getElementById('subtasksChecklistItems');
@@ -4724,6 +4763,8 @@ function submitSubtaskInlineAdd() {
   savePlanState();
   syncSubtasksToFocus(parent);
   renderSubtasksModalList();
+  renderCalendar();
+  setTimeout(() => input.focus(), 30);
 }
 
 function editParentFromSubtasksModal() {
