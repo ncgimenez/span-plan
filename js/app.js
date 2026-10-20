@@ -44,18 +44,19 @@ function closeSettingsModal() {
 }
 
 function goToFocusApp() {
-  if (window.location.hostname.includes('github.io')) {
-    window.location.href = 'https://ncgimenez.github.io/span-focus/';
-  } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    if (window.location.pathname.startsWith('/span-plan')) {
-      window.location.href = '/span-focus/';
-    } else {
-      window.location.href = 'https://ncgimenez.github.io/span-focus/';
-    }
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const syncKey = (typeof SYNC_USER_ID !== 'undefined' && SYNC_USER_ID) || localStorage.getItem('span_sync_user') || '';
+  const syncQuery = syncKey ? `?sync=${encodeURIComponent(syncKey)}` : '';
+  if (isLocal) {
+    window.location.href = `http://${window.location.hostname}:8080/${syncQuery}`;
+  } else if (window.location.hostname.includes('github.io')) {
+    window.location.href = `https://ncgimenez.github.io/span-focus/${syncQuery}`;
   } else {
-    window.location.href = '/span-focus/';
+    window.location.href = `/span-focus/${syncQuery}`;
   }
 }
+window.goToFocusApp = goToFocusApp;
+
 
 function exportData() {
   const tasks = (window.SpanPlanState && window.SpanPlanState.tasks) || [];

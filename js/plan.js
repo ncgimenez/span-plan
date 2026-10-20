@@ -349,15 +349,57 @@ function syncFocusTasksToPlanBacklog(shouldSave = true, customFocusTasks = null)
       }
       existing.fromFocus = true;
 
-      if (ft.isEvent && existing.type !== 'event') {
-        existing.type = 'event';
+      // Synchronisation du titre
+      if (ft.title && existing.title !== ft.title) {
+        existing.title = ft.title;
         hasChanges = true;
       }
 
-      // Synchronisation du statut de complétion
-      if (ft.completed && !existing.completed) {
-        existing.completed = true;
+      // Synchronisation de la date et de l'heure
+      const targetDate = ft.scheduledDate !== undefined ? (ft.scheduledDate || null) : existing.date;
+      if (existing.date !== targetDate) {
+        existing.date = targetDate;
+        existing.endDate = targetDate;
         hasChanges = true;
+      }
+
+      const targetTime = ft.scheduledTime !== undefined ? (ft.scheduledTime || '') : existing.time;
+      if (existing.time !== targetTime) {
+        existing.time = targetTime;
+        existing.allDay = !targetTime;
+        hasChanges = true;
+      }
+
+      // Synchronisation de la durée
+      const targetDuration = ft.duration || (ft.estimate ? ft.estimate * 30 : existing.duration || 30);
+      if (existing.duration !== targetDuration) {
+        existing.duration = targetDuration;
+        hasChanges = true;
+      }
+
+      // Type (Événement vs Tâche)
+      const isEv = !!ft.isEvent || ft.type === 'event';
+      if (isEv && existing.type !== 'event') {
+        existing.type = 'event';
+        hasChanges = true;
+      } else if (!isEv && existing.type === 'event' && ft.isEvent !== undefined) {
+        existing.type = 'task';
+        hasChanges = true;
+      }
+
+      // Synchronisation bidirectionnelle du statut de complétion
+      if (typeof ft.completed === 'boolean' && existing.completed !== ft.completed) {
+        existing.completed = ft.completed;
+        hasChanges = true;
+      }
+
+      // Synchronisation du contexte
+      if (ft.category) {
+        const normCtx = normalizePlanContext(ft.category);
+        if (existing.context !== normCtx) {
+          existing.context = normCtx;
+          hasChanges = true;
+        }
       }
 
       // Synchronisation des sous-tâches (fusion intelligente préservant l'état coché)
@@ -490,12 +532,32 @@ function syncPlanTaskUpdateToFocus(taskId, isCompleted, title) {
 // Synchronisation initiale au démarrage
 syncFocusTasksToPlanBacklog(false);
 
-// Synchronisation temps réel inter-onglets (si Focus et Plan sont ouverts en parallèle)
+// Synchronisation temps réel inter-onglets & inter-apps
+const suiteBridge = (typeof BroadcastChannel !== 'undefined') ? new BroadcastChannel('span_suite_bridge') : null;
+if (suiteBridge) {
+  suiteBridge.onmessage = (e) => {
+    if (e.data && (e.data.type === 'FOCUS_UPDATED' || e.data.type === 'FOCUS_TASKS_SAVED')) {
+      const changed = syncFocusTasksToPlanBacklog(false);
+      if (changed) {
+        if (typeof renderPlanGrid === 'function') renderPlanGrid(true);
+        if (typeof renderBacklogDrawer === 'function') renderBacklogDrawer();
+        if (typeof updateCounters === 'function') updateCounters();
+      }
+    }
+  };
+}
+
 window.addEventListener('storage', (e) => {
-  if (e.key === 'span_tasks') {
-    syncFocusTasksToPlanBacklog(true);
+  if (e.key === 'span_tasks' || e.key === 'span_plan_tasks') {
+    const changed = syncFocusTasksToPlanBacklog(false);
+    if (changed) {
+      if (typeof renderPlanGrid === 'function') renderPlanGrid(true);
+      if (typeof renderBacklogDrawer === 'function') renderBacklogDrawer();
+      if (typeof updateCounters === 'function') updateCounters();
+    }
   }
 });
+
 
 let visibleDaysCount = parseInt(localStorage.getItem('span_plan_visible_days')) || 3;
 if (visibleDaysCount < 3) visibleDaysCount = 3;
@@ -567,13 +629,147 @@ function executeAutoRollover() {
   if (hasChanges) savePlanState();
 }
 
+function syncPlanTasksToFocusStorage() {
+  try {
+    let focusTasks = [];
+    try {
+      focusTasks = JSON.parse(localStorage.getItem('span_tasks')) || [];
+    } catch (e) {
+      focusTasks = [];
+    }
+    if (!Array.isArray(focusTasks)) focusTasks = [];
+
+    let modified = false;
+    const catMap = { work: 'Work', life: 'Home', fun: 'Fun' };
+
+    (window.SpanPlanState.tasks || []).forEach(pt => {
+      if (!pt || !pt.id) return;
+      const isEv = pt.type === 'event' || !!pt.isEvent;
+      let existing = focusTasks.find(ft => 
+        (ft && ft.id && (String(ft.id) === String(pt.id) || String(ft.id) === String(pt.focusId))) ||
+        (ft && ft.planId && String(ft.planId) === String(pt.id)) ||
+        (ft && ft.title && pt.title && ft.title.trim().toLowerCase() === pt.title.trim().toLowerCase())
+      );
+
+      const targetFocusId = existing ? existing.id : (pt.focusId || pt.id);
+
+      if (existing) {
+        if (!existing.planId) existing.planId = pt.id;
+        if (pt.focusId && !existing.focusId) existing.focusId = pt.focusId;
+
+        const targetDate = pt.date || null;
+        if (existing.scheduledDate !== targetDate) {
+          existing.scheduledDate = targetDate;
+          modified = true;
+        }
+
+        const targetTime = pt.time || null;
+        if (existing.scheduledTime !== targetTime) {
+          existing.scheduledTime = targetTime;
+          modified = true;
+        }
+
+        if (pt.title && existing.title !== pt.title) {
+          existing.title = pt.title;
+          modified = true;
+        }
+
+        if (typeof pt.duration === 'number' && existing.duration !== pt.duration) {
+          existing.duration = pt.duration;
+          existing.estimate = Math.max(1, Math.round(pt.duration / 30));
+          modified = true;
+        }
+
+        if (existing.isEvent !== isEv) {
+          existing.isEvent = isEv;
+          modified = true;
+        }
+
+        if (!existing.isEvent && typeof pt.completed === 'boolean' && existing.completed !== pt.completed) {
+          existing.completed = pt.completed;
+          modified = true;
+        }
+      } else {
+        focusTasks.push({
+          id: targetFocusId,
+          planId: pt.id,
+          title: pt.title || 'Untitled',
+          category: catMap[pt.context] || 'Work',
+          estimate: Math.max(1, Math.round((pt.duration || 30) / 30)),
+          duration: pt.duration || 30,
+          completed: !isEv && !!pt.completed,
+          isFavorite: false,
+          isEvent: isEv,
+          parentEventId: null,
+          scheduledDate: pt.date || null,
+          scheduledTime: pt.time || null
+        });
+        modified = true;
+      }
+
+      // Synchroniser les sous-tâches imbriquées
+      if (Array.isArray(pt.subtasks) && pt.subtasks.length > 0) {
+        pt.subtasks.forEach(st => {
+          if (!st || !st.id) return;
+          let existingSub = focusTasks.find(ft => 
+            String(ft.id) === String(st.id) || 
+            (ft.title && st.title && ft.title.trim().toLowerCase() === st.title.trim().toLowerCase())
+          );
+          if (existingSub) {
+            if (existingSub.completed !== !!st.completed) {
+              existingSub.completed = !!st.completed;
+              modified = true;
+            }
+            if (st.title && existingSub.title !== st.title) {
+              existingSub.title = st.title;
+              modified = true;
+            }
+            if (existingSub.parentEventId !== String(targetFocusId)) {
+              existingSub.parentEventId = String(targetFocusId);
+              modified = true;
+            }
+          } else {
+            focusTasks.push({
+              id: st.id,
+              title: st.title || 'Subtask',
+              category: catMap[st.context] || catMap[pt.context] || 'Work',
+              estimate: 1,
+              duration: 30,
+              completed: !!st.completed,
+              isFavorite: false,
+              isEvent: false,
+              parentEventId: String(targetFocusId),
+              scheduledDate: pt.date || null,
+              scheduledTime: null
+            });
+            modified = true;
+          }
+        });
+      }
+    });
+
+    if (modified) {
+      localStorage.setItem('span_tasks', JSON.stringify(focusTasks));
+    }
+  } catch (e) {
+    // Non bloquant
+  }
+}
+
 function savePlanState() {
+  syncPlanTasksToFocusStorage();
   localStorage.setItem('span_plan_tasks', JSON.stringify(window.SpanPlanState.tasks));
   renderPlanGrid();
   renderBacklogDrawer();
   updateCounters();
+  if (suiteBridge) {
+    try {
+      suiteBridge.postMessage({ type: 'PLAN_UPDATED', timestamp: Date.now() });
+    } catch (e) {}
+  }
   if (typeof syncPlanToCloud === 'function') syncPlanToCloud();
 }
+
 
 function formatMinutesDuration(totalM) {
   if (totalM <= 0) return '0h';

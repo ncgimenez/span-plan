@@ -7,9 +7,23 @@ const supabaseClient = (typeof supabase !== 'undefined')
   : null;
 
 function getOrCreateSyncId() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const syncParam = urlParams.get('sync');
+  if (syncParam && syncParam.trim()) {
+    const cleanSync = syncParam.trim();
+    localStorage.setItem('span_sync_user', cleanSync);
+    localStorage.setItem('span_sync_key_manually_set', 'true');
+    return cleanSync;
+  }
   let id = localStorage.getItem('span_sync_user');
-  if (!id) {
-    id = 'span_' + Math.random().toString(36).substring(2, 8) + '_' + Date.now().toString(36);
+  const isLocalhost = Boolean(
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname === '0.0.0.0'
+  );
+  const manuallySet = localStorage.getItem('span_sync_key_manually_set') === 'true';
+  if (!id || (isLocalhost && !manuallySet)) {
+    id = isLocalhost ? 'span_local_user' : ('span_' + Math.random().toString(36).substring(2, 8) + '_' + Date.now().toString(36));
     localStorage.setItem('span_sync_user', id);
   }
   return id;
@@ -44,6 +58,7 @@ async function handleLinkClick() {
 
   SYNC_USER_ID = key;
   localStorage.setItem('span_sync_user', key);
+  localStorage.setItem('span_sync_key_manually_set', 'true');
   
   syncKeychainInputs(key);
   updateSyncKeyDisplay();
@@ -100,7 +115,89 @@ async function syncPlanToCloud() {
       });
     }
 
-    // Incorporer les mises à jour locales de span_tasks (notamment le déplacement de sous-tâches vers un nouveau parentEventId)
+    // Synchroniser directement les modifications de SpanPlanState.tasks vers cleanedFocusItems (les items consommés par Focus)
+    const planTasks = (window.SpanPlanState && window.SpanPlanState.tasks) || [];
+    const catMap = { work: 'Work', life: 'Home', fun: 'Fun' };
+
+    planTasks.forEach(pt => {
+      if (!pt || !pt.id) return;
+      if (allDismissed.includes(pt.id)) return;
+      if (pt.title && allDismissed.includes('title:' + pt.title.trim().toLowerCase())) return;
+
+      const isEv = pt.type === 'event' || !!pt.isEvent;
+      let match = cleanedFocusItems.find(ft => 
+        (ft && ft.id && (String(ft.id) === String(pt.id) || String(ft.id) === String(pt.focusId))) ||
+        (ft && ft.planId && String(ft.planId) === String(pt.id)) ||
+        (ft && ft.title && pt.title && ft.title.trim().toLowerCase() === pt.title.trim().toLowerCase())
+      );
+
+      const targetFocusId = match ? match.id : (pt.focusId || pt.id);
+
+      if (match) {
+        match.scheduledDate = pt.date || null;
+        match.scheduledTime = pt.time || '';
+        match.duration = pt.duration || 30;
+        match.estimate = Math.max(1, Math.round((pt.duration || 30) / 30));
+        match.title = pt.title;
+        match.isEvent = isEv;
+        match.planId = pt.id;
+        if (pt.focusId) match.focusId = pt.focusId;
+        if (isEv) {
+          match.completed = false;
+        } else if (typeof pt.completed === 'boolean') {
+          match.completed = pt.completed;
+        }
+      } else {
+        cleanedFocusItems.push({
+          id: targetFocusId,
+          planId: pt.id,
+          title: pt.title || 'Untitled',
+          category: catMap[pt.context] || 'Work',
+          estimate: Math.max(1, Math.round((pt.duration || 30) / 30)),
+          duration: pt.duration || 30,
+          completed: !isEv && !!pt.completed,
+          isFavorite: false,
+          isEvent: isEv,
+          parentEventId: null,
+          scheduledDate: pt.date || null,
+          scheduledTime: pt.time || ''
+        });
+      }
+
+      // Synchroniser les sous-tâches dans cleanedFocusItems
+      if (Array.isArray(pt.subtasks) && pt.subtasks.length > 0) {
+        pt.subtasks.forEach(st => {
+          if (!st || !st.id || allDismissed.includes(st.id)) return;
+          if (st.title && allDismissed.includes('title:' + st.title.trim().toLowerCase())) return;
+
+          let existingSub = cleanedFocusItems.find(ft => 
+            String(ft.id) === String(st.id) || 
+            (ft.title && st.title && ft.title.trim().toLowerCase() === st.title.trim().toLowerCase())
+          );
+          if (existingSub) {
+            existingSub.completed = !!st.completed;
+            if (st.title) existingSub.title = st.title;
+            existingSub.parentEventId = String(targetFocusId);
+          } else {
+            cleanedFocusItems.push({
+              id: st.id,
+              title: st.title || 'Subtask',
+              category: catMap[st.context] || catMap[pt.context] || 'Work',
+              estimate: 1,
+              duration: 30,
+              completed: !!st.completed,
+              isFavorite: false,
+              isEvent: false,
+              parentEventId: String(targetFocusId),
+              scheduledDate: pt.date || null,
+              scheduledTime: null
+            });
+          }
+        });
+      }
+    });
+
+    // Incorporer les mises à jour locales de span_tasks si présentes
     let localFocusItems = [];
     try {
       localFocusItems = JSON.parse(localStorage.getItem('span_tasks')) || [];
@@ -118,15 +215,10 @@ async function syncPlanToCloud() {
         const match = localFocusMap.get(String(ft.id)) || (ft.title ? localFocusMap.get('title:' + ft.title.trim().toLowerCase()) : null);
         if (match) {
           if (match.parentEventId !== undefined) ft.parentEventId = match.parentEventId;
-          if (match.completed !== undefined) ft.completed = match.completed;
-          if (match.scheduledDate !== undefined) ft.scheduledDate = match.scheduledDate;
-          if (match.scheduledTime !== undefined) ft.scheduledTime = match.scheduledTime;
-          if (match.allDay !== undefined) ft.allDay = match.allDay;
-          if (match.date !== undefined) ft.date = match.date;
-          if (match.time !== undefined) ft.time = match.time;
         }
       });
     }
+
 
     const updatedTasksObj = {
       ...existingTasksObj,
@@ -270,9 +362,8 @@ async function loadPlanFromCloud() {
             }
 
             const remoteIsNewer = Boolean(
-              remoteTask.updated_at && localTask.updated_at && 
-              new Date(remoteTask.updated_at).getTime() > new Date(localTask.updated_at).getTime() && 
-              remoteSubtasks.length >= localSubtasks.length
+              !localTask.updated_at ||
+              (remoteTask.updated_at && new Date(remoteTask.updated_at).getTime() >= new Date(localTask.updated_at).getTime())
             );
 
             const winner = remoteIsNewer 
