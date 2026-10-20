@@ -121,14 +121,12 @@ async function syncPlanToCloud() {
 
     planTasks.forEach(pt => {
       if (!pt || !pt.id) return;
-      if (allDismissed.includes(pt.id)) return;
-      if (pt.title && allDismissed.includes('title:' + pt.title.trim().toLowerCase())) return;
+      if (allDismissed.includes(String(pt.id))) return;
 
       const isEv = pt.type === 'event' || !!pt.isEvent;
       let match = cleanedFocusItems.find(ft => 
         (ft && ft.id && (String(ft.id) === String(pt.id) || String(ft.id) === String(pt.focusId))) ||
-        (ft && ft.planId && String(ft.planId) === String(pt.id)) ||
-        (ft && ft.title && pt.title && ft.title.trim().toLowerCase() === pt.title.trim().toLowerCase())
+        (ft && ft.planId && String(ft.planId) === String(pt.id))
       );
 
       const targetFocusId = match ? match.id : (pt.focusId || pt.id);
@@ -164,16 +162,23 @@ async function syncPlanToCloud() {
         });
       }
 
-      // Synchroniser les sous-tâches dans cleanedFocusItems
+      // Synchroniser les sous-tâches dans cleanedFocusItems STRICTEMENT par ID
+      const validSubIds = new Set((pt.subtasks || []).map(s => String(s.id)));
+      // Supprimer les sous-tâches qui n'appartiennent plus à ce bloc
+      cleanedFocusItems = cleanedFocusItems.filter(ft => {
+        if (!ft || !ft.parentEventId) return true;
+        const isChildOfThis = String(ft.parentEventId) === String(targetFocusId) || String(ft.parentEventId) === String(pt.id);
+        if (isChildOfThis) {
+          return validSubIds.has(String(ft.id));
+        }
+        return true;
+      });
+
       if (Array.isArray(pt.subtasks) && pt.subtasks.length > 0) {
         pt.subtasks.forEach(st => {
-          if (!st || !st.id || allDismissed.includes(st.id)) return;
-          if (st.title && allDismissed.includes('title:' + st.title.trim().toLowerCase())) return;
+          if (!st || !st.id || allDismissed.includes(String(st.id))) return;
 
-          let existingSub = cleanedFocusItems.find(ft => 
-            String(ft.id) === String(st.id) || 
-            (ft.title && st.title && ft.title.trim().toLowerCase() === st.title.trim().toLowerCase())
-          );
+          let existingSub = cleanedFocusItems.find(ft => String(ft.id) === String(st.id));
           if (existingSub) {
             existingSub.completed = !!st.completed;
             if (st.title) existingSub.title = st.title;
@@ -318,48 +323,24 @@ async function loadPlanFromCloud() {
             const localSubtasks = Array.isArray(localTask.subtasks) ? localTask.subtasks : [];
             const remoteSubtasks = Array.isArray(remoteTask.subtasks) ? remoteTask.subtasks : [];
             
-            const mergedSubtasks = localSubtasks.map(lsub => {
-              const rmatch = remoteSubtasks.find(rsub => 
-                String(rsub.id) === String(lsub.id) || 
-                (rsub.title && lsub.title && rsub.title.trim().toLowerCase() === lsub.title.trim().toLowerCase())
-              );
-              if (rmatch) {
+            const mergedSubtasks = remoteSubtasks.map(rsub => {
+              const lmatch = localSubtasks.find(lsub => String(lsub.id) === String(rsub.id));
+              if (lmatch) {
                 return {
-                  ...lsub,
-                  completed: lsub.completed || rmatch.completed
+                  ...rsub,
+                  title: rsub.title,
+                  completed: (typeof rsub.completed === 'boolean') ? rsub.completed : lmatch.completed
                 };
               }
-              return lsub;
+              return rsub;
             });
-            const localIsNewer = Boolean(
-              localTask.updated_at && remoteTask.updated_at && 
-              new Date(localTask.updated_at).getTime() >= new Date(remoteTask.updated_at).getTime()
-            );
 
-            // N'intégrer des sous-tâches distantes supplémentaires QUE si le distant est plus récent
-            // et que ces sous-tâches n'existent pas déjà ailleurs dans le plan local
-            if (!localIsNewer) {
-              remoteSubtasks.forEach(rsub => {
-                const rTitle = (rsub.title || '').trim().toLowerCase();
-                const existsInMerged = mergedSubtasks.some(lsub => 
-                  String(lsub.id) === String(rsub.id) || 
-                  (lsub.title && rTitle && lsub.title.trim().toLowerCase() === rTitle)
-                );
-                if (existsInMerged) return;
-
-                const existsElsewhereInPlan = localTasks.some(otherTask => {
-                  if (otherTask.id === localTask.id || !Array.isArray(otherTask.subtasks)) return false;
-                  return otherTask.subtasks.some(ost => 
-                    String(ost.id) === String(rsub.id) || 
-                    (ost.title && rTitle && ost.title.trim().toLowerCase() === rTitle)
-                  );
-                });
-
-                if (!existsElsewhereInPlan) {
-                  mergedSubtasks.push(rsub);
-                }
-              });
-            }
+            // Conserver les sous-tâches locales créées hors ligne qui ont leur propre ID
+            localSubtasks.forEach(lsub => {
+              if (lsub && lsub.id && !mergedSubtasks.some(m => String(m.id) === String(lsub.id))) {
+                mergedSubtasks.push(lsub);
+              }
+            });
 
             const remoteIsNewer = Boolean(
               !localTask.updated_at ||

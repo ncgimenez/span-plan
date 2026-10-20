@@ -269,33 +269,29 @@ function syncFocusTasksToPlanBacklog(shouldSave = true, customFocusTasks = null)
 
   rootFocusTasks.forEach(ft => {
     if (!ft || !ft.title) return;
-    const titleKey = 'title:' + ft.title.trim().toLowerCase();
-    if (ft.id && dismissedFocusIds.includes(ft.id)) return;
-    if (ft.focusId && dismissedFocusIds.includes(ft.focusId)) return;
-    if (dismissedFocusIds.includes(titleKey)) return;
+    if (ft.id && dismissedFocusIds.includes(String(ft.id))) return;
+    if (ft.focusId && dismissedFocusIds.includes(String(ft.focusId))) return;
     
-    // Vérifier si cette tâche est déjà imbriquée comme sous-tâche d'une tâche/événement existant
+    // Vérifier strictement par ID si cette tâche est déjà imbriquée comme sous-tâche d'un bloc existant
     const isAlreadySubtask = window.SpanPlanState.tasks.some(pt => 
       Array.isArray(pt.subtasks) && pt.subtasks.some(st => 
-        (st.id && (st.id === ft.id || st.id === ft.focusId)) || 
-        (st.title && ft.title && st.title.trim().toLowerCase() === ft.title.trim().toLowerCase())
+        st.id && (String(st.id) === String(ft.id) || String(st.id) === String(ft.focusId))
       )
     );
     if (isAlreadySubtask) {
       return; // Ne pas réimporter dans le dock du jour !
     }
 
-    // Rechercher si cette tâche existe déjà dans Span Plan (qu'elle soit planifiée sur un jour ou en backlog)
+    // Rechercher si cette tâche existe déjà dans Span Plan STRICTEMENT par ID (aucun match par titre)
     let existing = window.SpanPlanState.tasks.find(pt => 
-      pt.id === ft.id || 
-      pt.focusId === ft.id ||
-      (pt.title && ft.title && pt.title.trim().toLowerCase() === ft.title.trim().toLowerCase())
+      (ft.id && (String(pt.id) === String(ft.id) || String(pt.focusId) === String(ft.id))) ||
+      (ft.planId && String(pt.id) === String(ft.planId))
     );
 
-    // Récupérer et formater les sous-tâches associées à cette tâche/événement
+    // Récupérer et formater les sous-tâches associées à cette tâche/événement par ID parent
     const mySubtasks = childSubtasks.filter(st => {
       const pid = String(st.parentEventId);
-      if (pid === String(ft.id)) return true;
+      if (ft.id && pid === String(ft.id)) return true;
       if (ft.planId && pid === String(ft.planId)) return true;
       if (ft.focusId && pid === String(ft.focusId)) return true;
       if (existing) {
@@ -402,39 +398,24 @@ function syncFocusTasksToPlanBacklog(shouldSave = true, customFocusTasks = null)
         }
       }
 
-      // Synchronisation des sous-tâches (fusion intelligente préservant l'état coché)
+      // Synchronisation des sous-tâches STRICTEMENT par ID (aucun match par titre)
       if (formattedSubtasks.length > 0) {
         const existingSubs = Array.isArray(existing.subtasks) ? existing.subtasks : [];
-        const merged = existingSubs.map(es => {
-          const matchingFocus = formattedSubtasks.find(fs => 
-            String(fs.id) === String(es.id) || 
-            (fs.title && es.title && fs.title.trim().toLowerCase() === es.title.trim().toLowerCase())
-          );
-          if (matchingFocus) {
+        const merged = formattedSubtasks.map(fs => {
+          const es = existingSubs.find(e => String(e.id) === String(fs.id));
+          if (es) {
             return {
               ...es,
-              completed: es.completed || matchingFocus.completed
+              title: fs.title,
+              completed: (typeof fs.completed === 'boolean') ? fs.completed : es.completed
             };
           }
-          return es;
+          return fs;
         });
 
-        formattedSubtasks.forEach(fs => {
-          const fsTitle = (fs.title || '').trim().toLowerCase();
-          const alreadyInMerged = merged.some(m => String(m.id) === String(fs.id) || (m.title && fsTitle && m.title.trim().toLowerCase() === fsTitle));
-          if (alreadyInMerged) return;
-
-          // Empêcher la réinsertion d'une sous-tâche qui appartient déjà à une autre tâche dans le plan
-          const alreadyBelongsElsewhere = window.SpanPlanState.tasks.some(other => {
-            if (other === existing || !Array.isArray(other.subtasks)) return false;
-            return other.subtasks.some(ost => 
-              String(ost.id) === String(fs.id) || 
-              (ost.title && fsTitle && ost.title.trim().toLowerCase() === fsTitle)
-            );
-          });
-
-          if (!alreadyBelongsElsewhere) {
-            merged.push(fs);
+        existingSubs.forEach(es => {
+          if (!merged.some(m => String(m.id) === String(es.id))) {
+            merged.push(es);
           }
         });
 
@@ -476,8 +457,7 @@ function syncPlanSubtaskUpdateToFocus(subtaskId, isCompleted, subTitle = '') {
     const normTitle = (subTitle || '').trim().toLowerCase();
     focusTasks.forEach(ft => {
       const idMatch = ft.id && (String(ft.id) === String(subtaskId));
-      const titleMatch = normTitle && ft.title && (ft.title.trim().toLowerCase() === normTitle);
-      if (idMatch || titleMatch) {
+      if (idMatch) {
         if (ft.completed !== isCompleted) {
           ft.completed = isCompleted;
           ft.updated_at = new Date().toISOString();
@@ -500,14 +480,14 @@ function syncPlanSubtaskUpdateToFocus(subtaskId, isCompleted, subTitle = '') {
   }
 }
 
-function syncPlanTaskUpdateToFocus(taskId, isCompleted, title) {
+function syncPlanTaskUpdateToFocus(taskId, isCompleted) {
   try {
     let focusTasks = JSON.parse(localStorage.getItem('span_tasks'));
     if (!Array.isArray(focusTasks)) return;
 
     let modified = false;
     focusTasks.forEach(ft => {
-      if (ft.id === taskId || (title && ft.title && ft.title.trim().toLowerCase() === title.trim().toLowerCase())) {
+      if (ft.id && (String(ft.id) === String(taskId) || (ft.planId && String(ft.planId) === String(taskId)))) {
         if (isCompleted !== undefined && ft.completed !== isCompleted) {
           ft.completed = isCompleted;
           modified = true;
@@ -647,8 +627,7 @@ function syncPlanTasksToFocusStorage() {
       const isEv = pt.type === 'event' || !!pt.isEvent;
       let existing = focusTasks.find(ft => 
         (ft && ft.id && (String(ft.id) === String(pt.id) || String(ft.id) === String(pt.focusId))) ||
-        (ft && ft.planId && String(ft.planId) === String(pt.id)) ||
-        (ft && ft.title && pt.title && ft.title.trim().toLowerCase() === pt.title.trim().toLowerCase())
+        (ft && ft.planId && String(ft.planId) === String(pt.id))
       );
 
       const targetFocusId = existing ? existing.id : (pt.focusId || pt.id);
@@ -707,14 +686,24 @@ function syncPlanTasksToFocusStorage() {
         modified = true;
       }
 
-      // Synchroniser les sous-tâches imbriquées
+      // Synchroniser les sous-tâches imbriquées STRICTEMENT par ID
+      const validSubIds = new Set((pt.subtasks || []).map(s => String(s.id)));
+      // Supprimer les sous-tâches qui n'appartiennent plus à ce bloc
+      const prevSubLen = focusTasks.length;
+      focusTasks = focusTasks.filter(ft => {
+        if (!ft || !ft.parentEventId) return true;
+        const isChildOfThis = String(ft.parentEventId) === String(targetFocusId) || String(ft.parentEventId) === String(pt.id);
+        if (isChildOfThis) {
+          return validSubIds.has(String(ft.id));
+        }
+        return true;
+      });
+      if (focusTasks.length !== prevSubLen) modified = true;
+
       if (Array.isArray(pt.subtasks) && pt.subtasks.length > 0) {
         pt.subtasks.forEach(st => {
           if (!st || !st.id) return;
-          let existingSub = focusTasks.find(ft => 
-            String(ft.id) === String(st.id) || 
-            (ft.title && st.title && ft.title.trim().toLowerCase() === st.title.trim().toLowerCase())
-          );
+          let existingSub = focusTasks.find(ft => ft && ft.id && String(ft.id) === String(st.id));
           if (existingSub) {
             if (existingSub.completed !== !!st.completed) {
               existingSub.completed = !!st.completed;
@@ -2642,14 +2631,13 @@ function handleSubtaskDropOnBlock(e, targetBlockId) {
       let matchedInFocus = false;
       focusTasks.forEach(ft => {
         const matchesId = validSubtaskId && String(ft.id) === String(validSubtaskId);
-        const matchesTitle = cleanTargetTitle && ft.title && ft.title.trim().toLowerCase() === cleanTargetTitle;
-        if (matchesId || matchesTitle) {
+        if (matchesId) {
           ft.parentEventId = targetParent.focusId || targetParent.id;
           ft.scheduledDate = targetParent.date || null;
           matchedInFocus = true;
         }
       });
-      if (!matchedInFocus && cleanTargetTitle) {
+      if (!matchedInFocus) {
         const catCapMap = { work: 'Work', life: 'Home', fun: 'Fun' };
         const subCtx = normalizePlanContext(subtask.context || targetParent.context || 'work');
         focusTasks.push({
@@ -2733,7 +2721,6 @@ function handleSubtaskDropToDay(targetDate) {
       const prevCount = task.subtasks.length;
       task.subtasks = task.subtasks.filter(s => {
         if (validSubtaskId && String(s.id) === String(validSubtaskId)) return false;
-        if (cleanTargetTitle && (s.title || '').trim().toLowerCase() === cleanTargetTitle) return false;
         return true;
       });
       if (task.subtasks.length !== prevCount) {
@@ -2749,8 +2736,7 @@ function handleSubtaskDropToDay(targetDate) {
     if (Array.isArray(focusTasks)) {
       focusTasks.forEach(ft => {
         const matchesId = validSubtaskId && String(ft.id) === String(validSubtaskId);
-        const matchesTitle = cleanTargetTitle && ft.title && ft.title.trim().toLowerCase() === cleanTargetTitle;
-        if (matchesId || matchesTitle) {
+        if (matchesId) {
           ft.parentEventId = null;
           ft.date = targetDate;
           ft.scheduledDate = targetDate;
@@ -2827,10 +2813,8 @@ function handleBatchSubtasksDropOnBlock(e, targetBlockId) {
     targetParent.subtasks = [];
   }
   subtasks.forEach(s => {
-    const sTitle = (s.title || '').trim().toLowerCase();
     const already = targetParent.subtasks.some(ts => 
-      (s.id && String(ts.id) === String(s.id)) || 
-      (sTitle && (ts.title || '').trim().toLowerCase() === sTitle)
+      s.id && String(ts.id) === String(s.id)
     );
     if (!already) {
       targetParent.subtasks.push({
@@ -2849,7 +2833,6 @@ function handleBatchSubtasksDropOnBlock(e, targetBlockId) {
       const prevCount = task.subtasks.length;
       task.subtasks = task.subtasks.filter(s => {
         if (s.id && movedIds.has(String(s.id))) return false;
-        if (s.title && movedTitles.has((s.title || '').trim().toLowerCase())) return false;
         return true;
       });
       if (task.subtasks.length !== prevCount) {
@@ -2865,8 +2848,7 @@ function handleBatchSubtasksDropOnBlock(e, targetBlockId) {
     if (Array.isArray(focusTasks)) {
       focusTasks.forEach(ft => {
         const matchesId = ft.id && movedIds.has(String(ft.id));
-        const matchesTitle = ft.title && movedTitles.has(ft.title.trim().toLowerCase());
-        if (matchesId || matchesTitle) {
+        if (matchesId) {
           ft.parentEventId = targetParent.focusId || targetParent.id;
         }
       });
@@ -3195,7 +3177,6 @@ function handleSubtaskDropToBacklog(e) {
       const prevCount = task.subtasks.length;
       task.subtasks = task.subtasks.filter(s => {
         if (validSubtaskId && String(s.id) === String(validSubtaskId)) return false;
-        if (cleanTargetTitle && (s.title || '').trim().toLowerCase() === cleanTargetTitle) return false;
         return true;
       });
       if (task.subtasks.length !== prevCount) {
@@ -3211,8 +3192,7 @@ function handleSubtaskDropToBacklog(e) {
     if (Array.isArray(focusTasks)) {
       focusTasks.forEach(ft => {
         const matchesId = validSubtaskId && String(ft.id) === String(validSubtaskId);
-        const matchesTitle = cleanTargetTitle && ft.title && ft.title.trim().toLowerCase() === cleanTargetTitle;
-        if (matchesId || matchesTitle) {
+        if (matchesId) {
           ft.parentEventId = null;
           ft.date = null;
           ft.scheduledDate = null;
@@ -3737,7 +3717,6 @@ function handleSubtaskDropToCanvas(e, targetDate) {
       const prevCount = task.subtasks.length;
       task.subtasks = task.subtasks.filter(s => {
         if (validSubtaskId && String(s.id) === String(validSubtaskId)) return false;
-        if (cleanTargetTitle && (s.title || '').trim().toLowerCase() === cleanTargetTitle) return false;
         return true;
       });
       if (task.subtasks.length !== prevCount) {
@@ -3753,8 +3732,7 @@ function handleSubtaskDropToCanvas(e, targetDate) {
     if (Array.isArray(focusTasks)) {
       focusTasks.forEach(ft => {
         const matchesId = validSubtaskId && String(ft.id) === String(validSubtaskId);
-        const matchesTitle = cleanTargetTitle && ft.title && ft.title.trim().toLowerCase() === cleanTargetTitle;
-        if (matchesId || matchesTitle) {
+        if (matchesId) {
           ft.parentEventId = null;
           ft.date = targetDate;
           ft.scheduledDate = targetDate;
