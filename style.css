@@ -933,6 +933,122 @@ body {
   overflow-x: hidden;
 }
 
+/* BACKLOG ACTION FILTER PILLS (CALLS / MAILS / PAIEMENTS) */
+.sidebar-action-filter-pills,
+.drawer-action-filter-pills {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 1px 0;
+}
+.sidebar-action-filter-pills::-webkit-scrollbar,
+.drawer-action-filter-pills::-webkit-scrollbar {
+  display: none;
+}
+.plan-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted, #94a3b8);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.plan-filter-pill:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+.plan-filter-pill.active {
+  color: #fff !important;
+  background: var(--accent, #6366f1) !important;
+  border-color: var(--accent, #6366f1) !important;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+}
+.plan-filter-pill .pill-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  min-width: 14px;
+}
+.plan-filter-pill.active .pill-count {
+  background: rgba(255, 255, 255, 0.25);
+}
+[data-theme="light"] .plan-filter-pill {
+  color: #64748b;
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+[data-theme="light"] .plan-filter-pill:hover {
+  color: #0f172a;
+  background: #e2e8f0;
+}
+[data-theme="light"] .plan-filter-pill.active {
+  color: #fff !important;
+  background: #4f46e5 !important;
+  border-color: #4f46e5 !important;
+}
+
+/* Action tag badge in Plan list items */
+.plan-action-tag-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.plan-action-tag-badge.action-call {
+  background: rgba(59, 130, 246, 0.18);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+}
+.plan-action-tag-badge.action-mail {
+  background: rgba(168, 85, 247, 0.18);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.35);
+}
+.plan-action-tag-badge.action-pay {
+  background: rgba(234, 179, 8, 0.18);
+  color: #facc15;
+  border: 1px solid rgba(234, 179, 8, 0.35);
+}
+[data-theme="light"] .plan-action-tag-badge.action-call {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #bfdbfe;
+}
+[data-theme="light"] .plan-action-tag-badge.action-mail {
+  background: #faf5ff;
+  color: #7c3aed;
+  border-color: #e9d5ff;
+}
+[data-theme="light"] .plan-action-tag-badge.action-pay {
+  background: #fefce8;
+  color: #ca8a04;
+  border-color: #fef08a;
+}
+
 .sidebar-task-list {
   display: flex;
   flex-direction: column;

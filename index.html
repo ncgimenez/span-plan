@@ -115,6 +115,13 @@
           <input type="text" id="sidebarBacklogInput" placeholder="Add unscheduled task..." onkeydown="if(event.key==='Enter') addSidebarBacklogTask()">
           <button type="button" class="btn-sidebar-add" onclick="addSidebarBacklogTask()" title="Add to Backlog">+</button>
         </div>
+        <!-- ACTION FILTER PILLS -->
+        <div class="sidebar-action-filter-pills" id="sidebarActionFilterPills">
+          <button type="button" class="plan-filter-pill active" data-filter="all" onclick="setPlanBacklogActionFilter('all')">Tous</button>
+          <button type="button" class="plan-filter-pill" data-filter="call" onclick="setPlanBacklogActionFilter('call')">📞 <span class="pill-count" id="planCountCall">0</span></button>
+          <button type="button" class="plan-filter-pill" data-filter="mail" onclick="setPlanBacklogActionFilter('mail')">✉️ <span class="pill-count" id="planCountMail">0</span></button>
+          <button type="button" class="plan-filter-pill" data-filter="pay" onclick="setPlanBacklogActionFilter('pay')">💳 <span class="pill-count" id="planCountPay">0</span></button>
+        </div>
         <div class="sidebar-backlog-scroll" ondragover="allowDrop(event)" ondragleave="handleBacklogDragLeave(event)" ondrop="handleDropToBacklog(event)">
           <ul class="task-list sidebar-task-list" id="sidebarBacklogList" ondragover="allowDrop(event)" ondragleave="handleBacklogDragLeave(event)" ondrop="handleDropToBacklog(event)">
             <!-- Rendered dynamically by plan.js -->
@@ -246,6 +253,13 @@
             <div class="drawer-actions">
               <button class="icon-btn mini" onclick="toggleBacklogDrawer()" title="Close">✕</button>
             </div>
+          </div>
+          <!-- DRAWER ACTION FILTER PILLS -->
+          <div class="drawer-action-filter-pills" id="drawerActionFilterPills">
+            <button type="button" class="plan-filter-pill active" data-filter="all" onclick="setPlanBacklogActionFilter('all')">Tous</button>
+            <button type="button" class="plan-filter-pill" data-filter="call" onclick="setPlanBacklogActionFilter('call')">📞 Calls <span class="pill-count" id="drawerCountCall">0</span></button>
+            <button type="button" class="plan-filter-pill" data-filter="mail" onclick="setPlanBacklogActionFilter('mail')">✉️ Mails <span class="pill-count" id="drawerCountMail">0</span></button>
+            <button type="button" class="plan-filter-pill" data-filter="pay" onclick="setPlanBacklogActionFilter('pay')">💳 Paiements <span class="pill-count" id="drawerCountPay">0</span></button>
           </div>
           <ul class="task-list drawer-list" id="backlogTaskList" ondragover="allowDrop(event)" ondragleave="handleBacklogDragLeave(event)" ondrop="handleDropToBacklog(event)">
           </ul>
@@ -837,9 +851,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=7.36"></script>
-  <script src="js/gcal.js?v=7.36"></script>
-  <script src="js/plan.js?v=7.36"></script>
-  <script src="js/app.js?v=7.36"></script>
+  <script src="js/sync.js?v=7.37"></script>
+  <script src="js/gcal.js?v=7.37"></script>
+  <script src="js/plan.js?v=7.37"></script>
+  <script src="js/app.js?v=7.37"></script>
 </body>
 </html>

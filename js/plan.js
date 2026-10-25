@@ -4325,6 +4325,42 @@ function popoverAction(action) {
   }
 }
 
+let planBacklogActionFilter = 'all';
+
+// Helper de détection intelligente du type d'action (Calls / Mails / Paiements)
+function getTaskActionType(task) {
+  if (!task) return 'other';
+  if (task.actionType) return task.actionType;
+  const title = (task.title || '').trim().toLowerCase();
+  
+  // 1. Tags explicites
+  if (/#(call|calls|appel|appels|phone)\b/i.test(title)) return 'call';
+  if (/#(mail|mails|email|emails|courriel)\b/i.test(title)) return 'mail';
+  if (/#(pay|paiement|paiements|facture|factures|virement|virements)\b/i.test(title)) return 'pay';
+
+  // 2. Mots-clés naturels
+  if (/\b(call|calls|appel|appels|appeler|téléphone|téléphoner|coup de fil|rdv|rendez-vous)\b/i.test(title)) {
+    return 'call';
+  }
+  if (/\b(mail|mails|email|emails|e-mail|courriel|newsletter|écrire à|envoyer mail)\b/i.test(title)) {
+    return 'mail';
+  }
+  if (/\b(payer|paiement|paiements|pay|virement|facture|factures|mutuelle|solidaris|poubelle|poubelles|banque|bank)\b/i.test(title)) {
+    return 'pay';
+  }
+  return 'other';
+}
+
+function setPlanBacklogActionFilter(filter) {
+  planBacklogActionFilter = filter;
+  document.querySelectorAll('.plan-filter-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.filter === filter);
+  });
+  renderBacklogDrawer();
+}
+window.setPlanBacklogActionFilter = setPlanBacklogActionFilter;
+window.getTaskActionType = getTaskActionType;
+
 // BACKLOG DRAWER & SIDEBAR BACKLOG
 function renderBacklogDrawer() {
   const targets = [
@@ -4334,18 +4370,49 @@ function renderBacklogDrawer() {
 
   if (targets.length === 0) return;
 
-  const backlogTasks = (window.SpanPlanState.tasks || []).filter(t => {
+  const allBacklogTasks = (window.SpanPlanState.tasks || []).filter(t => {
     const isUnscheduled = !t.date;
     const contextMatch = (currentContextFilter === 'all' || t.context === currentContextFilter);
     const tagMatch = !currentTagFilter || (t.title && t.title.toLowerCase().includes(`#${currentTagFilter.toLowerCase()}`));
     return isUnscheduled && contextMatch && tagMatch;
   });
 
+  // Action counts
+  let countCall = 0, countMail = 0, countPay = 0, countOther = 0;
+  allBacklogTasks.forEach(t => {
+    const at = getTaskActionType(t);
+    if (at === 'call') countCall++;
+    else if (at === 'mail') countMail++;
+    else if (at === 'pay') countPay++;
+    else countOther++;
+  });
+
+  ['planCountCall', 'drawerCountCall'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = countCall;
+  });
+  ['planCountMail', 'drawerCountMail'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = countMail;
+  });
+  ['planCountPay', 'drawerCountPay'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = countPay;
+  });
+
+  const backlogTasks = allBacklogTasks.filter(t => {
+    if (planBacklogActionFilter === 'all') return true;
+    return getTaskActionType(t) === planBacklogActionFilter;
+  });
+
   targets.forEach(list => {
     list.innerHTML = '';
 
     if (backlogTasks.length === 0) {
-      list.innerHTML = `<li style="font-size: 11px; color: var(--text-muted); padding: 14px 4px; text-align: center;">No unscheduled tasks</li>`;
+      const emptyMsg = planBacklogActionFilter === 'all' 
+        ? 'No unscheduled tasks' 
+        : `Aucun élément dans le filtre "${planBacklogActionFilter}"`;
+      list.innerHTML = `<li style="font-size: 11px; color: var(--text-muted); padding: 14px 4px; text-align: center;">${emptyMsg}</li>`;
       return;
     }
 
@@ -4358,6 +4425,12 @@ function renderBacklogDrawer() {
       const progressPillHtml = childSubtasks.length > 0 
         ? `<span class="event-progress-pill" onclick="event.stopPropagation(); openSubtasksModal('${task.id}')" title="Subtasks (${doneSubCount}/${childSubtasks.length})">${doneSubCount}/${childSubtasks.length}</span>` 
         : '';
+
+      const actionType = getTaskActionType(task);
+      let actionTagHtml = '';
+      if (actionType === 'call') actionTagHtml = '<span class="plan-action-tag-badge action-call" onclick="event.stopPropagation(); setPlanBacklogActionFilter(\'call\')">📞 Call</span>';
+      else if (actionType === 'mail') actionTagHtml = '<span class="plan-action-tag-badge action-mail" onclick="event.stopPropagation(); setPlanBacklogActionFilter(\'mail\')">✉️ Mail</span>';
+      else if (actionType === 'pay') actionTagHtml = '<span class="plan-action-tag-badge action-pay" onclick="event.stopPropagation(); setPlanBacklogActionFilter(\'pay\')">💳 Pay</span>';
 
       const li = document.createElement('li');
       li.className = `task-item cat-${task.context || 'work'} ${isEvent ? 'is-event' : ''} ${completedClass} ${isSelected ? 'is-selected' : ''}`;
@@ -4374,7 +4447,7 @@ function renderBacklogDrawer() {
               ${task.completed ? '✓' : ''}
             </div>
           `}
-          <span class="task-text ${completedClass}">${renderTitleWithTagsHtml(task.title)}</span>
+          <span class="task-text ${completedClass}">${renderTitleWithTagsHtml(task.title)}${actionTagHtml}</span>
           <div class="schedule-block-top-actions">
             ${progressPillHtml}
             <button type="button" class="btn-block-quick-add-subtask" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); quickAddSubtaskFromBlock('${task.id}')" title="Ajouter une sous-tâche">➕</button>
