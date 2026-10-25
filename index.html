@@ -280,6 +280,7 @@
     <button type="button" class="popover-item" onclick="popoverAction('edit')">✏️ Edit Details</button>
     <button type="button" class="popover-item" id="popoverItemRollover" onclick="popoverAction('rollover')" style="display: none;">⟳ Reporter les sous-tâches...</button>
     <button type="button" class="popover-item" onclick="popoverAction('toggle-type')">🔄 Switch Task / Event</button>
+    <button type="button" class="popover-item" onclick="popoverAction('attach-subtask')">📎 Déplacer comme sous-tâche...</button>
     <button type="button" class="popover-item" onclick="popoverAction('focus')">🎯 Focus in Spotlight</button>
     <button type="button" class="popover-item" onclick="popoverAction('today')">☀️ Schedule for Today</button>
     <button type="button" class="popover-item" onclick="popoverAction('backlog')">📥 Move to Backlog</button>
@@ -356,11 +357,11 @@
         <div class="form-row" id="rowTaskTimes">
           <div class="form-col">
             <label class="modal-label">Start Time</label>
-            <input type="time" class="modal-input" id="editTaskTime" onchange="handleModalStartTimeChange()">
+            <input type="time" class="modal-input" id="editTaskTime" onchange="handleModalStartTimeChange()" oninput="handleModalStartTimeChange()">
           </div>
           <div class="form-col">
             <label class="modal-label">End Time</label>
-            <input type="time" class="modal-input" id="editTaskEndTime" onchange="handleModalEndTimeChange()">
+            <input type="time" class="modal-input" id="editTaskEndTime" onchange="handleModalEndTimeChange()" oninput="handleModalEndTimeChange()">
           </div>
         </div>
 
@@ -836,9 +837,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=7.33"></script>
-  <script src="js/gcal.js?v=7.33"></script>
-  <script src="js/plan.js?v=7.33"></script>
-  <script src="js/app.js?v=7.33"></script>
+  <script src="js/sync.js?v=7.34"></script>
+  <script src="js/gcal.js?v=7.34"></script>
+  <script src="js/plan.js?v=7.34"></script>
+  <script src="js/app.js?v=7.34"></script>
 </body>
 </html>

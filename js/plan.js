@@ -370,6 +370,9 @@ function syncFocusTasksToPlanBacklog(shouldSave = true, customFocusTasks = null)
       const targetDuration = ft.duration || (ft.estimate ? ft.estimate * 30 : existing.duration || 30);
       if (existing.duration !== targetDuration) {
         existing.duration = targetDuration;
+        if (existing.time) {
+          existing.endTime = getEndTimeFromDuration(existing.time, targetDuration);
+        }
         hasChanges = true;
       }
 
@@ -635,6 +638,12 @@ function syncPlanTasksToFocusStorage() {
       if (existing) {
         if (!existing.planId) existing.planId = pt.id;
         if (pt.focusId && !existing.focusId) existing.focusId = pt.focusId;
+
+        const targetCat = catMap[pt.context] || 'Work';
+        if (existing.category !== targetCat) {
+          existing.category = targetCat;
+          modified = true;
+        }
 
         const targetDate = pt.date || null;
         if (existing.scheduledDate !== targetDate) {
@@ -1916,6 +1925,9 @@ function handleResizeEnd() {
     const task = window.SpanPlanState.tasks.find(t => t.id === resizingTaskId);
     if (task) {
       task.duration = minutes;
+      if (task.time) {
+        task.endTime = getEndTimeFromDuration(task.time, minutes);
+      }
       savePlanState();
     }
   }
@@ -2008,6 +2020,7 @@ function handleBlockPointerDown(e, taskId, dateStr) {
       e.target.closest('.checkbox') || 
       e.target.closest('.resize-handle') || 
       e.target.closest('.event-progress-pill') ||
+      e.target.closest('.btn-block-quick-add-subtask') ||
       e.target.closest('.block-subtask-row') ||
       e.target.closest('.block-subtasks-container') ||
       e.target.closest('.subtasks-unfold-btn') ||
@@ -2131,8 +2144,27 @@ function handleBlockPointerMove(e) {
       avatar.style.top = `${e.clientY - dragGrabOffsetY}px`;
     }
 
-    // Détection de la colonne ou du dock sous le curseur
     const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+
+    // Détection de survol d'un autre bloc pour imbrication directe en sous-tâche
+    const targetBlockEl = elUnder?.closest('.schedule-block-item');
+    const targetBlockId = targetBlockEl?.dataset.taskId;
+    const isOverOtherBlock = Boolean(targetBlockId && targetBlockId !== dragAnchorTaskId && !dragInitialTops.has(targetBlockId));
+
+    document.querySelectorAll('.schedule-block-item.subtask-drop-target').forEach(b => {
+      if (!isOverOtherBlock || b !== targetBlockEl) {
+        b.classList.remove('subtask-drop-target');
+      }
+    });
+
+    if (isOverOtherBlock) {
+      targetBlockEl.classList.add('subtask-drop-target');
+      document.querySelectorAll('[id^="pointerDragGhost_"]').forEach(g => g.remove());
+      document.querySelectorAll('.day-dock.dock-drop-hover, .cal-allday-drop-cell.drag-over').forEach(d => d.classList.remove('dock-drop-hover', 'drag-over'));
+      return;
+    }
+
+    // Détection de la colonne ou du dock sous le curseur
     const targetDock = elUnder?.closest('.day-dock, .cal-allday-drop-cell, .cal-allday-row');
     const targetCanvas = elUnder?.closest('.schedule-grid-canvas');
     const targetCol = targetCanvas ? targetCanvas.closest('.cal-day-column') : elUnder?.closest('.cal-day-column');
@@ -2255,8 +2287,34 @@ function handleBlockPointerUp(e) {
   lastBlockClickTime = 0;
   lastBlockClickTaskId = null;
 
+  document.querySelectorAll('.schedule-block-item.subtask-drop-target').forEach(b => b.classList.remove('subtask-drop-target'));
+
   if (wasDragging) {
     const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+    const targetBlockEl = elUnder?.closest('.schedule-block-item');
+    const targetBlockId = targetBlockEl?.dataset.taskId;
+    const isOverOtherBlock = Boolean(targetBlockId && targetBlockId !== anchorId && !dragInitialTops.has(targetBlockId));
+
+    if (isOverOtherBlock) {
+      const targetTask = window.SpanPlanState.tasks.find(t => t.id === targetBlockId);
+      const targetTitle = targetTask ? targetTask.title : 'block';
+      let attachedCount = 0;
+      dragInitialTops.forEach(info => {
+        if (attachTaskAsSubtask(info.task.id, targetBlockId)) {
+          attachedCount++;
+        }
+      });
+      dragInitialTops.clear();
+      clearSelection();
+      if (!window.expandedBlockAccordionIds) window.expandedBlockAccordionIds = new Set();
+      window.expandedBlockAccordionIds.add(targetBlockId);
+      savePlanState();
+      if (typeof showToast === 'function') {
+        showToast(`${attachedCount} item${attachedCount > 1 ? 's' : ''} added as subtask of "${targetTitle}"`, 'success');
+      }
+      return;
+    }
+
     const targetDock = elUnder?.closest('.day-dock, .cal-allday-drop-cell, .cal-allday-row');
     const targetCanvas = elUnder?.closest('.schedule-grid-canvas');
     const targetCol = targetCanvas ? targetCanvas.closest('.cal-day-column') : elUnder?.closest('.cal-day-column');
@@ -2305,6 +2363,8 @@ function handleBlockPointerUp(e) {
         info.task.date = targetDateStr || info.task.date;
         info.task.endDate = targetDateStr || info.task.date;
         info.task.isRollover = false;
+        const dur = info.task.duration || 45;
+        info.task.endTime = getEndTimeFromDuration(info.task.time, dur);
         info.task.updated_at = new Date().toISOString();
         movedCount++;
       });
@@ -3570,6 +3630,85 @@ function handleBlockDragLeave(e, targetBlockId) {
   }
 }
 
+function attachTaskAsSubtask(draggedId, targetBlockId) {
+  if (!draggedId || !targetBlockId || draggedId === targetBlockId) return false;
+
+  const allTasks = window.SpanPlanState.tasks;
+  const draggedIndex = allTasks.findIndex(t => t.id === draggedId);
+  const targetTask = allTasks.find(t => t.id === targetBlockId);
+
+  if (draggedIndex === -1 || !targetTask) return false;
+
+  const draggedTask = allTasks[draggedIndex];
+
+  if (!Array.isArray(targetTask.subtasks)) {
+    targetTask.subtasks = [];
+  }
+
+  const draggedTitleClean = (draggedTask.title || 'Untitled subtask').trim();
+  const targetParentFocusId = targetTask.focusId || targetTask.id;
+
+  const newSubtask = {
+    id: draggedTask.focusId || draggedTask.id,
+    title: draggedTitleClean,
+    completed: !!draggedTask.completed,
+    context: draggedTask.context || targetTask.context || 'work',
+    parentEventId: targetParentFocusId
+  };
+
+  if (Array.isArray(draggedTask.subtasks) && draggedTask.subtasks.length > 0) {
+    targetTask.subtasks.push(newSubtask, ...draggedTask.subtasks);
+  } else {
+    targetTask.subtasks.push(newSubtask);
+  }
+
+  // Mettre à jour Focus pour lier au parent
+  try {
+    let focusTasks = JSON.parse(localStorage.getItem('span_tasks')) || [];
+    if (Array.isArray(focusTasks)) {
+      const parentId = String(targetParentFocusId);
+      const draggedIdStr = String(draggedTask.id);
+      const draggedFocusId = String(draggedTask.focusId || draggedTask.id);
+      let ftFound = false;
+      focusTasks.forEach(ft => {
+        if (!ft) return;
+        if (String(ft.id) === draggedFocusId || (ft.planId && String(ft.planId) === draggedIdStr)) {
+          ft.parentEventId = parentId;
+          ft.scheduledDate = targetTask.date || null;
+          ft.scheduledTime = null;
+          ftFound = true;
+        } else if (String(ft.parentEventId) === draggedFocusId || (draggedTask.planId && String(ft.parentEventId) === String(draggedTask.planId))) {
+          ft.parentEventId = parentId;
+        }
+      });
+      if (!ftFound) {
+        focusTasks.push({
+          id: draggedFocusId,
+          planId: draggedTask.id,
+          title: draggedTitleClean,
+          category: (targetTask.context === 'life' ? 'Home' : (targetTask.context === 'fun' ? 'Fun' : 'Work')),
+          estimate: 1,
+          duration: 30,
+          completed: !!draggedTask.completed,
+          isFavorite: false,
+          isEvent: false,
+          parentEventId: parentId,
+          scheduledDate: targetTask.date || null,
+          scheduledTime: null
+        });
+      }
+      localStorage.setItem('span_tasks', JSON.stringify(focusTasks));
+    }
+  } catch (e) {}
+
+  // Mettre à jour l'horodatage du parent
+  targetTask.updated_at = new Date().toISOString();
+
+  // Retirer la tâche glissée de la liste racine
+  allTasks.splice(draggedIndex, 1);
+  return true;
+}
+
 function handleBlockDrop(e, targetBlockId) {
   e.preventDefault();
   e.stopPropagation();
@@ -3594,71 +3733,24 @@ function handleBlockDrop(e, targetBlockId) {
 
   if (!draggedTaskId || draggedTaskId === targetBlockId) return;
 
-  const allTasks = window.SpanPlanState.tasks;
-  const draggedIndex = allTasks.findIndex(t => t.id === draggedTaskId);
-  const targetTask = allTasks.find(t => t.id === targetBlockId);
-
-  if (draggedIndex === -1 || !targetTask) return;
-
-  const draggedTask = allTasks[draggedIndex];
-
-  if (!Array.isArray(targetTask.subtasks)) {
-    targetTask.subtasks = [];
-  }
-
-  const draggedTitleClean = (draggedTask.title || 'Untitled subtask').trim();
-  const draggedTitleLower = draggedTitleClean.toLowerCase();
-
-  const newSubtask = {
-    id: draggedTask.id ? ('sub_' + draggedTask.id) : ('sub_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36)),
-    title: draggedTitleClean,
-    completed: !!draggedTask.completed,
-    context: draggedTask.context || targetTask.context || 'work',
-    parentEventId: targetTask.focusId || targetTask.id
-  };
-
-  if (Array.isArray(draggedTask.subtasks) && draggedTask.subtasks.length > 0) {
-    targetTask.subtasks.push(newSubtask, ...draggedTask.subtasks);
-  } else {
-    targetTask.subtasks.push(newSubtask);
-  }
-
-  // Enregistrer la tâche glissée dans les identifiants supprimés (uniquement par ID, jamais par titre)
-  const keysToDismiss = [draggedTask.id];
-  if (draggedTask.focusId) keysToDismiss.push(draggedTask.focusId);
-  addDismissedTaskIds(keysToDismiss);
-
-  // Mettre à jour Focus pour lier au parent
-  try {
-    let focusTasks = JSON.parse(localStorage.getItem('span_tasks')) || [];
-    if (Array.isArray(focusTasks)) {
-      const parentId = targetTask.focusId || targetTask.id;
-      const ftIndex = focusTasks.findIndex(ft => ft.id === draggedTask.id || ft.id === draggedTask.focusId || (ft.title && ft.title.trim().toLowerCase() === draggedTitleLower));
-      if (ftIndex !== -1) {
-        focusTasks[ftIndex].parentEventId = parentId;
-        localStorage.setItem('span_tasks', JSON.stringify(focusTasks));
-      }
-    }
-  } catch (e) {}
-
-  // Mettre à jour l'horodatage du parent
-  targetTask.updated_at = new Date().toISOString();
-
-  // Retirer la tâche glissée de la liste racine
-  allTasks.splice(draggedIndex, 1);
+  const targetTask = window.SpanPlanState.tasks.find(t => t.id === targetBlockId);
+  const targetTitle = targetTask ? targetTask.title : 'block';
+  const success = attachTaskAsSubtask(draggedTaskId, targetBlockId);
   draggedTaskId = null;
 
-  savePlanState();
-  if (typeof syncSubtasksToFocus === 'function') {
-    syncSubtasksToFocus(targetTask);
-  }
-  if (typeof syncPlanToCloud === 'function') {
-    syncPlanToCloud();
-  }
-
-  if (typeof showToast === 'function') {
-    const parentType = targetTask.type === 'event' ? 'event' : 'task';
-    showToast(alreadyExists ? `Subtask already present in "${targetTask.title}"` : `Added as subtask to ${parentType} "${targetTask.title}"`, 'success');
+  if (success) {
+    if (!window.expandedBlockAccordionIds) window.expandedBlockAccordionIds = new Set();
+    window.expandedBlockAccordionIds.add(targetBlockId);
+    savePlanState();
+    if (typeof syncSubtasksToFocus === 'function' && targetTask) {
+      syncSubtasksToFocus(targetTask);
+    }
+    if (typeof syncPlanToCloud === 'function') {
+      syncPlanToCloud();
+    }
+    if (typeof showToast === 'function') {
+      showToast(`Added as subtask of "${targetTitle}"`, 'success');
+    }
   }
 }
 
@@ -4041,6 +4133,35 @@ function popoverAction(action) {
         showToast(label, 'info');
       }
     }
+  } else if (action === 'attach-subtask') {
+    const task = window.SpanPlanState.tasks.find(t => t.id === id);
+    if (!task) return;
+    const sameDayBlocks = window.SpanPlanState.tasks.filter(t => 
+      t.id !== task.id && 
+      (t.date === task.date || (!task.date && t.date === TODAY_STR)) &&
+      (t.time || t.allDay)
+    );
+    if (sameDayBlocks.length === 0) {
+      if (typeof showToast === 'function') showToast("Aucun autre bloc disponible pour y attacher cette tâche", 'warning');
+      return;
+    }
+    const blockNames = sameDayBlocks.map((b, i) => `${i + 1}. ${b.title || 'Sans titre'} (${b.time || 'Toute la journée'})`).join('\n');
+    const choice = prompt(`Choisir le numéro du bloc auquel rattacher "${task.title}" :\n\n${blockNames}`);
+    if (choice) {
+      const idx = parseInt(choice, 10) - 1;
+      if (idx >= 0 && idx < sameDayBlocks.length) {
+        const targetBlock = sameDayBlocks[idx];
+        if (attachTaskAsSubtask(task.id, targetBlock.id)) {
+          if (!window.expandedBlockAccordionIds) window.expandedBlockAccordionIds = new Set();
+          window.expandedBlockAccordionIds.add(targetBlock.id);
+          savePlanState();
+          if (typeof showToast === 'function') {
+            showToast(`"${task.title}" attachée en sous-tâche à "${targetBlock.title}"`, 'success');
+          }
+        }
+      }
+    }
+    return;
   } else if (action === 'focus') {
     pushToSpanFocus(id);
   } else if (action === 'backlog') {
@@ -5333,7 +5454,7 @@ function openEditModal(id) {
   const dur = task.duration || 45;
   if (durEl) durEl.value = dur;
   if (endTimeEl) {
-    endTimeEl.value = task.endTime || getEndTimeFromDuration(task.time || '09:00', dur);
+    endTimeEl.value = getEndTimeFromDuration(task.time || '09:00', dur);
   }
 
   const deleteBtn = document.getElementById('btnModalDeleteTask');
