@@ -1570,6 +1570,11 @@ function renderTimedBlocks(tasks, dateStr) {
                 ${sub.completed ? '✓' : ''}
               </div>
               <span class="subtask-row-title">${renderTitleWithTagsHtml(sub.title)}</span>
+              <button type="button" 
+                      class="btn-subtask-quick-backlog" 
+                      onpointerdown="event.stopPropagation()" 
+                      onclick="event.stopPropagation(); moveSubtaskToBacklog('${task.id}', '${sub.id}')" 
+                      title="Déplacer vers le Backlog">📥</button>
             </div>
           `).join('')}
           ${isExpanded ? `
@@ -2021,6 +2026,7 @@ function handleBlockPointerDown(e, taskId, dateStr) {
       e.target.closest('.resize-handle') || 
       e.target.closest('.event-progress-pill') ||
       e.target.closest('.btn-block-quick-add-subtask') ||
+      e.target.closest('.btn-subtask-quick-backlog') ||
       e.target.closest('.block-subtask-row') ||
       e.target.closest('.block-subtasks-container') ||
       e.target.closest('.subtasks-unfold-btn') ||
@@ -3197,82 +3203,121 @@ function handleBatchSubtasksDropToBacklog(e) {
   }
 }
 
-function handleSubtaskDropToBacklog(e) {
-  if (!window.draggedSubtaskInfo) return;
-  const { parentId, subtaskId, subtask } = window.draggedSubtaskInfo;
+function moveSubtaskToBacklog(parentId, subtaskId) {
+  if (!parentId || !subtaskId) return false;
 
   const allTasks = window.SpanPlanState.tasks;
-  const sourceParent = allTasks.find(t => t.id === parentId || (t.focusId && t.focusId === parentId));
-  if (!sourceParent) {
-    handleSubtaskDragEnd(e);
-    return;
-  }
+  const parent = allTasks.find(t => t.id === parentId || (t.focusId && t.focusId === parentId));
+  if (!parent || !Array.isArray(parent.subtasks)) return false;
 
-  const cleanTargetTitle = (subtask.title || '').trim().toLowerCase();
-  const validSubtaskId = subtaskId || subtask.id;
+  const subIndex = parent.subtasks.findIndex(s => String(s.id) === String(subtaskId));
+  if (subIndex === -1) return false;
 
-  // 1. Créer la nouvelle tâche dans le backlog
-  const newTaskId = 'task_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36);
-  const newTask = {
-    id: newTaskId,
-    title: (subtask.title || 'Untitled task').trim(),
-    date: null,
-    endDate: null,
-    time: '',
-    allDay: false,
-    type: 'task',
-    context: subtask.context || sourceParent.context || 'work',
-    completed: !!subtask.completed,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    subtasks: []
-  };
+  const subtask = parent.subtasks[subIndex];
+  const targetTitle = (subtask.title || 'Untitled task').trim();
+  const validSubtaskId = String(subtask.id || subtaskId);
 
-  allTasks.push(newTask);
+  // 1. Retirer la sous-tâche du bloc parent
+  parent.subtasks.splice(subIndex, 1);
+  parent.updated_at = new Date().toISOString();
 
-  // 2. RETIRER RÉELLEMENT ET DÉFINITIVEMENT de TOUS les blocs parents
+  // 2. Retirer aussi de tout autre parent au cas où
   allTasks.forEach(task => {
-    if (task.id === newTaskId) return;
+    if (task.id === parent.id) return;
     if (Array.isArray(task.subtasks) && task.subtasks.length > 0) {
-      const prevCount = task.subtasks.length;
-      task.subtasks = task.subtasks.filter(s => {
-        if (validSubtaskId && String(s.id) === String(validSubtaskId)) return false;
-        return true;
-      });
-      if (task.subtasks.length !== prevCount) {
-        task.updated_at = new Date().toISOString();
-        syncSubtasksToFocus(task);
-      }
+      task.subtasks = task.subtasks.filter(s => String(s.id) !== validSubtaskId);
     }
   });
 
-  // 3. Mettre à jour Focus (span_tasks)
+  // 3. Créer ou transformer en tâche racine du Backlog (en conservant l'identifiant)
+  let existingRoot = allTasks.find(t => String(t.id) === validSubtaskId || (t.focusId && String(t.focusId) === validSubtaskId));
+  if (existingRoot) {
+    existingRoot.date = null;
+    existingRoot.endDate = null;
+    existingRoot.time = '';
+    existingRoot.allDay = false;
+    existingRoot.title = targetTitle;
+    existingRoot.context = subtask.context || parent.context || 'work';
+    existingRoot.completed = !!subtask.completed;
+    existingRoot.updated_at = new Date().toISOString();
+  } else {
+    const newTask = {
+      id: validSubtaskId,
+      title: targetTitle,
+      date: null,
+      endDate: null,
+      time: '',
+      allDay: false,
+      type: 'task',
+      context: subtask.context || parent.context || 'work',
+      completed: !!subtask.completed,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      subtasks: []
+    };
+    allTasks.unshift(newTask);
+  }
+
+  // 4. Mettre à jour Focus (span_tasks) : délier de parentEventId et passer en tâche Backlog
   try {
     let focusTasks = JSON.parse(localStorage.getItem('span_tasks')) || [];
     if (Array.isArray(focusTasks)) {
+      let ftFound = false;
+      const catMap = { work: 'Work', life: 'Home', fun: 'Fun' };
       focusTasks.forEach(ft => {
-        const matchesId = validSubtaskId && String(ft.id) === String(validSubtaskId);
+        if (!ft) return;
+        const matchesId = (validSubtaskId && String(ft.id) === validSubtaskId) || (ft.planId && String(ft.planId) === validSubtaskId);
         if (matchesId) {
           ft.parentEventId = null;
           ft.date = null;
           ft.scheduledDate = null;
           ft.time = null;
           ft.scheduledTime = null;
+          ft.completed = !!subtask.completed;
+          if (subtask.context && catMap[subtask.context]) ft.category = catMap[subtask.context];
+          ftFound = true;
         }
       });
+
+      if (!ftFound) {
+        focusTasks.unshift({
+          id: validSubtaskId,
+          planId: validSubtaskId,
+          title: targetTitle,
+          category: (subtask.context === 'life' ? 'Home' : (subtask.context === 'fun' ? 'Fun' : 'Work')),
+          estimate: 1,
+          duration: 30,
+          completed: !!subtask.completed,
+          isFavorite: false,
+          isEvent: false,
+          parentEventId: null,
+          scheduledDate: null,
+          scheduledTime: null
+        });
+      }
       localStorage.setItem('span_tasks', JSON.stringify(focusTasks));
     }
   } catch (err) {}
 
-  syncSubtasksToFocus(sourceParent);
+  // 5. Retirer de la liste des identifiants supprimés s'il y figurait
+  try {
+    const dismissed = JSON.parse(localStorage.getItem('span_plan_dismissed_focus_ids')) || [];
+    const updated = dismissed.filter(d => d !== validSubtaskId && d !== ('title:' + targetTitle.toLowerCase()));
+    localStorage.setItem('span_plan_dismissed_focus_ids', JSON.stringify(updated));
+  } catch (e) {}
 
-  handleSubtaskDragEnd(e);
+  // 6. Synchroniser les sous-tâches du parent avec Focus
+  if (typeof syncSubtasksToFocus === 'function') {
+    syncSubtasksToFocus(parent);
+  }
 
+  // 7. Sauvegarder l'état
   savePlanState();
   if (typeof syncPlanToCloud === 'function') syncPlanToCloud();
 
+  // 8. Mettre à jour la modale de sous-tâches si ouverte
   if (currentSubtasksParentId) {
-    if (sourceParent.subtasks.length === 0) {
+    if (parent.subtasks.length === 0) {
       closeSubtasksModal();
     } else {
       renderSubtasksModalList();
@@ -3280,8 +3325,19 @@ function handleSubtaskDropToBacklog(e) {
   }
 
   if (typeof showToast === 'function') {
-    showToast(`Déplacé dans le Backlog : "${newTask.title}"`, 'info');
+    showToast(`Déplacé dans le Backlog : "${targetTitle}"`, 'info');
   }
+
+  return true;
+}
+window.moveSubtaskToBacklog = moveSubtaskToBacklog;
+
+function handleSubtaskDropToBacklog(e) {
+  if (!window.draggedSubtaskInfo) return;
+  const { parentId, subtaskId, subtask } = window.draggedSubtaskInfo;
+  const targetSubId = subtaskId || (subtask ? subtask.id : null);
+  moveSubtaskToBacklog(parentId, targetSubId);
+  handleSubtaskDragEnd(e);
 }
 
 function toggleSubtasksRolloverPanel(show) {
@@ -3952,10 +4008,35 @@ function handleDropToDock(e, targetDate) {
   draggedTaskId = null;
 }
 
+function allowDrop(e) {
+  e.preventDefault();
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'move';
+  }
+  const backlogTarget = e.currentTarget.closest('.sidebar-backlog-section, #backlogDrawer, .btn-backlog-toggle, #mobileNavBacklog') || e.currentTarget;
+  if (backlogTarget && !backlogTarget.classList.contains('drag-over')) {
+    backlogTarget.classList.add('drag-over');
+  }
+}
+window.allowDrop = allowDrop;
+
+function handleBacklogDragLeave(e) {
+  const target = e.currentTarget;
+  if (!e.relatedTarget || !target.contains(e.relatedTarget)) {
+    target.classList.remove('drag-over');
+    const section = target.closest('.sidebar-backlog-section, #backlogDrawer, .btn-backlog-toggle, #mobileNavBacklog');
+    if (section) section.classList.remove('drag-over');
+  }
+}
+window.handleBacklogDragLeave = handleBacklogDragLeave;
+
 function handleDropToBacklog(e) {
   e.preventDefault();
+  e.stopPropagation();
   const ghost = document.getElementById('canvasDragGhost');
   if (ghost) ghost.remove();
+
+  document.querySelectorAll('.drag-over, .dock-drop-hover').forEach(el => el.classList.remove('drag-over', 'dock-drop-hover'));
 
   if (window.draggedBatchSubtasksInfo) {
     handleBatchSubtasksDropToBacklog(e);
@@ -3972,11 +4053,14 @@ function handleDropToBacklog(e) {
   const task = window.SpanPlanState.tasks.find(t => t.id === draggedTaskId);
   if (task) {
     task.date = null;
+    task.endDate = null;
     task.time = '';
+    task.allDay = false;
     task.isRollover = false;
+    task.updated_at = new Date().toISOString();
     savePlanState();
     if (typeof showToast === 'function') {
-      showToast(`Déplacé dans le Backlog`, 'info');
+      showToast(`Déplacé dans le Backlog : "${task.title}"`, 'info');
     }
   }
   draggedTaskId = null;
@@ -4771,6 +4855,10 @@ function renderSubtasksModalList() {
               class="subtask-edit-btn" 
               onclick="event.stopPropagation(); enableSubtaskInlineEdit(event, '${sub.id}')" 
               title="Modifier le nom">✏️</button>
+      <button type="button" 
+              class="subtask-backlog-btn" 
+              onclick="event.stopPropagation(); moveSubtaskToBacklog('${currentSubtasksParentId}', '${sub.id}')" 
+              title="Déplacer dans le Backlog">📥</button>
       <button type="button" 
               class="subtask-detach-btn" 
               onclick="event.stopPropagation(); detachSubtaskToDay('${sub.id}')" 

@@ -15,7 +15,7 @@
   <link rel="shortcut icon" href="favicon.ico?v=7.14">
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=7.14">
 
-  <link rel="stylesheet" href="style.css?v=7.33">
+  <link rel="stylesheet" href="style.css?v=7.35">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -115,8 +115,8 @@
           <input type="text" id="sidebarBacklogInput" placeholder="Add unscheduled task..." onkeydown="if(event.key==='Enter') addSidebarBacklogTask()">
           <button type="button" class="btn-sidebar-add" onclick="addSidebarBacklogTask()" title="Add to Backlog">+</button>
         </div>
-        <div class="sidebar-backlog-scroll">
-          <ul class="task-list sidebar-task-list" id="sidebarBacklogList" ondragover="allowDrop(event)" ondrop="handleDropToBacklog(event)">
+        <div class="sidebar-backlog-scroll" ondragover="allowDrop(event)" ondragleave="handleBacklogDragLeave(event)" ondrop="handleDropToBacklog(event)">
+          <ul class="task-list sidebar-task-list" id="sidebarBacklogList" ondragover="allowDrop(event)" ondragleave="handleBacklogDragLeave(event)" ondrop="handleDropToBacklog(event)">
             <!-- Rendered dynamically by plan.js -->
           </ul>
         </div>
@@ -170,7 +170,7 @@
             <button class="icon-btn btn-new-task" onclick="toggleQuickAddBar()" title="Quick add bar (⌘K)">
               <span>⚡ Quick</span>
             </button>
-            <button class="icon-btn btn-backlog-toggle mobile-only-btn" id="btnToggleDrawer" onclick="toggleBacklogDrawer()" title="Backlog (B / L)">
+            <button class="icon-btn btn-backlog-toggle mobile-only-btn" id="btnToggleDrawer" onclick="toggleBacklogDrawer()" ondragover="allowDrop(event)" ondragleave="handleBacklogDragLeave(event)" ondrop="handleDropToBacklog(event)" title="Backlog (B / L)">
               <span>📋</span>
               <span class="backlog-counter-pill" id="globalLaterCount">0</span>
             </button>
@@ -237,7 +237,7 @@
         </div>
 
         <!-- Hidden/Fallback Drawer for mobile -->
-        <aside class="backlog-drawer" id="backlogDrawer" style="display: none;">
+        <aside class="backlog-drawer" id="backlogDrawer" style="display: none;" ondragover="allowDrop(event)" ondragleave="handleBacklogDragLeave(event)" ondrop="handleDropToBacklog(event)">
           <div class="drawer-header">
             <div class="drawer-title-wrap">
               <span class="drawer-title">Backlog / Later</span>
@@ -247,7 +247,7 @@
               <button class="icon-btn mini" onclick="toggleBacklogDrawer()" title="Close">✕</button>
             </div>
           </div>
-          <ul class="task-list drawer-list" id="backlogTaskList" ondragover="allowDrop(event)" ondrop="handleDropToBacklog(event)">
+          <ul class="task-list drawer-list" id="backlogTaskList" ondragover="allowDrop(event)" ondragleave="handleBacklogDragLeave(event)" ondrop="handleDropToBacklog(event)">
           </ul>
         </aside>
       </main>
@@ -264,7 +264,7 @@
       <button type="button" class="nav-btn nav-btn-add" onclick="openCreateModalWithDefaults()" title="New task or event">
         <div class="nav-fab-circle">+</div>
       </button>
-      <button type="button" class="nav-btn" id="mobileNavBacklog" onclick="setMobileDayView('backlog')" title="Backlog">
+      <button type="button" class="nav-btn" id="mobileNavBacklog" onclick="setMobileDayView('backlog')" ondragover="allowDrop(event)" ondragleave="handleBacklogDragLeave(event)" ondrop="handleDropToBacklog(event)" title="Backlog">
         <span class="nav-icon">📥</span>
         <span>Backlog (<span id="mobileLaterCount">0</span>)</span>
       </button>
@@ -837,9 +837,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=7.34"></script>
-  <script src="js/gcal.js?v=7.34"></script>
-  <script src="js/plan.js?v=7.34"></script>
-  <script src="js/app.js?v=7.34"></script>
+  <script src="js/sync.js?v=7.35"></script>
+  <script src="js/gcal.js?v=7.35"></script>
+  <script src="js/plan.js?v=7.35"></script>
+  <script src="js/app.js?v=7.35"></script>
 </body>
 </html>

@@ -5482,7 +5482,8 @@ body.is-card-dragging * {
   cursor: grabbing;
 }
 
-.subtask-detach-btn {
+.subtask-detach-btn,
+.subtask-backlog-btn {
   background: transparent;
   border: none;
   color: var(--text-muted);
@@ -5496,7 +5497,8 @@ body.is-card-dragging * {
   line-height: 1;
 }
 
-.subtask-interactive-row:hover .subtask-detach-btn {
+.subtask-interactive-row:hover .subtask-detach-btn,
+.subtask-interactive-row:hover .subtask-backlog-btn {
   opacity: 0.7;
 }
 
@@ -5509,6 +5511,53 @@ body.is-card-dragging * {
 [data-theme="light"] .subtask-detach-btn:hover {
   background: rgba(99, 102, 241, 0.12);
   color: #4338ca;
+}
+
+.subtask-backlog-btn:hover {
+  opacity: 1 !important;
+  color: #38bdf8 !important;
+  background: rgba(56, 189, 248, 0.15) !important;
+}
+
+[data-theme="light"] .subtask-backlog-btn:hover {
+  background: rgba(56, 189, 248, 0.12) !important;
+  color: #0284c7 !important;
+}
+
+.btn-subtask-quick-backlog {
+  background: transparent;
+  border: none;
+  font-size: 10px;
+  cursor: pointer;
+  padding: 1px 3px;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+  line-height: 1;
+  color: var(--text-muted);
+}
+
+.block-subtask-row:hover .btn-subtask-quick-backlog {
+  opacity: 0.65;
+}
+
+.btn-subtask-quick-backlog:hover {
+  opacity: 1 !important;
+  color: #38bdf8 !important;
+  background: rgba(56, 189, 248, 0.2) !important;
+}
+
+/* Drag hover on Backlog button and drawer */
+.btn-backlog-toggle.drag-over,
+#mobileNavBacklog.drag-over,
+.sidebar-backlog-section.drag-over,
+.backlog-drawer.drag-over {
+  outline: 2px dashed #38bdf8 !important;
+  outline-offset: 2px !important;
+  background: rgba(56, 189, 248, 0.18) !important;
+  transform: scale(1.05);
+  transition: all 0.12s ease;
 }
 
 #subtasksModalOverlay.dragging-subtask-active {
