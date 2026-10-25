@@ -594,22 +594,88 @@ function filterByTag(tag) {
 }
 
 function executeAutoRollover() {
+  const currentToday = getLocalDateString();
   let hasChanges = false;
-  window.SpanPlanState.tasks.forEach(task => {
-    // Les événements ET les blocs récurrents ne doivent JAMAIS être déplacés ou altérés par l'auto-rollover !
-    if (task.type === 'event') return;
+  const allTasks = window.SpanPlanState.tasks || [];
+  const extractedSubtasks = [];
+
+  allTasks.forEach(task => {
+    if (!task || !task.date) return;
     if (task.recurrence && task.recurrence !== 'none') return;
 
-    if (task.date && task.date < TODAY_STR && !task.completed) {
-      task.date = TODAY_STR;
+    // 1. Tâches seules du passé non réalisées -> Déplacées directement dans le Backlog (Inbox sans date)
+    if (task.type !== 'event' && task.date < currentToday && !task.completed) {
+      task.date = null;
       task.time = '';
-      task.isRollover = true;
+      task.endDate = null;
+      task.isRollover = false;
       task.updated_at = new Date().toISOString();
       hasChanges = true;
     }
+
+    // 2. Sous-tâches non faites restées dans des blocs/événements passés -> Extraites vers le Backlog
+    if (task.date < currentToday && Array.isArray(task.subtasks) && task.subtasks.length > 0) {
+      const unfinished = task.subtasks.filter(s => !s.completed);
+      if (unfinished.length > 0) {
+        // Le bloc passé conserve uniquement ses sous-tâches terminées (pour l'historique de l'agenda)
+        task.subtasks = task.subtasks.filter(s => !!s.completed);
+        task.updated_at = new Date().toISOString();
+        hasChanges = true;
+
+        unfinished.forEach(sub => {
+          extractedSubtasks.push({
+            id: String(sub.id || ('sub_' + Math.random().toString(36).substr(2, 9))),
+            title: (sub.title || 'Untitled task').trim(),
+            context: sub.context || task.context || 'work',
+            completed: false
+          });
+        });
+      }
+    }
   });
 
-  if (hasChanges) savePlanState();
+  // Insérer ou mettre à jour les sous-tâches extraites comme tâches racines du Backlog
+  if (extractedSubtasks.length > 0) {
+    extractedSubtasks.forEach(sub => {
+      let existingRoot = allTasks.find(t => String(t.id) === sub.id || (t.focusId && String(t.focusId) === sub.id));
+      if (existingRoot) {
+        existingRoot.date = null;
+        existingRoot.endDate = null;
+        existingRoot.time = '';
+        existingRoot.allDay = false;
+        existingRoot.completed = false;
+        existingRoot.title = sub.title;
+        existingRoot.context = sub.context;
+        existingRoot.updated_at = new Date().toISOString();
+      } else {
+        const newBacklogTask = {
+          id: sub.id,
+          title: sub.title,
+          date: null,
+          endDate: null,
+          time: '',
+          allDay: false,
+          type: 'task',
+          context: sub.context,
+          completed: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          subtasks: []
+        };
+        allTasks.unshift(newBacklogTask);
+      }
+    });
+    hasChanges = true;
+  }
+
+  if (hasChanges) {
+    savePlanState();
+    renderPlanGrid();
+    renderBacklogDrawer();
+    if (typeof showToast === 'function' && extractedSubtasks.length > 0) {
+      showToast(`${extractedSubtasks.length} tâche${extractedSubtasks.length > 1 ? 's' : ''} d'hier déplacée${extractedSubtasks.length > 1 ? 's' : ''} dans le Backlog`, 'info');
+    }
+  }
 }
 
 function syncPlanTasksToFocusStorage() {
@@ -3523,14 +3589,12 @@ function executeSubtasksRolloverCore({ targetDate, targetEndDate, targetTime, ta
 
   // 3. Mettre à jour Focus (span_tasks)
   const movedIds = new Set(unfinished.map(s => String(s.id || '')).filter(Boolean));
-  const movedTitles = new Set(unfinished.map(s => (s.title || '').trim().toLowerCase()).filter(Boolean));
   try {
     let focusTasks = JSON.parse(localStorage.getItem('span_tasks')) || [];
     if (Array.isArray(focusTasks)) {
       focusTasks.forEach(ft => {
         const matchesId = ft.id && movedIds.has(String(ft.id));
-        const matchesTitle = ft.title && movedTitles.has(ft.title.trim().toLowerCase());
-        if (matchesId || matchesTitle) {
+        if (matchesId) {
           ft.parentEventId = continuationTask.id;
           ft.date = targetDate;
           ft.time = targetTime;

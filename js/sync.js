@@ -212,14 +212,13 @@ async function syncPlanToCloud() {
       const localFocusMap = new Map();
       localFocusItems.forEach(lft => {
         if (lft && lft.id) localFocusMap.set(String(lft.id), lft);
-        if (lft && lft.title) localFocusMap.set('title:' + lft.title.trim().toLowerCase(), lft);
       });
 
       cleanedFocusItems.forEach(ft => {
-        if (!ft) return;
-        const match = localFocusMap.get(String(ft.id)) || (ft.title ? localFocusMap.get('title:' + ft.title.trim().toLowerCase()) : null);
+        if (!ft || !ft.id) return;
+        const match = localFocusMap.get(String(ft.id));
         if (match) {
-          if (match.parentEventId !== undefined) ft.parentEventId = match.parentEventId;
+          if (typeof match.isFavorite === 'boolean') ft.isFavorite = match.isFavorite;
         }
       });
     }
@@ -323,33 +322,37 @@ async function loadPlanFromCloud() {
             const localSubtasks = Array.isArray(localTask.subtasks) ? localTask.subtasks : [];
             const remoteSubtasks = Array.isArray(remoteTask.subtasks) ? remoteTask.subtasks : [];
             
-            const mergedSubtasks = remoteSubtasks.map(rsub => {
-              const lmatch = localSubtasks.find(lsub => String(lsub.id) === String(rsub.id));
-              if (lmatch) {
-                return {
-                  ...rsub,
-                  title: rsub.title,
-                  completed: (typeof rsub.completed === 'boolean') ? rsub.completed : lmatch.completed
-                };
-              }
-              return rsub;
-            });
-
-            // Conserver les sous-tâches locales créées hors ligne qui ont leur propre ID
-            localSubtasks.forEach(lsub => {
-              if (lsub && lsub.id && !mergedSubtasks.some(m => String(m.id) === String(lsub.id))) {
-                mergedSubtasks.push(lsub);
-              }
-            });
-
             const remoteIsNewer = Boolean(
               !localTask.updated_at ||
               (remoteTask.updated_at && new Date(remoteTask.updated_at).getTime() >= new Date(localTask.updated_at).getTime())
             );
 
+            let finalSubtasks = remoteSubtasks;
+            if (!remoteIsNewer) {
+              const mergedSubtasks = remoteSubtasks.map(rsub => {
+                const lmatch = localSubtasks.find(lsub => String(lsub.id) === String(rsub.id));
+                if (lmatch) {
+                  return {
+                    ...rsub,
+                    title: lmatch.title || rsub.title,
+                    completed: (typeof lmatch.completed === 'boolean') ? lmatch.completed : rsub.completed
+                  };
+                }
+                return rsub;
+              });
+              localSubtasks.forEach(lsub => {
+                if (lsub && lsub.id && !mergedSubtasks.some(m => String(m.id) === String(lsub.id))) {
+                  mergedSubtasks.push(lsub);
+                }
+              });
+              finalSubtasks = mergedSubtasks;
+            } else {
+              finalSubtasks = remoteSubtasks;
+            }
+
             const winner = remoteIsNewer 
-              ? { ...remoteTask, subtasks: mergedSubtasks } 
-              : { ...localTask, subtasks: mergedSubtasks };
+              ? { ...remoteTask, subtasks: finalSubtasks } 
+              : { ...localTask, subtasks: finalSubtasks };
 
             mergedMap.set(remoteTask.id, winner);
           }
