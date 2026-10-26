@@ -4474,8 +4474,41 @@ function setPlanBacklogActionFilter(filter) {
 window.setPlanBacklogActionFilter = setPlanBacklogActionFilter;
 window.getTaskActionType = getTaskActionType;
 
+let planHideActionsInAll = localStorage.getItem('span_plan_hide_actions_in_all') !== 'false'; // default true
+
+function updatePlanHideActionsToggleUI() {
+  const btnSidebar = document.getElementById('btnToggleHideActionsPlan');
+  const btnDrawer = document.getElementById('btnToggleHideActionsDrawer');
+  const badgeSidebar = document.getElementById('planToggleBadgeText');
+  const badgeDrawer = document.getElementById('drawerToggleBadgeText');
+
+  [btnSidebar, btnDrawer].forEach(btn => {
+    if (btn) btn.classList.toggle('active', planHideActionsInAll);
+  });
+  [badgeSidebar, badgeDrawer].forEach(b => {
+    if (b) b.textContent = planHideActionsInAll ? 'ON' : 'OFF';
+  });
+}
+window.updatePlanHideActionsToggleUI = updatePlanHideActionsToggleUI;
+
+function togglePlanHideActionsInAll(forceVal) {
+  if (typeof forceVal === 'boolean') {
+    planHideActionsInAll = forceVal;
+  } else {
+    planHideActionsInAll = !planHideActionsInAll;
+  }
+  localStorage.setItem('span_plan_hide_actions_in_all', planHideActionsInAll ? 'true' : 'false');
+  updatePlanHideActionsToggleUI();
+  renderBacklogDrawer();
+  if (typeof showToast === 'function') {
+    showToast(planHideActionsInAll ? 'Actions (Calls/Mails/Pay) masquées dans "Tous"' : 'Actions affichées dans "Tous"', 'info');
+  }
+}
+window.togglePlanHideActionsInAll = togglePlanHideActionsInAll;
+
 // BACKLOG DRAWER & SIDEBAR BACKLOG
 function renderBacklogDrawer() {
+  updatePlanHideActionsToggleUI();
   const targets = [
     document.getElementById('sidebarBacklogList'),
     document.getElementById('backlogTaskList')
@@ -4513,20 +4546,53 @@ function renderBacklogDrawer() {
     if (el) el.textContent = countPay;
   });
 
+  const elPlanAll = document.querySelector('#sidebarActionFilterPills [data-filter="all"]');
+  if (elPlanAll) {
+    elPlanAll.innerHTML = `Tous <span class="pill-count">${planHideActionsInAll ? countOther : allBacklogTasks.length}</span>`;
+  }
+  const elDrawerAll = document.querySelector('#drawerActionFilterPills [data-filter="all"]');
+  if (elDrawerAll) {
+    elDrawerAll.innerHTML = `Tous <span class="pill-count">${planHideActionsInAll ? countOther : allBacklogTasks.length}</span>`;
+  }
+
   const backlogTasks = allBacklogTasks.filter(t => {
-    if (planBacklogActionFilter === 'all') return true;
-    return getTaskActionType(t) === planBacklogActionFilter;
+    const act = getTaskActionType(t);
+    if (planBacklogActionFilter === 'all') {
+      if (planHideActionsInAll) {
+        return act === 'other';
+      }
+      return true;
+    }
+    return act === planBacklogActionFilter;
   });
 
   targets.forEach(list => {
     list.innerHTML = '';
 
     if (backlogTasks.length === 0) {
-      const emptyMsg = planBacklogActionFilter === 'all' 
-        ? 'No unscheduled tasks' 
-        : `Aucun élément dans le filtre "${planBacklogActionFilter}"`;
-      list.innerHTML = `<li style="font-size: 11px; color: var(--text-muted); padding: 14px 4px; text-align: center;">${emptyMsg}</li>`;
-      return;
+      if (planBacklogActionFilter === 'all') {
+        const totalCategorized = countCall + countMail + countPay;
+        if (planHideActionsInAll && totalCategorized > 0) {
+          list.innerHTML = `
+            <div style="padding: 14px 6px; text-align: center;">
+              <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">Aucune tâche standard en attente</div>
+              <div style="font-size: 10px; color: var(--text-muted); opacity: 0.85;">${totalCategorized} action(s) masquée(s) de "Tous" :</div>
+              <div style="display: flex; gap: 4px; justify-content: center; margin-top: 6px; flex-wrap: wrap;">
+                ${countCall > 0 ? `<button type="button" class="plan-filter-pill" onclick="setPlanBacklogActionFilter('call')" style="font-size:10px; padding:2px 6px;">📞 ${countCall} Calls</button>` : ''}
+                ${countMail > 0 ? `<button type="button" class="plan-filter-pill" onclick="setPlanBacklogActionFilter('mail')" style="font-size:10px; padding:2px 6px;">✉️ ${countMail} Mails</button>` : ''}
+                ${countPay > 0 ? `<button type="button" class="plan-filter-pill" onclick="setPlanBacklogActionFilter('pay')" style="font-size:10px; padding:2px 6px;">💳 ${countPay} Pay</button>` : ''}
+              </div>
+            </div>
+          `;
+          return;
+        } else {
+          list.innerHTML = `<li style="font-size: 11px; color: var(--text-muted); padding: 14px 4px; text-align: center;">No unscheduled tasks</li>`;
+          return;
+        }
+      } else {
+        list.innerHTML = `<li style="font-size: 11px; color: var(--text-muted); padding: 14px 4px; text-align: center;">Aucun élément dans le filtre "${planBacklogActionFilter}"</li>`;
+        return;
+      }
     }
 
     backlogTasks.forEach(task => {
