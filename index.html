@@ -402,6 +402,15 @@
           <button type="button" class="cat-pill cat-fun" data-context="fun" onclick="selectEditContext('fun')">Fun</button>
         </div>
 
+        <label class="modal-label">Type d'action</label>
+        <div class="action-pills" id="modalPlanActionPills">
+          <button type="button" class="action-pill active" data-action="auto" onclick="selectEditPlanAction('auto')" title="Détection automatique via mots-clés ou tags">⚡ Auto</button>
+          <button type="button" class="action-pill action-call" data-action="call" onclick="selectEditPlanAction('call')">📞 Call</button>
+          <button type="button" class="action-pill action-mail" data-action="mail" onclick="selectEditPlanAction('mail')">✉️ Mail</button>
+          <button type="button" class="action-pill action-pay" data-action="pay" onclick="selectEditPlanAction('pay')">💳 Pay</button>
+          <button type="button" class="action-pill action-other" data-action="other" onclick="selectEditPlanAction('other')">📦 Standard</button>
+        </div>
+
         <!-- COLLAPSIBLE EXTRA DETAILS: LOCATION/LINK & NOTES -->
         <div class="modal-collapsible-wrap">
           <button type="button" class="btn-toggle-collapsible" id="btnToggleExtraDetails" onclick="toggleModalExtraDetails()">
@@ -851,9 +860,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=7.37"></script>
-  <script src="js/gcal.js?v=7.37"></script>
-  <script src="js/plan.js?v=7.37"></script>
-  <script src="js/app.js?v=7.37"></script>
+  <script src="js/sync.js?v=7.38"></script>
+  <script src="js/gcal.js?v=7.38"></script>
+  <script src="js/plan.js?v=7.38"></script>
+  <script src="js/app.js?v=7.38"></script>
 </body>
 </html>

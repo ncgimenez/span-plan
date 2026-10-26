@@ -312,7 +312,8 @@ function syncFocusTasksToPlanBacklog(shouldSave = true, customFocusTasks = null)
         title: st.title,
         context: subCtx,
         completed: !!st.completed,
-        parentEventId: ft.id
+        parentEventId: ft.id,
+        actionType: st.actionType || null
       };
     });
 
@@ -327,6 +328,7 @@ function syncFocusTasksToPlanBacklog(shouldSave = true, customFocusTasks = null)
         focusId: ft.id || null,
         title: ft.title,
         type: isEv ? 'event' : 'task',
+        actionType: ft.actionType || null,
         date: ft.scheduledDate || null,
         time: ft.scheduledTime || '',
         duration: ft.duration || (ft.estimate ? ft.estimate * 30 : 30),
@@ -348,6 +350,12 @@ function syncFocusTasksToPlanBacklog(shouldSave = true, customFocusTasks = null)
       // Synchronisation du titre
       if (ft.title && existing.title !== ft.title) {
         existing.title = ft.title;
+        hasChanges = true;
+      }
+
+      // Synchronisation du type d'action
+      if (ft.actionType !== undefined && existing.actionType !== ft.actionType) {
+        existing.actionType = ft.actionType;
         hasChanges = true;
       }
 
@@ -410,6 +418,7 @@ function syncFocusTasksToPlanBacklog(shouldSave = true, customFocusTasks = null)
             return {
               ...es,
               title: fs.title,
+              actionType: fs.actionType !== undefined ? fs.actionType : es.actionType,
               completed: (typeof fs.completed === 'boolean') ? fs.completed : es.completed
             };
           }
@@ -553,7 +562,16 @@ let isDrawerPinned = localStorage.getItem('span_plan_drawer_pinned') !== 'false'
 let editingTaskId = null;
 let editingContext = 'work';
 let editingItemType = 'task';
+let editingPlanActionType = 'auto';
 let popoverTargetTaskId = null;
+
+function selectEditPlanAction(action) {
+  editingPlanActionType = action || 'auto';
+  document.querySelectorAll('#modalPlanActionPills .action-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.action === editingPlanActionType);
+  });
+}
+window.selectEditPlanAction = selectEditPlanAction;
 
 function autoRecoverTodayTasks() {
   let modified = false;
@@ -743,12 +761,18 @@ function syncPlanTasksToFocusStorage() {
           existing.completed = pt.completed;
           modified = true;
         }
+
+        if (pt.actionType !== undefined && existing.actionType !== pt.actionType) {
+          existing.actionType = pt.actionType;
+          modified = true;
+        }
       } else {
         focusTasks.push({
           id: targetFocusId,
           planId: pt.id,
           title: pt.title || 'Untitled',
           category: catMap[pt.context] || 'Work',
+          actionType: pt.actionType || null,
           estimate: Math.max(1, Math.round((pt.duration || 30) / 30)),
           duration: pt.duration || 30,
           completed: !isEv && !!pt.completed,
@@ -788,6 +812,10 @@ function syncPlanTasksToFocusStorage() {
               existingSub.title = st.title;
               modified = true;
             }
+            if (st.actionType !== undefined && existingSub.actionType !== st.actionType) {
+              existingSub.actionType = st.actionType;
+              modified = true;
+            }
             if (existingSub.parentEventId !== String(targetFocusId)) {
               existingSub.parentEventId = String(targetFocusId);
               modified = true;
@@ -797,6 +825,7 @@ function syncPlanTasksToFocusStorage() {
               id: st.id,
               title: st.title || 'Subtask',
               category: catMap[st.context] || catMap[pt.context] || 'Work',
+              actionType: st.actionType || null,
               estimate: 1,
               duration: 30,
               completed: !!st.completed,
@@ -1624,25 +1653,38 @@ function renderTimedBlocks(tasks, dateStr) {
 
       subtasksHtml = `
         <div class="block-subtasks-container accordion-subtasks" data-count="${sortedSubtasks.length}" onpointerdown="event.stopPropagation()">
-          ${sortedSubtasks.map((sub, idx) => `
+          ${sortedSubtasks.map((sub, idx) => {
+            const subAction = getTaskActionType(sub);
+            let subActionBadge = '';
+            if (subAction === 'call') subActionBadge = '<span class="subtask-action-mini-badge" title="Call">📞</span>';
+            else if (subAction === 'mail') subActionBadge = '<span class="subtask-action-mini-badge" title="Mail">✉️</span>';
+            else if (subAction === 'pay') subActionBadge = '<span class="subtask-action-mini-badge" title="Paiement">💳</span>';
+
+            return `
             <div class="block-subtask-row subtask-cat-${sub.context || 'work'} ${sub.completed ? 'completed' : ''} ${idx >= baseVisibleLimit ? 'subtask-overflow-item' : ''}" 
                  draggable="true"
                  onpointerdown="event.stopPropagation()"
                  ondragstart="handleSubtaskDragStart(event, '${task.id}', '${sub.id}')"
                  ondragend="handleSubtaskDragEnd(event)"
-                 onclick="event.stopPropagation(); toggleSubtaskCompletion('${task.id}', '${sub.id}')"
-                 title="${sub.completed ? 'Marquer comme non fait' : 'Marquer comme fait'} (glisser pour déplacer)">
-              <div class="subtask-mini-checkbox ${sub.completed ? 'checked' : ''}">
+                 ondblclick="event.stopPropagation(); openSubtasksModal('${task.id}', false, '${sub.id}')"
+                 title="${sub.completed ? 'Marquer comme non fait' : 'Marquer comme fait'} (double-cliquer pour modifier, glisser pour déplacer)">
+              <div class="subtask-mini-checkbox ${sub.completed ? 'checked' : ''}"
+                   onclick="event.stopPropagation(); toggleSubtaskCompletion('${task.id}', '${sub.id}')"
+                   title="${sub.completed ? 'Marquer comme non fait' : 'Marquer comme fait'}">
                 ${sub.completed ? '✓' : ''}
               </div>
-              <span class="subtask-row-title">${renderTitleWithTagsHtml(sub.title)}</span>
+              ${subActionBadge}
+              <span class="subtask-row-title" 
+                    onclick="event.stopPropagation(); openSubtasksModal('${task.id}', false, '${sub.id}')"
+                    ondblclick="event.stopPropagation(); openSubtasksModal('${task.id}', false, '${sub.id}')"
+                    title="Cliquer pour modifier">${renderTitleWithTagsHtml(sub.title)}</span>
               <button type="button" 
                       class="btn-subtask-quick-backlog" 
                       onpointerdown="event.stopPropagation()" 
                       onclick="event.stopPropagation(); moveSubtaskToBacklog('${task.id}', '${sub.id}')" 
                       title="Déplacer vers le Backlog">📥</button>
             </div>
-          `).join('')}
+          `;}).join('')}
           ${isExpanded ? `
             <button type="button" 
                     class="block-subtask-add-btn" 
@@ -4330,7 +4372,7 @@ let planBacklogActionFilter = 'all';
 // Helper de détection intelligente du type d'action (Calls / Mails / Paiements)
 function getTaskActionType(task) {
   if (!task) return 'other';
-  if (task.actionType) return task.actionType;
+  if (task.actionType && task.actionType !== 'auto') return task.actionType;
   const title = (task.title || '').trim().toLowerCase();
   
   // 1. Tags explicites
@@ -4839,7 +4881,7 @@ function addSidebarBacklogTask() {
 // ==============================================================
 let currentSubtasksParentId = null;
 
-function openSubtasksModal(taskId, focusInput = false) {
+function openSubtasksModal(taskId, focusInput = false, targetSubtaskId = null) {
   const task = window.SpanPlanState.tasks.find(t => t.id === taskId);
   if (!task) return;
 
@@ -4875,7 +4917,17 @@ function openSubtasksModal(taskId, focusInput = false) {
   renderSubtasksModalList();
   if (overlay) overlay.style.display = 'flex';
 
-  if (focusInput) {
+  if (targetSubtaskId) {
+    setTimeout(() => {
+      enableSubtaskInlineEdit(null, targetSubtaskId);
+      const row = document.querySelector(`.subtask-interactive-row[data-subtask-id="${targetSubtaskId}"]`);
+      if (row) {
+        row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        row.classList.add('subtask-highlight-pulse');
+        setTimeout(() => row.classList.remove('subtask-highlight-pulse'), 1500);
+      }
+    }, 60);
+  } else if (focusInput) {
     setTimeout(() => {
       const input = document.getElementById('subtasksInlineAddInput');
       if (input) {
@@ -4953,7 +5005,16 @@ function renderSubtasksModalList() {
     return;
   }
 
-  listEl.innerHTML = sortedSubtasks.map(sub => `
+  listEl.innerHTML = sortedSubtasks.map(sub => {
+    const subAction = getTaskActionType(sub);
+    let subActionIcon = '⚡';
+    let subActionLabel = 'Auto';
+    if (subAction === 'call') { subActionIcon = '📞'; subActionLabel = 'Call'; }
+    else if (subAction === 'mail') { subActionIcon = '✉️'; subActionLabel = 'Mail'; }
+    else if (subAction === 'pay') { subActionIcon = '💳'; subActionLabel = 'Paiement'; }
+    else if (sub.actionType === 'other') { subActionIcon = '📦'; subActionLabel = 'Standard'; }
+
+    return `
     <div class="subtask-interactive-row ${sub.completed ? 'completed' : ''}" 
          data-subtask-id="${sub.id}"
          draggable="true"
@@ -4962,12 +5023,19 @@ function renderSubtasksModalList() {
          ondragover="handleSubtaskRowDragOver(event, '${sub.id}')"
          ondragleave="handleSubtaskRowDragLeave(event)"
          ondrop="handleSubtaskRowDrop(event, '${sub.id}')"
-         title="Glisser pour déplacer vers un autre jour, un autre bloc ou réordonner">
+         ondblclick="enableSubtaskInlineEdit(event, '${sub.id}')"
+         title="Double-cliquer pour modifier, glisser pour déplacer">
       <span class="subtask-drag-handle">⠿</span>
       <button type="button" 
               class="subtask-cat-btn cat-${sub.context || parent.context || 'work'}" 
               onclick="event.stopPropagation(); cycleSubtaskContext('${sub.id}')" 
               title="Catégorie: ${sub.context || parent.context || 'work'} (cliquer pour changer)">
+      </button>
+      <button type="button" 
+              class="subtask-action-btn action-${subAction}" 
+              onclick="event.stopPropagation(); cycleSubtaskActionType('${sub.id}')" 
+              title="Type d'action: ${subActionLabel} (cliquer pour changer)">
+        ${subActionIcon}
       </button>
       <div class="subtask-checkbox ${sub.completed ? 'checked' : ''}" 
            onclick="event.stopPropagation(); handleSubtaskModalToggle('${sub.id}')"
@@ -5005,7 +5073,7 @@ function renderSubtasksModalList() {
               onclick="event.stopPropagation(); deleteSubtask('${sub.id}')" 
               title="Supprimer la sous-tâche">✕</button>
     </div>
-  `).join('');
+  `;}).join('');
 }
 
 function enableSubtaskInlineEdit(event, subtaskId) {
@@ -5147,6 +5215,40 @@ function cycleSubtaskContext(subtaskId) {
   renderSubtasksModalList();
 }
 
+function cycleSubtaskActionType(subtaskId) {
+  if (!currentSubtasksParentId) return;
+  const parent = window.SpanPlanState.tasks.find(t => t.id === currentSubtasksParentId);
+  if (!parent || !Array.isArray(parent.subtasks)) return;
+
+  const sub = parent.subtasks.find(s => String(s.id) === String(subtaskId));
+  if (!sub) return;
+
+  // Cycle: auto (null) -> call -> mail -> pay -> other (standard) -> auto
+  const currentAction = sub.actionType || 'auto';
+  const order = ['auto', 'call', 'mail', 'pay', 'other'];
+  const nextIdx = (order.indexOf(currentAction) + 1) % order.length;
+  const nextAction = order[nextIdx];
+
+  sub.actionType = nextAction === 'auto' ? null : nextAction;
+  parent.updated_at = new Date().toISOString();
+
+  savePlanState();
+  syncSubtasksToFocus(parent);
+  renderSubtasksModalList();
+  renderCalendar();
+  if (typeof showToast === 'function') {
+    const labels = {
+      auto: '⚡ Action: Détection auto',
+      call: '📞 Action: Call',
+      mail: '✉️ Action: Mail',
+      pay: '💳 Action: Paiement',
+      other: '📦 Action: Standard'
+    };
+    showToast(labels[nextAction] || 'Action modifiée', 'info');
+  }
+}
+window.cycleSubtaskActionType = cycleSubtaskActionType;
+
 function deleteSubtask(subtaskId) {
   if (!currentSubtasksParentId) return;
   const parent = window.SpanPlanState.tasks.find(t => t.id === currentSubtasksParentId);
@@ -5223,6 +5325,7 @@ function syncSubtasksToFocus(parent) {
         title: st.title,
         completed: !!st.completed,
         category: catCapMap[subCtx] || 'Work',
+        actionType: st.actionType || null,
         estimate: 1,
         duration: 30,
         isEvent: false,
@@ -5276,7 +5379,8 @@ function submitSubtaskInlineAdd() {
     id: 'sub_' + Date.now(),
     title: title,
     completed: false,
-    context: subCtx
+    context: subCtx,
+    actionType: null
   };
   parent.subtasks.push(newSub);
   input.value = '';
@@ -5628,6 +5732,8 @@ function openCreateModalWithDefaults(dateStr = TODAY_STR, timeStr = '') {
     btn.classList.toggle('active', btn.dataset.context === editingContext);
   });
 
+  selectEditPlanAction('auto');
+
   const modal = document.getElementById('editModalOverlay');
   if (modal) modal.style.display = 'flex';
   if (titleEl) {
@@ -5688,6 +5794,8 @@ function openEditModal(id) {
   document.querySelectorAll('#modalContextPills .cat-pill').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.context === editingContext);
   });
+
+  selectEditPlanAction(task.actionType || 'auto');
 
   document.getElementById('editModalOverlay').style.display = 'flex';
 }
@@ -5767,6 +5875,7 @@ function saveTaskModal() {
       task.endTime = endTimeVal;
       task.duration = durationVal;
       task.context = editingContext;
+      task.actionType = (editingPlanActionType === 'auto') ? null : editingPlanActionType;
       task.location = locationVal;
       task.notes = notesVal;
       task.updated_at = new Date().toISOString();
@@ -5790,6 +5899,7 @@ function saveTaskModal() {
       endTime: endTimeVal,
       duration: durationVal,
       context: editingContext,
+      actionType: (editingPlanActionType === 'auto') ? null : editingPlanActionType,
       location: locationVal,
       notes: notesVal,
       completed: false,

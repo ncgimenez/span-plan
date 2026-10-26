@@ -335,6 +335,7 @@ async function loadPlanFromCloud() {
                   return {
                     ...rsub,
                     title: lmatch.title || rsub.title,
+                    actionType: lmatch.actionType !== undefined ? lmatch.actionType : rsub.actionType,
                     completed: (typeof lmatch.completed === 'boolean') ? lmatch.completed : rsub.completed
                   };
                 }

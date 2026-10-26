@@ -4520,6 +4520,92 @@ body.is-card-dragging * {
 .cat-pill.active.cat-life { background: rgba(16, 185, 129, 0.2);  border-color: rgba(16, 185, 129, 0.4); }
 .cat-pill.active.cat-fun  { background: rgba(251, 113, 133, 0.2); border-color: rgba(251, 113, 133, 0.4); }
 
+/* Action Pills in Edit Modal */
+.action-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.action-pill {
+  flex: 1;
+  min-width: 60px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--card-border);
+  color: var(--text-muted);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+.action-pill:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.action-pill.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-main);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+.action-pill.active.action-call {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.45);
+  color: #60a5fa;
+}
+.action-pill.active.action-mail {
+  background: rgba(168, 85, 247, 0.2);
+  border-color: rgba(168, 85, 247, 0.45);
+  color: #c084fc;
+}
+.action-pill.active.action-pay {
+  background: rgba(234, 179, 8, 0.2);
+  border-color: rgba(234, 179, 8, 0.45);
+  color: #facc15;
+}
+.action-pill.active.action-other {
+  background: rgba(100, 116, 139, 0.2);
+  border-color: rgba(100, 116, 139, 0.45);
+  color: #94a3b8;
+}
+
+[data-theme="light"] .action-pill {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #64748b;
+}
+[data-theme="light"] .action-pill:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #0f172a;
+}
+[data-theme="light"] .action-pill.active {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: rgba(0, 0, 0, 0.3);
+}
+[data-theme="light"] .action-pill.active.action-call {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #2563eb;
+}
+[data-theme="light"] .action-pill.active.action-mail {
+  background: #faf5ff;
+  border-color: #a855f7;
+  color: #7c3aed;
+}
+[data-theme="light"] .action-pill.active.action-pay {
+  background: #fefce8;
+  border-color: #eab308;
+  color: #b45309;
+}
+[data-theme="light"] .action-pill.active.action-other {
+  background: #f1f5f9;
+  border-color: #64748b;
+  color: #475569;
+}
+
 .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
 
 .btn-cancel {
@@ -5638,6 +5724,78 @@ body.is-card-dragging * {
 [data-theme="light"] .subtask-backlog-btn:hover {
   background: rgba(56, 189, 248, 0.12) !important;
   color: #0284c7 !important;
+}
+
+/* Subtask interactive action button and animation */
+.subtask-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.subtask-action-btn:hover {
+  transform: scale(1.15);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+.subtask-action-btn.action-call {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+.subtask-action-btn.action-mail {
+  background: rgba(168, 85, 247, 0.2);
+  border-color: rgba(168, 85, 247, 0.4);
+}
+.subtask-action-btn.action-pay {
+  background: rgba(234, 179, 8, 0.2);
+  border-color: rgba(234, 179, 8, 0.4);
+}
+.subtask-action-btn.action-other {
+  background: rgba(100, 116, 139, 0.18);
+  border-color: rgba(100, 116, 139, 0.35);
+}
+[data-theme="light"] .subtask-action-btn {
+  border-color: rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.03);
+}
+[data-theme="light"] .subtask-action-btn.action-call {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+[data-theme="light"] .subtask-action-btn.action-mail {
+  background: #faf5ff;
+  border-color: #e9d5ff;
+}
+[data-theme="light"] .subtask-action-btn.action-pay {
+  background: #fefce8;
+  border-color: #fef08a;
+}
+
+.subtask-action-mini-badge {
+  font-size: 10px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+@keyframes subtaskPulseAnim {
+  0% { background: rgba(99, 102, 241, 0.4); }
+  50% { background: rgba(99, 102, 241, 0.15); }
+  100% { background: transparent; }
+}
+.subtask-interactive-row.subtask-highlight-pulse {
+  animation: subtaskPulseAnim 1.4s ease-out;
 }
 
 .btn-subtask-quick-backlog {
