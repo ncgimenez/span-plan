@@ -115,6 +115,14 @@
           <input type="text" id="sidebarBacklogInput" placeholder="Add unscheduled task..." onkeydown="if(event.key==='Enter') addSidebarBacklogTask()">
           <button type="button" class="btn-sidebar-add" onclick="addSidebarBacklogTask()" title="Add to Backlog">+</button>
         </div>
+        <!-- QUICK ACTION CHIPS FOR NEW BACKLOG TASKS -->
+        <div class="quick-add-action-chips sidebar-backlog-action-chips" id="sidebarBacklogActionChips">
+          <span class="quick-action-chips-label">Type:</span>
+          <button type="button" class="quick-action-chip active" data-action="auto" onclick="setSidebarBacklogAction('auto')" title="Détection automatique">⚡ Auto</button>
+          <button type="button" class="quick-action-chip action-call" data-action="call" onclick="setSidebarBacklogAction('call')" title="Marquer comme Appel">📞 Call</button>
+          <button type="button" class="quick-action-chip action-mail" data-action="mail" onclick="setSidebarBacklogAction('mail')" title="Marquer comme Email">✉️ Mail</button>
+          <button type="button" class="quick-action-chip action-pay" data-action="pay" onclick="setSidebarBacklogAction('pay')" title="Marquer comme Paiement">💳 Pay</button>
+        </div>
         <!-- ACTION FILTER PILLS -->
         <div class="sidebar-action-filter-pills" id="sidebarActionFilterPills">
           <button type="button" class="plan-filter-pill active" data-filter="all" onclick="setPlanBacklogActionFilter('all')">Tous</button>
@@ -214,6 +222,14 @@
             <option value="fun">Fun</option>
           </select>
 
+          <select class="quick-select" id="quickActionSelect" title="Type d'action">
+            <option value="auto" selected>⚡ Auto</option>
+            <option value="call">📞 Call</option>
+            <option value="mail">✉️ Mail</option>
+            <option value="pay">💳 Pay</option>
+            <option value="other">📦 Standard</option>
+          </select>
+
           <button class="btn-quick-add" onclick="submitQuickAdd()">Add</button>
           <button type="button" class="btn-quick-close" onclick="toggleQuickAddBar(false)" title="Close (Esc)">✕</button>
         </div>
@@ -291,6 +307,16 @@
 
   <!-- CONTEXT MENU POPOVER FOR TASK (⋮) -->
   <div class="task-popover-menu" id="taskPopoverMenu" style="display: none;">
+    <div class="popover-action-picker">
+      <span class="popover-section-label">Type d'action :</span>
+      <div class="popover-action-btns">
+        <button type="button" class="popover-action-btn chip-call" onclick="popoverSetActionType('call')">📞 Call</button>
+        <button type="button" class="popover-action-btn chip-mail" onclick="popoverSetActionType('mail')">✉️ Mail</button>
+        <button type="button" class="popover-action-btn chip-pay" onclick="popoverSetActionType('pay')">💳 Pay</button>
+        <button type="button" class="popover-action-btn chip-other" onclick="popoverSetActionType('other')">📦 Standard</button>
+        <button type="button" class="popover-action-btn chip-auto" onclick="popoverSetActionType('auto')">⚡ Auto</button>
+      </div>
+    </div>
     <button type="button" class="popover-item" onclick="popoverAction('edit')">✏️ Edit Details</button>
     <button type="button" class="popover-item" id="popoverItemRollover" onclick="popoverAction('rollover')" style="display: none;">⟳ Reporter les sous-tâches...</button>
     <button type="button" class="popover-item" onclick="popoverAction('toggle-type')">🔄 Switch Task / Event</button>
@@ -318,6 +344,15 @@
           <button type="button" class="quick-cat-chip cat-work active" data-context="work" onclick="setQuickAddCategory('work')">Work</button>
           <button type="button" class="quick-cat-chip cat-life" data-context="life" onclick="setQuickAddCategory('life')">Life</button>
           <button type="button" class="quick-cat-chip cat-fun" data-context="fun" onclick="setQuickAddCategory('fun')">Fun</button>
+        </div>
+      </div>
+      <div class="quick-add-row" style="margin-top: 6px;">
+        <div class="quick-add-action-chips" id="quickAddPopoverActionChips">
+          <span class="quick-action-chips-label">Action:</span>
+          <button type="button" class="quick-action-chip active" data-action="auto" onclick="setQuickAddPopoverAction('auto')" title="Détection automatique">⚡ Auto</button>
+          <button type="button" class="quick-action-chip action-call" data-action="call" onclick="setQuickAddPopoverAction('call')" title="Marquer comme Appel">📞 Call</button>
+          <button type="button" class="quick-action-chip action-mail" data-action="mail" onclick="setQuickAddPopoverAction('mail')" title="Marquer comme Email">✉️ Mail</button>
+          <button type="button" class="quick-action-chip action-pay" data-action="pay" onclick="setQuickAddPopoverAction('pay')" title="Marquer comme Paiement">💳 Pay</button>
         </div>
       </div>
     </div>
@@ -860,9 +895,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=7.38"></script>
-  <script src="js/gcal.js?v=7.38"></script>
-  <script src="js/plan.js?v=7.38"></script>
-  <script src="js/app.js?v=7.38"></script>
+  <script src="js/sync.js?v=7.39"></script>
+  <script src="js/gcal.js?v=7.39"></script>
+  <script src="js/plan.js?v=7.39"></script>
+  <script src="js/app.js?v=7.39"></script>
 </body>
 </html>

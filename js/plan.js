@@ -1761,6 +1761,16 @@ function renderTimedBlocks(tasks, dateStr) {
       `;
     }
 
+    const actionType = getTaskActionType(task);
+    let blockActionTagHtml = '';
+    if (actionType === 'call') {
+      blockActionTagHtml = `<span class="plan-action-tag-badge action-call" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Action: Call (cliquer pour changer)">📞 Call</span>`;
+    } else if (actionType === 'mail') {
+      blockActionTagHtml = `<span class="plan-action-tag-badge action-mail" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Action: Mail (cliquer pour changer)">✉️ Mail</span>`;
+    } else if (actionType === 'pay') {
+      blockActionTagHtml = `<span class="plan-action-tag-badge action-pay" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Action: Paiement (cliquer pour changer)">💳 Pay</span>`;
+    }
+
     let innerContentHtml = '';
     if (isCompact) {
       innerContentHtml = `
@@ -1773,7 +1783,7 @@ function renderTimedBlocks(tasks, dateStr) {
             </div>
           ` : ''}
           <span class="compact-time">${task.time}</span>
-          <span class="schedule-block-title">${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
+          <span class="schedule-block-title">${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}${blockActionTagHtml ? ' ' + blockActionTagHtml : ''}</span>
           ${locationHtml}
           ${notesHtml}
           ${isLiveNow ? `
@@ -1798,7 +1808,7 @@ function renderTimedBlocks(tasks, dateStr) {
               ${task.completed ? '✓' : ''}
             </div>
           ` : ''}
-          <span class="schedule-block-title">${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
+          <span class="schedule-block-title">${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}${blockActionTagHtml ? ' ' + blockActionTagHtml : ''}</span>
           <div class="schedule-block-top-actions">
             ${progressPillHtml}
             <button type="button" class="btn-block-quick-add-subtask" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); quickAddSubtaskFromBlock('${task.id}')" title="Ajouter une sous-tâche">➕</button>
@@ -4178,12 +4188,19 @@ function openTaskPopover(e, id) {
   const menu = document.getElementById('taskPopoverMenu');
   if (!menu) return;
 
+  const task = window.SpanPlanState.tasks.find(t => t.id === id);
+
   const rolloverItem = document.getElementById('popoverItemRollover');
   if (rolloverItem) {
-    const task = window.SpanPlanState.tasks.find(t => t.id === id);
     const hasUnfinishedSubtasks = task && Array.isArray(task.subtasks) && task.subtasks.some(s => !s.completed);
     rolloverItem.style.display = hasUnfinishedSubtasks ? 'block' : 'none';
   }
+
+  // Update action picker buttons in popover
+  const currentAction = (task && task.actionType) ? task.actionType : 'auto';
+  menu.querySelectorAll('.popover-action-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.classList.contains(`chip-${currentAction}`));
+  });
 
   const btnRect = e.currentTarget.getBoundingClientRect();
   menu.style.display = 'flex';
@@ -4193,6 +4210,13 @@ function openTaskPopover(e, id) {
   menu.style.top = `${top}px`;
   menu.style.left = `${Math.max(10, left)}px`;
 }
+
+function popoverSetActionType(action) {
+  if (!popoverTargetTaskId) return;
+  setPlanTaskAction(popoverTargetTaskId, action);
+  closeTaskPopover();
+}
+window.popoverSetActionType = popoverSetActionType;
 
 function closeTaskPopover() {
   const menu = document.getElementById('taskPopoverMenu');
@@ -4393,11 +4417,58 @@ function getTaskActionType(task) {
   return 'other';
 }
 
+let sidebarBacklogAction = 'auto';
+
+function setSidebarBacklogAction(action) {
+  sidebarBacklogAction = action || 'auto';
+  document.querySelectorAll('#sidebarBacklogActionChips .quick-action-chip').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.action === sidebarBacklogAction);
+  });
+}
+window.setSidebarBacklogAction = setSidebarBacklogAction;
+
+function setPlanTaskAction(taskId, action) {
+  const task = (window.SpanPlanState.tasks || []).find(t => t.id === taskId);
+  if (!task) return;
+  task.actionType = (action === 'auto') ? null : action;
+  task.updated_at = new Date().toISOString();
+  savePlanState();
+  renderCalendar();
+  renderBacklogDrawer();
+  if (typeof showToast === 'function') {
+    const labels = {
+      auto: '⚡ Action: Détection auto',
+      call: '📞 Action: Call',
+      mail: '✉️ Action: Mail',
+      pay: '💳 Action: Paiement',
+      other: '📦 Action: Standard'
+    };
+    showToast(labels[action] || 'Action modifiée', 'info');
+  }
+}
+window.setPlanTaskAction = setPlanTaskAction;
+
+function cyclePlanTaskAction(taskId) {
+  const task = (window.SpanPlanState.tasks || []).find(t => t.id === taskId);
+  if (!task) return;
+  const current = task.actionType || 'auto';
+  const order = ['auto', 'call', 'mail', 'pay', 'other'];
+  const nextIdx = (order.indexOf(current) + 1) % order.length;
+  const nextType = order[nextIdx];
+  setPlanTaskAction(taskId, nextType);
+}
+window.cyclePlanTaskAction = cyclePlanTaskAction;
+
 function setPlanBacklogActionFilter(filter) {
   planBacklogActionFilter = filter;
   document.querySelectorAll('.plan-filter-pill').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.filter === filter);
   });
+  if (['call', 'mail', 'pay'].includes(filter)) {
+    setSidebarBacklogAction(filter);
+  } else if (filter === 'all') {
+    setSidebarBacklogAction('auto');
+  }
   renderBacklogDrawer();
 }
 window.setPlanBacklogActionFilter = setPlanBacklogActionFilter;
@@ -4470,9 +4541,15 @@ function renderBacklogDrawer() {
 
       const actionType = getTaskActionType(task);
       let actionTagHtml = '';
-      if (actionType === 'call') actionTagHtml = '<span class="plan-action-tag-badge action-call" onclick="event.stopPropagation(); setPlanBacklogActionFilter(\'call\')">📞 Call</span>';
-      else if (actionType === 'mail') actionTagHtml = '<span class="plan-action-tag-badge action-mail" onclick="event.stopPropagation(); setPlanBacklogActionFilter(\'mail\')">✉️ Mail</span>';
-      else if (actionType === 'pay') actionTagHtml = '<span class="plan-action-tag-badge action-pay" onclick="event.stopPropagation(); setPlanBacklogActionFilter(\'pay\')">💳 Pay</span>';
+      if (actionType === 'call') {
+        actionTagHtml = `<span class="plan-action-tag-badge action-call" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Action: Call (cliquer pour changer)">📞 Call</span>`;
+      } else if (actionType === 'mail') {
+        actionTagHtml = `<span class="plan-action-tag-badge action-mail" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Action: Mail (cliquer pour changer)">✉️ Mail</span>`;
+      } else if (actionType === 'pay') {
+        actionTagHtml = `<span class="plan-action-tag-badge action-pay" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Action: Paiement (cliquer pour changer)">💳 Pay</span>`;
+      } else {
+        actionTagHtml = `<span class="plan-action-tag-badge action-none" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Définir une action (Call, Mail, Pay)">+ Action</span>`;
+      }
 
       const li = document.createElement('li');
       li.className = `task-item cat-${task.context || 'work'} ${isEvent ? 'is-event' : ''} ${completedClass} ${isSelected ? 'is-selected' : ''}`;
@@ -4803,10 +4880,14 @@ function submitQuickAdd() {
   rawText = rawText.replace(/\s+/g, ' ').trim();
   if (!rawText) rawText = extractedType === 'event' ? 'Untitled Event' : 'Untitled Task';
 
+  const actionSelect = document.getElementById('quickActionSelect');
+  let chosenAction = (actionSelect && actionSelect.value !== 'auto') ? actionSelect.value : null;
+
   const newTask = {
     id: 'p_' + Date.now(),
     title: rawText,
     type: extractedType,
+    actionType: chosenAction,
     date: targetDate,
     time: extractedTime,
     duration: extractedDuration,
@@ -4817,6 +4898,7 @@ function submitQuickAdd() {
 
   window.SpanPlanState.tasks.unshift(newTask);
   if (input) input.value = '';
+  if (actionSelect) actionSelect.value = 'auto';
   savePlanState();
 
   if (typeof showToast === 'function') {
@@ -4835,6 +4917,7 @@ function addBacklogTask() {
     id: 'p_' + Date.now(),
     title: text,
     type: 'task',
+    actionType: (sidebarBacklogAction === 'auto') ? null : sidebarBacklogAction,
     date: null,
     time: '',
     duration: 45,
@@ -4860,6 +4943,7 @@ function addSidebarBacklogTask() {
     id: 'p_' + Date.now(),
     title: text,
     type: 'task',
+    actionType: (sidebarBacklogAction === 'auto') ? null : sidebarBacklogAction,
     date: null,
     time: '',
     duration: 45,
@@ -5422,6 +5506,16 @@ let quickAddState = {
   context: 'work'
 };
 
+let quickAddPopoverAction = 'auto';
+
+function setQuickAddPopoverAction(action) {
+  quickAddPopoverAction = action || 'auto';
+  document.querySelectorAll('#quickAddPopoverActionChips .quick-action-chip').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.action === quickAddPopoverAction);
+  });
+}
+window.setQuickAddPopoverAction = setQuickAddPopoverAction;
+
 function openQuickAddPopover(dateStr, timeStr, clickX, clickY) {
   closeQuickAddPopover();
   if (selectedTaskIds.size > 0 && marqueeMoved) return;
@@ -5436,6 +5530,7 @@ function openQuickAddPopover(dateStr, timeStr, clickX, clickY) {
   quickAddState.timeStr = timeStr || '09:00';
   quickAddState.type = 'event';
   quickAddState.context = currentContextFilter === 'all' ? 'work' : normalizePlanContext(currentContextFilter);
+  setQuickAddPopoverAction('auto');
 
   // Preview date & horaire
   const [hStr, mStr] = (quickAddState.timeStr || '09:00').split(':');
@@ -5550,6 +5645,7 @@ function saveQuickAdd() {
     duration: duration,
     context: context,
     type: type,
+    actionType: (quickAddPopoverAction === 'auto') ? null : quickAddPopoverAction,
     completed: false,
     subtasks: []
   };
