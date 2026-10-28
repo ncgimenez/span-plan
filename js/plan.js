@@ -7161,9 +7161,59 @@ window.addEventListener('DOMContentLoaded', () => {
 
   setTimeout(applyDynamicScroll, 120);
 
-  setInterval(() => {
-    if (currentTimelineOffset === 0) {
-      renderPlanGrid();
+  // Smooth, high-performance timeline marker update (zero DOM destruction)
+  function updateNowTimelinePosition() {
+    const now = new Date();
+    const currentTodayStr = (typeof getLocalDateString === 'function') ? getLocalDateString(now) : TODAY_STR;
+    
+    // If midnight has passed, perform a clean full calendar day-roll
+    if (currentTodayStr !== TODAY_STR) {
+      if (typeof refreshCalendarDayRoll === 'function') {
+        refreshCalendarDayRoll();
+      } else {
+        renderPlanGrid();
+      }
+      return;
     }
-  }, 60000);
+
+    // Reposition red marker smoothly without tearing down the calendar DOM
+    if (currentTimelineOffset === 0) {
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const startMinutes = START_HOUR * 60;
+      const endMinutes = (END_HOUR + 1) * 60;
+
+      if (currentMinutes >= startMinutes && currentMinutes <= endMinutes) {
+        const top = ((currentMinutes - startMinutes) / 60) * HOUR_HEIGHT;
+        const marker = document.querySelector('.schedule-grid-canvas .now-timeline-marker');
+        if (marker) {
+          marker.style.top = `${top}px`;
+        } else {
+          const todayCanvas = document.getElementById(`canvas_${TODAY_STR}`);
+          if (todayCanvas && !todayCanvas.querySelector('.now-timeline-marker')) {
+            const markerEl = document.createElement('div');
+            markerEl.className = 'now-timeline-marker';
+            markerEl.style.top = `${top}px`;
+            markerEl.innerHTML = '<span class="now-dot"></span>';
+            todayCanvas.appendChild(markerEl);
+          }
+        }
+
+        // Smoothly update live remaining minutes in active blocks without re-rendering
+        document.querySelectorAll('.schedule-block-item.is-live-now').forEach(block => {
+          const remEl = block.querySelector('.live-meta-remaining');
+          const taskId = block.getAttribute('data-task-id');
+          if (remEl && taskId) {
+            const task = (window.SpanPlanState.tasks || []).find(t => String(t.id) === String(taskId));
+            if (task && task.time && task.duration) {
+              const startM = (typeof timeToMinutes === 'function') ? timeToMinutes(task.time) : 0;
+              const rem = Math.max(0, (startM + parseInt(task.duration)) - currentMinutes);
+              remEl.textContent = `${rem}m`;
+            }
+          }
+        });
+      }
+    }
+  }
+
+  setInterval(updateNowTimelinePosition, 30000);
 });
