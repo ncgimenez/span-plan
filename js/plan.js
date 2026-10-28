@@ -769,14 +769,110 @@ function executeAutoRollover() {
   const currentToday = getLocalDateString();
   let hasChanges = false;
   const allTasks = window.SpanPlanState.tasks || [];
-  const extractedSubtasks = [];
+  const recreatedBacklogBlocks = [];
+  const modifiedParents = [];
 
   allTasks.forEach(task => {
     if (!task || !task.date) return;
     if (task.recurrence && task.recurrence !== 'none') return;
+    if (task.date >= currentToday) return;
 
-    // 1. Tâches seules du passé non réalisées -> Déplacées directement dans le Backlog (Inbox sans date)
-    if (task.type !== 'event' && task.date < currentToday && !task.completed) {
+    const hasSubtasks = Array.isArray(task.subtasks) && task.subtasks.length > 0;
+
+    if (hasSubtasks) {
+      const completedSubtasks = task.subtasks.filter(s => !!s.completed);
+      const unfinishedSubtasks = task.subtasks.filter(s => !s.completed);
+
+      // Si toutes les sous-tâches sont faites, la tâche est complétée et reste dans l'historique
+      if (unfinishedSubtasks.length === 0) {
+        if (!task.completed) {
+          task.completed = true;
+          task.updated_at = new Date().toISOString();
+          hasChanges = true;
+        }
+        return;
+      }
+
+      // Si aucune sous-tâche n'a été réalisée :
+      if (completedSubtasks.length === 0) {
+        if (task.type === 'event') {
+          // Un événement passé reste sur le calendrier pour l'historique (sans sous-tâches)
+          task.subtasks = [];
+          task.updated_at = new Date().toISOString();
+          modifiedParents.push(task);
+
+          // Le bloc est recréé dans le Backlog avec toutes ses sous-tâches restantes groupées ensemble
+          recreatedBacklogBlocks.push({
+            id: 'task_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36),
+            title: task.title,
+            type: 'task',
+            date: null,
+            endDate: null,
+            time: '',
+            allDay: false,
+            duration: task.duration || 60,
+            context: task.context || 'work',
+            important: !!task.important,
+            completed: false,
+            subtasks: unfinishedSubtasks.map(s => ({
+              id: String(s.id || ('sub_' + Math.random().toString(36).substr(2, 9))),
+              title: (s.title || 'Untitled task').trim(),
+              context: s.context || task.context || 'work',
+              completed: false
+            })),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+          hasChanges = true;
+        } else {
+          // Bloc de tâches : aucune faite, le bloc entier passe au Backlog avec toutes ses sous-tâches groupées
+          task.date = null;
+          task.time = '';
+          task.endDate = null;
+          task.isRollover = false;
+          task.completed = false;
+          task.updated_at = new Date().toISOString();
+          hasChanges = true;
+          modifiedParents.push(task);
+        }
+        return;
+      }
+
+      // Si CERTAINES sous-tâches ont été faites et d'AUTRES non :
+      // 1. Le bloc d'origine reste sur sa date passée avec les sous-tâches faites (historique préservé)
+      task.subtasks = completedSubtasks;
+      task.completed = true;
+      task.updated_at = new Date().toISOString();
+      modifiedParents.push(task);
+      hasChanges = true;
+
+      // 2. Un NOUVEAU bloc commun est recréé dans le Backlog, contenant TOUTES les sous-tâches restantes ensemble
+      recreatedBacklogBlocks.push({
+        id: 'task_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36),
+        title: task.title,
+        type: 'task',
+        date: null,
+        endDate: null,
+        time: '',
+        allDay: false,
+        duration: task.duration || 60,
+        context: task.context || 'work',
+        important: !!task.important,
+        completed: false,
+        subtasks: unfinishedSubtasks.map(s => ({
+          id: String(s.id || ('sub_' + Math.random().toString(36).substr(2, 9))),
+          title: (s.title || 'Untitled task').trim(),
+          context: s.context || task.context || 'work',
+          completed: false
+        })),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+      return;
+    }
+
+    // Tâche ordinaire seule non complétée -> Déplacée dans le Backlog
+    if (task.type !== 'event' && !task.completed) {
       task.date = null;
       task.time = '';
       task.endDate = null;
@@ -784,68 +880,29 @@ function executeAutoRollover() {
       task.updated_at = new Date().toISOString();
       hasChanges = true;
     }
-
-    // 2. Sous-tâches non faites restées dans des blocs/événements passés -> Extraites vers le Backlog
-    if (task.date < currentToday && Array.isArray(task.subtasks) && task.subtasks.length > 0) {
-      const unfinished = task.subtasks.filter(s => !s.completed);
-      if (unfinished.length > 0) {
-        // Le bloc passé conserve uniquement ses sous-tâches terminées (pour l'historique de l'agenda)
-        task.subtasks = task.subtasks.filter(s => !!s.completed);
-        task.updated_at = new Date().toISOString();
-        hasChanges = true;
-
-        unfinished.forEach(sub => {
-          extractedSubtasks.push({
-            id: String(sub.id || ('sub_' + Math.random().toString(36).substr(2, 9))),
-            title: (sub.title || 'Untitled task').trim(),
-            context: sub.context || task.context || 'work',
-            completed: false
-          });
-        });
-      }
-    }
   });
 
-  // Insérer ou mettre à jour les sous-tâches extraites comme tâches racines du Backlog
-  if (extractedSubtasks.length > 0) {
-    extractedSubtasks.forEach(sub => {
-      let existingRoot = allTasks.find(t => String(t.id) === sub.id || (t.focusId && String(t.focusId) === sub.id));
-      if (existingRoot) {
-        existingRoot.date = null;
-        existingRoot.endDate = null;
-        existingRoot.time = '';
-        existingRoot.allDay = false;
-        existingRoot.completed = false;
-        existingRoot.title = sub.title;
-        existingRoot.context = sub.context;
-        existingRoot.updated_at = new Date().toISOString();
-      } else {
-        const newBacklogTask = {
-          id: sub.id,
-          title: sub.title,
-          date: null,
-          endDate: null,
-          time: '',
-          allDay: false,
-          type: 'task',
-          context: sub.context,
-          completed: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          subtasks: []
-        };
-        allTasks.unshift(newBacklogTask);
+  // Insérer les blocs recréés au début du Backlog
+  if (recreatedBacklogBlocks.length > 0) {
+    recreatedBacklogBlocks.forEach(newBlock => {
+      allTasks.unshift(newBlock);
+      if (typeof syncSubtasksToFocus === 'function') {
+        syncSubtasksToFocus(newBlock);
       }
     });
-    hasChanges = true;
+  }
+
+  // Mettre à jour Focus pour les parents modifiés
+  if (modifiedParents.length > 0 && typeof syncSubtasksToFocus === 'function') {
+    modifiedParents.forEach(p => syncSubtasksToFocus(p));
   }
 
   if (hasChanges) {
     savePlanState();
     renderPlanGrid();
     renderBacklogDrawer();
-    if (typeof showToast === 'function' && extractedSubtasks.length > 0) {
-      showToast(`${extractedSubtasks.length} tâche${extractedSubtasks.length > 1 ? 's' : ''} d'hier déplacée${extractedSubtasks.length > 1 ? 's' : ''} dans le Backlog`, 'info');
+    if (typeof showToast === 'function' && recreatedBacklogBlocks.length > 0) {
+      showToast(`${recreatedBacklogBlocks.length} bloc${recreatedBacklogBlocks.length > 1 ? 's' : ''} recréé${recreatedBacklogBlocks.length > 1 ? 's' : ''} dans le Backlog avec les tâches restantes`, 'info');
     }
   }
 }
@@ -1446,10 +1503,59 @@ function deleteTask(id) {
 function moveToBacklog(id) {
   const task = window.SpanPlanState.tasks.find(t => t.id === id);
   if (!task) return;
+
+  const hasSubtasks = Array.isArray(task.subtasks) && task.subtasks.length > 0;
+  if (hasSubtasks) {
+    const completedSubtasks = task.subtasks.filter(s => !!s.completed);
+    const unfinishedSubtasks = task.subtasks.filter(s => !s.completed);
+
+    // Si certaines sous-tâches sont faites et d'autres non : scinder pour conserver l'historique sur le jour
+    if (completedSubtasks.length > 0 && unfinishedSubtasks.length > 0 && task.date) {
+      task.subtasks = completedSubtasks;
+      task.completed = true;
+      task.updated_at = new Date().toISOString();
+
+      const newBlock = {
+        id: 'task_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36),
+        title: task.title,
+        type: 'task',
+        date: null,
+        endDate: null,
+        time: '',
+        allDay: false,
+        duration: task.duration || 60,
+        context: task.context || 'work',
+        important: !!task.important,
+        completed: false,
+        subtasks: unfinishedSubtasks.map(s => ({
+          id: String(s.id || ('sub_' + Math.random().toString(36).substr(2, 9))),
+          title: (s.title || 'Untitled task').trim(),
+          context: s.context || task.context || 'work',
+          completed: false
+        })),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      window.SpanPlanState.tasks.unshift(newBlock);
+      if (typeof syncSubtasksToFocus === 'function') {
+        syncSubtasksToFocus(task);
+        syncSubtasksToFocus(newBlock);
+      }
+      savePlanState();
+      renderPlanGrid();
+      renderBacklogDrawer();
+      return;
+    }
+  }
+
   task.date = null;
   task.time = '';
+  task.endDate = null;
   task.isRollover = false;
+  task.updated_at = new Date().toISOString();
   savePlanState();
+  renderPlanGrid();
+  renderBacklogDrawer();
 }
 
 function scheduleTaskDirectly(id, targetDate) {

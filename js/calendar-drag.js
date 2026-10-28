@@ -493,13 +493,58 @@ function handleBlockPointerUp(e) {
       let movedCount = 0;
       const movedTitles = [];
       dragInitialTops.forEach(info => {
-        info.task.date = null;
-        info.task.endDate = null;
-        info.task.time = '';
-        info.task.allDay = false;
-        info.task.isRollover = false;
-        info.task.updated_at = new Date().toISOString();
-        movedTitles.push(info.task.title);
+        const task = info.task;
+        const hasSubtasks = Array.isArray(task.subtasks) && task.subtasks.length > 0;
+        if (hasSubtasks) {
+          const completedSubtasks = task.subtasks.filter(s => !!s.completed);
+          const unfinishedSubtasks = task.subtasks.filter(s => !s.completed);
+
+          if (completedSubtasks.length > 0 && unfinishedSubtasks.length > 0 && task.date) {
+            // Conserver l'historique des sous-tâches faites sur le jour
+            task.subtasks = completedSubtasks;
+            task.completed = true;
+            task.updated_at = new Date().toISOString();
+
+            // Créer le nouveau bloc regroupant toutes les sous-tâches restantes dans le Backlog
+            const newBlock = {
+              id: 'task_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36),
+              title: task.title,
+              type: 'task',
+              date: null,
+              endDate: null,
+              time: '',
+              allDay: false,
+              duration: task.duration || 60,
+              context: task.context || 'work',
+              important: !!task.important,
+              completed: false,
+              subtasks: unfinishedSubtasks.map(s => ({
+                id: String(s.id || ('sub_' + Math.random().toString(36).substr(2, 9))),
+                title: (s.title || 'Untitled task').trim(),
+                context: s.context || task.context || 'work',
+                completed: false
+              })),
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+            window.SpanPlanState.tasks.unshift(newBlock);
+            if (typeof syncSubtasksToFocus === 'function') {
+              syncSubtasksToFocus(task);
+              syncSubtasksToFocus(newBlock);
+            }
+            movedTitles.push(task.title);
+            movedCount++;
+            return;
+          }
+        }
+
+        task.date = null;
+        task.endDate = null;
+        task.time = '';
+        task.allDay = false;
+        task.isRollover = false;
+        task.updated_at = new Date().toISOString();
+        movedTitles.push(task.title);
         movedCount++;
       });
 
@@ -2303,6 +2348,52 @@ function handleDropToBacklog(e) {
 
   const task = window.SpanPlanState.tasks.find(t => t.id === effectiveTaskId);
   if (task) {
+    const hasSubtasks = Array.isArray(task.subtasks) && task.subtasks.length > 0;
+    if (hasSubtasks) {
+      const completedSubtasks = task.subtasks.filter(s => !!s.completed);
+      const unfinishedSubtasks = task.subtasks.filter(s => !s.completed);
+
+      if (completedSubtasks.length > 0 && unfinishedSubtasks.length > 0 && task.date) {
+        task.subtasks = completedSubtasks;
+        task.completed = true;
+        task.updated_at = new Date().toISOString();
+
+        const newBlock = {
+          id: 'task_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36),
+          title: task.title,
+          type: 'task',
+          date: null,
+          endDate: null,
+          time: '',
+          allDay: false,
+          duration: task.duration || 60,
+          context: task.context || 'work',
+          important: !!task.important,
+          completed: false,
+          subtasks: unfinishedSubtasks.map(s => ({
+            id: String(s.id || ('sub_' + Math.random().toString(36).substr(2, 9))),
+            title: (s.title || 'Untitled task').trim(),
+            context: s.context || task.context || 'work',
+            completed: false
+          })),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        window.SpanPlanState.tasks.unshift(newBlock);
+        if (typeof syncSubtasksToFocus === 'function') {
+          syncSubtasksToFocus(task);
+          syncSubtasksToFocus(newBlock);
+        }
+        savePlanState();
+        if (typeof syncPlanToCloud === 'function') syncPlanToCloud();
+        if (typeof showToast === 'function') {
+          showToast(`Sous-tâches restantes de "${task.title}" déplacées dans le Backlog`, 'info');
+        }
+        draggedTaskId = null;
+        return;
+      }
+    }
+
     task.date = null;
     task.endDate = null;
     task.time = '';

@@ -141,7 +141,7 @@
 [data-theme="light"] .schedule-block-item:not(.is-event) {
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.09);
-  border-right: 3.5px solid #94a3b8;
+  border-left: 3.5px solid #94a3b8;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
@@ -152,24 +152,27 @@
 }
 
 [data-theme="light"] .schedule-block-item:not(.is-event).cat-work {
-  border-right-color: #6366f1;
+  border-left-color: #6366f1;
 }
 [data-theme="light"] .schedule-block-item:not(.is-event).cat-work:hover {
   border-color: rgba(99, 102, 241, 0.35);
+  border-left-color: #6366f1;
 }
 
 [data-theme="light"] .schedule-block-item:not(.is-event).cat-life {
-  border-right-color: #059669;
+  border-left-color: #059669;
 }
 [data-theme="light"] .schedule-block-item:not(.is-event).cat-life:hover {
   border-color: rgba(5, 150, 105, 0.35);
+  border-left-color: #059669;
 }
 
 [data-theme="light"] .schedule-block-item:not(.is-event).cat-fun {
-  border-right-color: #d97706;
+  border-left-color: #d97706;
 }
 [data-theme="light"] .schedule-block-item:not(.is-event).cat-fun:hover {
   border-color: rgba(217, 119, 6, 0.35);
+  border-left-color: #d97706;
 }
 
 /* ÉVÉNEMENTS EN MODE CLAIR (PASTEL SUBTIL + TEXTE SOMBRE SATURÉ) */
@@ -180,7 +183,7 @@
 [data-theme="light"] .schedule-block-item.is-event.cat-work {
   background: #f0f4ff;
   border: 1px solid rgba(99, 102, 241, 0.22);
-  border-right: 3.5px solid #6366f1;
+  border-left: 3.5px solid #6366f1;
 }
 [data-theme="light"] .schedule-block-item.is-event.cat-work .schedule-block-title {
   color: #1e1b4b !important;
@@ -192,7 +195,7 @@
 [data-theme="light"] .schedule-block-item.is-event.cat-life {
   background: #ecfdf5;
   border: 1px solid rgba(5, 150, 105, 0.22);
-  border-right: 3.5px solid #059669;
+  border-left: 3.5px solid #059669;
 }
 [data-theme="light"] .schedule-block-item.is-event.cat-life .schedule-block-title {
   color: #064e3b !important;
@@ -204,7 +207,7 @@
 [data-theme="light"] .schedule-block-item.is-event.cat-fun {
   background: #fffbeb;
   border: 1px solid rgba(217, 119, 6, 0.22);
-  border-right: 3.5px solid #d97706;
+  border-left: 3.5px solid #d97706;
 }
 [data-theme="light"] .schedule-block-item.is-event.cat-fun .schedule-block-title {
   color: #78350f !important;
@@ -2384,8 +2387,8 @@ body {
 }
 
 .cal-allday-ribbon.cat-fun {
-  background: linear-gradient(90deg, #e11d48 0%, #fb7185 100%);
-  border: 1px solid rgba(253, 164, 175, 0.3);
+  background: linear-gradient(90deg, #d97706 0%, #f59e0b 100%);
+  border: 1px solid rgba(251, 191, 36, 0.3);
 }
 
 .cal-allday-ribbon.is-multiday-span {
@@ -2924,32 +2927,35 @@ body {
   cursor: grabbing;
 }
 
-/* TÂCHES ORDINAIRES (CARTE SOMBRE POLIE AVEC LISERÉ CATÉGORIE SUR LE CÔTÉ DROIT) */
+/* TÂCHES ORDINAIRES (CARTE SOMBRE POLIE AVEC LISERÉ CATÉGORIE SUR LE CÔTÉ GAUCHE) */
 .schedule-block-item:not(.is-event) {
   background: rgba(24, 24, 27, 0.94);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-right: 3px solid var(--cat-none, #71717a);
+  border-left: 3.5px solid var(--cat-none, #71717a);
 }
 
 .schedule-block-item:not(.is-event).cat-work {
-  border-right-color: var(--color-work);
+  border-left-color: var(--color-work);
 }
 .schedule-block-item:not(.is-event).cat-work:hover {
   border-color: rgba(129, 140, 248, 0.3);
+  border-left-color: var(--color-work);
 }
 
 .schedule-block-item:not(.is-event).cat-life {
-  border-right-color: var(--color-life);
+  border-left-color: var(--color-life);
 }
 .schedule-block-item:not(.is-event).cat-life:hover {
   border-color: rgba(16, 185, 129, 0.3);
+  border-left-color: var(--color-life);
 }
 
 .schedule-block-item:not(.is-event).cat-fun {
-  border-right-color: var(--color-fun);
+  border-left-color: var(--color-fun);
 }
 .schedule-block-item:not(.is-event).cat-fun:hover {
   border-color: rgba(245, 158, 11, 0.3);
+  border-left-color: var(--color-fun);
 }
 
 .schedule-block-item.rollover .schedule-block-title {
@@ -2967,7 +2973,7 @@ body {
 }
 
 /* ==============================================================
-   ÉVÉNEMENTS (GLASS TINT SÉDUISANT AVEC BORDURE DROITE DE CATÉGORIE)
+   ÉVÉNEMENTS (GLASS TINT SÉDUISANT AVEC BORDURE GAUCHE DE CATÉGORIE)
    ============================================================== */
 .schedule-block-item.is-event {
   border-radius: 8px;
@@ -2980,19 +2986,19 @@ body {
 .schedule-block-item.is-event.cat-work {
   background: linear-gradient(145deg, rgba(99, 102, 241, 0.12) 0%, rgba(79, 70, 229, 0.05) 100%);
   border-color: rgba(129, 140, 248, 0.25);
-  border-right: 3px solid var(--color-work);
+  border-left: 3.5px solid var(--color-work);
 }
 
 .schedule-block-item.is-event.cat-life {
   background: linear-gradient(145deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.05) 100%);
   border-color: rgba(52, 211, 153, 0.25);
-  border-right: 3px solid var(--color-life);
+  border-left: 3.5px solid var(--color-life);
 }
 
 .schedule-block-item.is-event.cat-fun {
   background: linear-gradient(145deg, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.05) 100%);
   border-color: rgba(245, 158, 11, 0.25);
-  border-right: 3px solid var(--color-fun);
+  border-left: 3.5px solid var(--color-fun);
 }
 
 .schedule-block-item.is-event:hover {
@@ -3182,8 +3188,8 @@ body {
 }
 
 .block-subtask-row.subtask-cat-fun .subtask-mini-checkbox.checked {
-  background: #fb7185;
-  border-color: #fb7185;
+  background: #f59e0b;
+  border-color: #f59e0b;
 }
 
 .subtask-mini-checkbox:hover {
@@ -4079,7 +4085,7 @@ body.is-card-dragging * {
 .task-item {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-right: 3.5px solid rgba(255, 255, 255, 0.2);
+  border-left: 3.5px solid rgba(255, 255, 255, 0.2);
   border-radius: 10px;
   padding: 8px 10px;
   cursor: grab;
@@ -4096,9 +4102,9 @@ body.is-card-dragging * {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
-.task-item.cat-work { border-right-color: var(--color-work) !important; }
-.task-item.cat-life { border-right-color: var(--color-life) !important; }
-.task-item.cat-fun  { border-right-color: var(--color-fun) !important;  }
+.task-item.cat-work { border-left-color: var(--color-work) !important; }
+.task-item.cat-life { border-left-color: var(--color-life) !important; }
+.task-item.cat-fun  { border-left-color: var(--color-fun) !important;  }
 
 .task-row-main {
   display: flex;
@@ -4653,9 +4659,9 @@ body.is-card-dragging * {
 }
 
 .quick-cat-chip.cat-fun.active {
-  background: rgba(251, 113, 133, 0.25);
-  border-color: #fb7185;
-  color: #fda4af;
+  background: rgba(245, 158, 11, 0.25);
+  border-color: #f59e0b;
+  color: #fcd34d;
 }
 
 .quick-add-footer {
@@ -6167,7 +6173,7 @@ body.is-card-dragging * {
 
 .subtask-cat-btn.cat-work { background: #818cf8; }
 .subtask-cat-btn.cat-life { background: #10b981; }
-.subtask-cat-btn.cat-fun  { background: #fb7185; }
+.subtask-cat-btn.cat-fun  { background: #f59e0b; }
 
 .subtask-checkbox {
   width: 16px;
@@ -7358,21 +7364,31 @@ body.is-dragging-subtask .cal-allday-drop-cell.drag-over {
 }
 
 /* ==============================================================
-   TÂCHES & ÉVÉNEMENTS IMPORTANTS (LISERÉ VERTICAL ROUGE VERMILLON ÉPURÉ)
-   Zéro emoji - Bordure gauche franche et symétrique avec la catégorie à droite
+   TÂCHES & ÉVÉNEMENTS IMPORTANTS (TITRE ÉCRIT EN ROUGE ÉPURÉ)
+   Zéro emoji - Bordure de catégorie naturelle préservée à gauche
    ============================================================== */
-.schedule-block-item.is-important {
-  border-left: 3.5px solid var(--brick-important) !important;
-  box-shadow: 0 2px 12px var(--brick-important-glow), 0 1px 4px rgba(0, 0, 0, 0.25) !important;
+.schedule-block-item.is-important .schedule-block-title,
+.cal-allday-ribbon.is-important .cal-allday-title,
+.task-item.is-important .task-text {
+  color: #f87171 !important;
+  font-weight: 650;
 }
 
-.cal-allday-ribbon.is-important {
-  border-left: 3.5px solid var(--brick-important) !important;
-  box-shadow: 0 2px 10px var(--brick-important-glow) !important;
+[data-theme="light"] .schedule-block-item.is-important .schedule-block-title,
+[data-theme="light"] .cal-allday-ribbon.is-important .cal-allday-title,
+[data-theme="light"] .task-item.is-important .task-text {
+  color: #dc2626 !important;
+  font-weight: 650;
 }
 
-.task-item.is-important {
-  position: relative;
-  border-left: 3.5px solid var(--brick-important) !important;
-  box-shadow: 0 1px 8px var(--brick-important-glow) !important;
+.schedule-block-item.is-important.is-completed .schedule-block-title,
+.task-item.is-important.completed .task-text {
+  color: rgba(248, 113, 113, 0.5) !important;
+  text-decoration: line-through;
+}
+
+[data-theme="light"] .schedule-block-item.is-important.is-completed .schedule-block-title,
+[data-theme="light"] .task-item.is-important.completed .task-text {
+  color: rgba(220, 38, 38, 0.5) !important;
+  text-decoration: line-through;
 }
