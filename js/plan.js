@@ -1200,7 +1200,7 @@ function renderAllDayContinuousRibbonHtml(visibleDates) {
     }
 
     return `
-      <div class="cal-allday-ribbon cat-${task.context || 'work'} ${task.completed ? 'completed' : ''} ${multiDayClasses}"
+      <div class="cal-allday-ribbon cat-${task.context || 'work'} ${task.completed ? 'completed' : ''} ${multiDayClasses} ${task.important ? 'is-important' : ''}"
            id="allday_${task.id}"
            style="grid-column: ${colStart + 1} / ${colEnd + 2}; grid-row: ${track + 1}; z-index: 2;"
            draggable="true"
@@ -1933,8 +1933,10 @@ function renderTimedBlocks(tasks, dateStr) {
     const notesTooltip = (task.notes && task.notes.trim()) ? `\n📝 ${task.notes.trim().slice(0, 100)}` : '';
     const locTooltip = (task.location && task.location.trim()) ? `\n📍 ${task.location.trim()}` : '';
 
+    const importantClass = task.important ? 'is-important' : '';
+
     return `
-      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass} ${completedClass} ${isCompact ? 'is-compact' : ''} ${hasSubtasksClass} ${shortBlockClass} ${expandedClass} ${narrowColClass} ${overnightClass}" 
+      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass} ${completedClass} ${isCompact ? 'is-compact' : ''} ${hasSubtasksClass} ${shortBlockClass} ${expandedClass} ${narrowColClass} ${overnightClass} ${importantClass}" 
            id="block_${task.id}${isContinuation ? '_cont' : ''}"
            data-task-id="${task.id}"
            data-date="${dateStr}"
@@ -2035,8 +2037,10 @@ function renderUnscheduledList(tasks) {
       ? `<span class="event-progress-pill" onclick="event.stopPropagation(); openSubtasksModal('${task.id}')" title="Subtasks (${doneSubCount}/${childSubtasks.length})">${doneSubCount}/${childSubtasks.length}</span>` 
       : '';
 
+    const importantClass = task.important ? 'is-important' : '';
+
     return `
-      <li class="task-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${isSelected ? 'is-selected' : ''}"
+      <li class="task-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${isSelected ? 'is-selected' : ''} ${importantClass}"
           draggable="true"
           ondragstart="handleDragStart(event, '${task.id}')"
           ondragend="handleDragEnd(event)">
@@ -4631,6 +4635,11 @@ function openTaskPopover(e, id) {
     rolloverItem.style.display = hasUnfinishedSubtasks ? 'block' : 'none';
   }
 
+  const importantText = document.getElementById('popoverImportantText');
+  if (importantText) {
+    importantText.textContent = (task && task.important) ? "Retirer l'importance (I)" : "Marquer comme important (I)";
+  }
+
   // Update action picker buttons in popover
   const currentAction = (task && task.actionType) ? task.actionType : 'auto';
   menu.querySelectorAll('.popover-action-btn').forEach(btn => {
@@ -4709,6 +4718,18 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
+  // ↵ Enter dans la modale d'édition : sauvegarder immédiatement (sauf saut de ligne standard dans le textarea de notes)
+  const editModal = document.getElementById('editModalOverlay');
+  const isEditModalOpen = editModal && window.getComputedStyle(editModal).display !== 'none';
+  if (isEditModalOpen && e.key === 'Enter') {
+    const isNotesTextarea = e.target && e.target.id === 'editTaskNotes';
+    if (!isNotesTextarea || (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      saveTaskModal();
+      return;
+    }
+  }
+
   // ⌘B / Ctrl+B: Toggle Sidebar
   if ((e.metaKey || e.ctrlKey) && (e.key === 'b' || e.key === 'B')) {
     e.preventDefault();
@@ -4741,7 +4762,21 @@ window.addEventListener('keydown', (e) => {
 
   // Raccourcis une touche (hors saisie)
   if (!isTyping && !e.metaKey && !e.ctrlKey && !e.altKey) {
-    if (e.key === '[') {
+    if (e.key === 'i' || e.key === 'I' || e.key === '!') {
+      e.preventDefault();
+      toggleSelectedTasksImportant();
+    } else if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (selectedTaskIds && selectedTaskIds.size > 0) {
+        e.preventDefault();
+        deleteSelectedTasks();
+      }
+    } else if (e.key === 'Enter') {
+      if (selectedTaskIds && selectedTaskIds.size === 1) {
+        e.preventDefault();
+        const singleId = Array.from(selectedTaskIds)[0];
+        openEditModal(singleId);
+      }
+    } else if (e.key === '[') {
       e.preventDefault();
       toggleSidebar();
     } else if (e.key === '1') {
@@ -4772,6 +4807,40 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+function toggleSelectedTasksImportant() {
+  const targetIds = (selectedTaskIds && selectedTaskIds.size > 0)
+    ? Array.from(selectedTaskIds)
+    : (popoverTargetTaskId ? [popoverTargetTaskId] : []);
+
+  if (targetIds.length === 0) {
+    if (typeof showToast === 'function') {
+      showToast("Sélectionnez d'abord un élément pour marquer son importance (Touche I)", 'info');
+    }
+    return;
+  }
+
+  const tasks = window.SpanPlanState.tasks.filter(t => targetIds.includes(t.id));
+  if (tasks.length === 0) return;
+
+  const hasUnimportant = tasks.some(t => !t.important);
+  const newStatus = hasUnimportant;
+
+  tasks.forEach(t => {
+    t.important = newStatus;
+    t.updated_at = new Date().toISOString();
+  });
+
+  savePlanState();
+
+  if (typeof showToast === 'function') {
+    const msg = newStatus
+      ? (tasks.length > 1 ? `${tasks.length} éléments marqués importants ⌝` : `"${tasks[0].title}" marqué important ⌝`)
+      : (tasks.length > 1 ? `Importance retirée pour ${tasks.length} éléments` : `Importance retirée`);
+    showToast(msg, 'info');
+  }
+}
+window.toggleSelectedTasksImportant = toggleSelectedTasksImportant;
+
 function popoverAction(action) {
   const id = popoverTargetTaskId;
   closeTaskPopover();
@@ -4779,6 +4848,17 @@ function popoverAction(action) {
 
   if (action === 'edit') {
     openEditModal(id);
+  } else if (action === 'toggle-important') {
+    const task = window.SpanPlanState.tasks.find(t => t.id === id);
+    if (task) {
+      task.important = !task.important;
+      task.updated_at = new Date().toISOString();
+      savePlanState();
+      if (typeof showToast === 'function') {
+        showToast(task.important ? 'Marqué important ⌝' : 'Importance retirée', 'info');
+      }
+    }
+    return;
   } else if (action === 'rollover') {
     openSubtasksModal(id);
     setTimeout(() => toggleSubtasksRolloverPanel(true), 60);
@@ -5090,7 +5170,8 @@ function renderBacklogDrawer() {
       }
 
       const li = document.createElement('li');
-      li.className = `task-item cat-${task.context || 'work'} ${isEvent ? 'is-event' : ''} ${completedClass} ${isSelected ? 'is-selected' : ''}`;
+      const importantClass = task.important ? 'is-important' : '';
+      li.className = `task-item cat-${task.context || 'work'} ${isEvent ? 'is-event' : ''} ${completedClass} ${isSelected ? 'is-selected' : ''} ${importantClass}`;
       li.draggable = true;
       li.ondragstart = (e) => handleDragStart(e, task.id);
       li.ondragend = (e) => handleDragEnd(e);
@@ -5415,6 +5496,13 @@ function submitQuickAdd() {
     rawText = rawText.replace(rawMatch, '').trim();
   }
 
+  // Reconnaissance naturelle de l'importance (! ou #important)
+  let isImportant = false;
+  if (rawText.endsWith('!') || /\s!($|\s)/.test(rawText) || /#important\b/i.test(rawText)) {
+    isImportant = true;
+    if (rawText.endsWith('!')) rawText = rawText.slice(0, -1).trim();
+  }
+
   rawText = rawText.replace(/\s+/g, ' ').trim();
   if (!rawText) rawText = extractedType === 'event' ? 'Untitled Event' : 'Untitled Task';
 
@@ -5431,6 +5519,7 @@ function submitQuickAdd() {
     duration: extractedDuration,
     context: extractedContext,
     completed: false,
+    important: isImportant,
     isRollover: false
   };
 
@@ -5451,9 +5540,16 @@ function addBacklogTask() {
   const text = input ? input.value.trim() : '';
   if (!text) return;
 
+  let isImportant = false;
+  let cleanText = text;
+  if (cleanText.endsWith('!') || /\s!($|\s)/.test(cleanText) || /#important\b/i.test(cleanText)) {
+    isImportant = true;
+    if (cleanText.endsWith('!')) cleanText = cleanText.slice(0, -1).trim();
+  }
+
   const newTask = {
     id: 'p_' + Date.now(),
-    title: text,
+    title: cleanText,
     type: 'task',
     actionType: (sidebarBacklogAction === 'auto') ? null : sidebarBacklogAction,
     date: null,
@@ -5461,6 +5557,7 @@ function addBacklogTask() {
     duration: 45,
     context: currentContextFilter === 'all' ? 'work' : normalizePlanContext(currentContextFilter),
     completed: false,
+    important: isImportant,
     isRollover: false
   };
 
@@ -5468,7 +5565,7 @@ function addBacklogTask() {
   if (input) input.value = '';
   savePlanState();
   if (typeof showToast === 'function') {
-    showToast(`Added to Backlog: "${newTask.title}"`, 'info');
+    showToast(`Added to Backlog: "${newTask.title}"${isImportant ? ' ⌝' : ''}`, 'info');
   }
 }
 
@@ -5477,9 +5574,16 @@ function addSidebarBacklogTask() {
   const text = input ? input.value.trim() : '';
   if (!text) return;
 
+  let isImportant = false;
+  let cleanText = text;
+  if (cleanText.endsWith('!') || /\s!($|\s)/.test(cleanText) || /#important\b/i.test(cleanText)) {
+    isImportant = true;
+    if (cleanText.endsWith('!')) cleanText = cleanText.slice(0, -1).trim();
+  }
+
   const newTask = {
     id: 'p_' + Date.now(),
-    title: text,
+    title: cleanText,
     type: 'task',
     actionType: (sidebarBacklogAction === 'auto') ? null : sidebarBacklogAction,
     date: null,
@@ -5487,6 +5591,7 @@ function addSidebarBacklogTask() {
     duration: 45,
     context: currentContextFilter === 'all' ? 'work' : normalizePlanContext(currentContextFilter),
     completed: false,
+    important: isImportant,
     isRollover: false
   };
 
@@ -6169,6 +6274,13 @@ function saveQuickAdd() {
     return;
   }
 
+  let isImportant = false;
+  let cleanTitle = title;
+  if (cleanTitle.endsWith('!') || /\s!($|\s)/.test(cleanTitle) || /#important\b/i.test(cleanTitle)) {
+    isImportant = true;
+    if (cleanTitle.endsWith('!')) cleanTitle = cleanTitle.slice(0, -1).trim();
+  }
+
   const date = quickAddState.dateStr || TODAY_STR;
   const time = quickAddState.timeStr || '09:00';
   const duration = 45;
@@ -6177,7 +6289,7 @@ function saveQuickAdd() {
 
   const newItem = {
     id: 'plan_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-    title: title,
+    title: cleanTitle,
     date: date,
     time: time,
     duration: duration,
@@ -6185,6 +6297,7 @@ function saveQuickAdd() {
     type: type,
     actionType: (quickAddPopoverAction === 'auto') ? null : quickAddPopoverAction,
     completed: false,
+    important: isImportant,
     subtasks: []
   };
 
@@ -6323,6 +6436,9 @@ function openCreateModalWithDefaults(dateStr = TODAY_STR, timeStr = '') {
   if (allDayCheck) allDayCheck.checked = isAllDay;
   toggleModalAllDay(isAllDay);
 
+  const impCheck = document.getElementById('editTaskImportant');
+  if (impCheck) impCheck.checked = false;
+
   selectModalType(timeStr ? 'event' : 'task');
 
   const titleEl = document.getElementById('editTaskTitle');
@@ -6391,6 +6507,9 @@ function openEditModal(id) {
   const allDayCheck = document.getElementById('editTaskAllDay');
   if (allDayCheck) allDayCheck.checked = isAllDay;
   toggleModalAllDay(isAllDay);
+
+  const impCheck = document.getElementById('editTaskImportant');
+  if (impCheck) impCheck.checked = !!task.important;
 
   const dateEl = document.getElementById('editTaskDate');
   if (dateEl) dateEl.value = task.date || '';
@@ -6462,6 +6581,17 @@ function saveTaskModal() {
   const title = document.getElementById('editTaskTitle').value.trim();
   if (!title) return;
 
+  const impCheck = document.getElementById('editTaskImportant');
+  let isImportant = impCheck ? impCheck.checked : false;
+
+  let cleanTitle = title;
+  if (cleanTitle.endsWith('!') || /\s!($|\s)/.test(cleanTitle) || /#important\b/i.test(cleanTitle)) {
+    isImportant = true;
+    if (cleanTitle.endsWith('!')) {
+      cleanTitle = cleanTitle.slice(0, -1).trim();
+    }
+  }
+
   const allDayCheck = document.getElementById('editTaskAllDay');
   const isAllDay = allDayCheck ? allDayCheck.checked : false;
 
@@ -6503,9 +6633,10 @@ function saveTaskModal() {
   if (editingTaskId) {
     const task = window.SpanPlanState.tasks.find(t => t.id === editingTaskId);
     if (task) {
-      task.title = title;
+      task.title = cleanTitle || title;
       task.type = editingItemType;
       task.allDay = isAllDay;
+      task.important = isImportant;
       task.date = dateVal;
       task.endDate = computedEndDate;
       task.recurrence = recurrenceVal;
@@ -6520,15 +6651,16 @@ function saveTaskModal() {
     }
     if (typeof showToast === 'function') {
       const label = editingItemType === 'event' ? 'Event updated' : 'Task updated';
-      showToast(label, 'info');
+      showToast(`${label}${isImportant ? ' ⌝' : ''}`, 'info');
     }
   } else {
     const nowIso = new Date().toISOString();
     const newTask = {
       id: 'p_' + Date.now(),
-      title: title,
+      title: cleanTitle || title,
       type: editingItemType,
       allDay: isAllDay,
+      important: isImportant,
       date: dateVal,
       endDate: computedEndDate,
       recurrence: recurrenceVal,

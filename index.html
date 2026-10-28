@@ -17,7 +17,7 @@
   <link rel="shortcut icon" href="favicon.ico?v=7.42">
   <link rel="apple-touch-icon" href="span-logo-192.png?v=7.42">
 
-  <link rel="stylesheet" href="style.css?v=7.37">
+  <link rel="stylesheet" href="style.css?v=7.38">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -339,6 +339,10 @@
       </div>
     </div>
     <button type="button" class="popover-item" onclick="popoverAction('edit')">✏️ Edit Details</button>
+    <button type="button" class="popover-item" id="popoverItemToggleImportant" onclick="popoverAction('toggle-important')">
+      <span style="color: #e05244; font-weight: 800; font-size: 14px; margin-right: 4px; display: inline-block;">⌝</span>
+      <span id="popoverImportantText">Marquer important (I)</span>
+    </button>
     <button type="button" class="popover-item" id="popoverItemRollover" onclick="popoverAction('rollover')" style="display: none;">⟳ Reporter les sous-tâches...</button>
     <button type="button" class="popover-item" onclick="popoverAction('toggle-type')">🔄 Switch Task / Event</button>
     <button type="button" class="popover-item" onclick="popoverAction('attach-subtask')">📎 Déplacer comme sous-tâche...</button>
@@ -408,6 +412,17 @@
           <label class="allday-switch-label" title="Enable for events that span the whole day or multiple days">
             <input type="checkbox" id="editTaskAllDay" onchange="toggleModalAllDay(this.checked)">
             <span class="allday-switch-text">All-day (toute la journée / séjour)</span>
+          </label>
+        </div>
+
+        <!-- IMPORTANT / HIGH PRIORITY TOGGLE ROW -->
+        <div class="modal-important-row">
+          <label class="important-switch-label" title="Marquer avec l'équerre rouge brique d'importance (Touche rapide : I)">
+            <input type="checkbox" id="editTaskImportant">
+            <span class="important-switch-box">
+              <span class="important-brick-bracket">⌝</span>
+              <span class="important-switch-text">Important / Priorité haute</span>
+            </span>
           </label>
         </div>
 
@@ -493,7 +508,7 @@
         <button type="button" class="btn-modal-delete" id="btnModalDeleteTask" onclick="deleteCurrentEditingTask()">Delete</button>
         <div style="flex: 1;"></div>
         <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
-        <button class="btn-save" onclick="saveTaskModal()">Save</button>
+        <button class="btn-save" onclick="saveTaskModal()" title="Enregistrer (Touche Enter ou ⌘+Enter)">Save (↵)</button>
       </div>
     </div>
   </div>
@@ -645,8 +660,9 @@
           <div class="shortcut-row"><kbd>B</kbd> or <kbd>L</kbd><span>Toggle Backlog drawer</span></div>
           <div class="shortcut-row"><kbd>3</kbd>, <kbd>5</kbd>, <kbd>7</kbd><span>Switch visible days count</span></div>
           <div class="shortcut-row"><kbd>Click</kbd><span>Select / Deselect item</span></div>
+          <div class="shortcut-row"><kbd>I</kbd> or <kbd>!</kbd><span>Basculer l'importance (Équerre rouge ⌝)</span></div>
           <div class="shortcut-row"><kbd>Double-click</kbd><span>Edit task details</span></div>
-          <div class="shortcut-row"><kbd>Enter</kbd><span>Edit selected item</span></div>
+          <div class="shortcut-row"><kbd>Enter</kbd><span>Edit selected item / Save modal</span></div>
           <div class="shortcut-row"><kbd>Del</kbd> / <kbd>Backspace</kbd><span>Delete selected item(s)</span></div>
           <div class="shortcut-row"><kbd>Esc</kbd><span>Clear selection / Close modal</span></div>
           <div class="shortcut-row"><kbd>?</kbd><span>Open shortcuts cheat sheet</span></div>
@@ -907,6 +923,10 @@
       <span id="multiSelectCountText">0 selected</span>
     </div>
     <span class="multi-select-hint">Drag any block to move group</span>
+    <button type="button" class="multi-select-action-btn" onclick="toggleSelectedTasksImportant()" title="Basculer l'importance (Touche I)">
+      <span style="color: #e05244; font-weight: 800;">⌝</span>
+      <span>Important (I)</span>
+    </button>
     <button type="button" class="multi-select-action-btn danger" onclick="deleteSelectedTasks()" title="Delete selected (Del / Backspace)">
       <span>✕ Delete</span>
     </button>
@@ -916,9 +936,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=7.43"></script>
-  <script src="js/gcal.js?v=7.43"></script>
-  <script src="js/plan.js?v=7.43"></script>
-  <script src="js/app.js?v=7.43"></script>
+  <script src="js/sync.js?v=7.44"></script>
+  <script src="js/gcal.js?v=7.44"></script>
+  <script src="js/plan.js?v=7.44"></script>
+  <script src="js/app.js?v=7.44"></script>
 </body>
 </html>

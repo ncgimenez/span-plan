@@ -18,6 +18,10 @@
   --color-life: #10b981; /* Emerald */
   --color-fun:  #fb7185; /* Coral / Rose */
 
+  /* IMPORTANT BRICK-RED CORNER ACCENT (NO EMOJI) */
+  --brick-important: #e05244;
+  --brick-important-glow: rgba(224, 82, 68, 0.25);
+
   --hour-height: 64px;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
 }
@@ -38,6 +42,9 @@
   --color-work: #6366f1;
   --color-life: #059669;
   --color-fun:  #e11d48;
+
+  --brick-important: #c83f30;
+  --brick-important-glow: rgba(200, 63, 48, 0.2);
 }
 
 [data-theme="light"] .pill-btn {
@@ -4726,14 +4733,15 @@ body.is-card-dragging * {
 .modal-card {
   width: 100%;
   max-width: 440px;
+  max-height: min(92vh, 650px);
   background: #18181b;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
-  padding: 22px;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
 }
 
 .modal-header {
@@ -4742,6 +4750,9 @@ body.is-card-dragging * {
   align-items: center;
   font-size: 15px;
   font-weight: 700;
+  padding: 16px 20px 14px 20px;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .modal-close {
@@ -4756,7 +4767,29 @@ body.is-card-dragging * {
 .modal-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 11px;
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  overscroll-behavior: contain;
+}
+
+.modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .modal-label {
@@ -4897,6 +4930,60 @@ body.is-card-dragging * {
 }
 
 .allday-switch-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.modal-important-row {
+  margin: 2px 0 6px 0;
+  display: flex;
+  align-items: center;
+}
+
+.important-switch-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(224, 82, 68, 0.08);
+  border: 1px solid rgba(224, 82, 68, 0.25);
+  transition: all 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.important-switch-label:hover {
+  background: rgba(224, 82, 68, 0.15);
+  border-color: rgba(224, 82, 68, 0.45);
+}
+
+.important-switch-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brick-important);
+  cursor: pointer;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.important-switch-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.important-brick-bracket {
+  color: var(--brick-important);
+  font-weight: 900;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.important-switch-text {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-main);
@@ -5048,7 +5135,39 @@ body.is-card-dragging * {
   color: #475569;
 }
 
-.modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px 16px 20px;
+  flex-shrink: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: #18181b;
+  margin-top: 0;
+}
+
+[data-theme="light"] .modal-header {
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .modal-footer {
+  border-top-color: rgba(0, 0, 0, 0.08);
+  background: #ffffff;
+}
+[data-theme="light"] .modal-body::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+[data-theme="light"] .modal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.28);
+}
+[data-theme="light"] .important-switch-label {
+  background: rgba(200, 63, 48, 0.06);
+  border-color: rgba(200, 63, 48, 0.2);
+}
+[data-theme="light"] .important-switch-label:hover {
+  background: rgba(200, 63, 48, 0.1);
+  border-color: rgba(200, 63, 48, 0.35);
+}
 
 .btn-cancel {
   background: transparent;
@@ -7139,4 +7258,63 @@ body.is-dragging-subtask .cal-allday-drop-cell.drag-over {
   font-size: 10px;
   color: var(--text-muted);
   line-height: 1.25;
+}
+
+/* ==============================================================
+   TÂCHES & ÉVÉNEMENTS IMPORTANTS (ÉQUERRE ROUGE BRIQUE ⌝)
+   Zéro emoji - Angle nord-est : bordure droite complète + retour haut de 26px
+   ============================================================== */
+.schedule-block-item.is-important {
+  border-right: 3px solid var(--brick-important) !important;
+  box-shadow: 0 2px 10px var(--brick-important-glow), 0 1px 4px rgba(0, 0, 0, 0.25) !important;
+}
+
+.schedule-block-item.is-important::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 26px;
+  height: 3px;
+  background-color: var(--brick-important);
+  border-top-right-radius: 8px;
+  z-index: 25;
+  pointer-events: none;
+}
+
+.cal-allday-ribbon.is-important {
+  border-right: 3px solid var(--brick-important) !important;
+  box-shadow: 0 2px 8px var(--brick-important-glow) !important;
+}
+
+.cal-allday-ribbon.is-important::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 26px;
+  height: 3px;
+  background-color: var(--brick-important);
+  border-top-right-radius: 6px;
+  z-index: 25;
+  pointer-events: none;
+}
+
+.task-item.is-important {
+  position: relative;
+  border-right: 3px solid var(--brick-important) !important;
+  box-shadow: 0 1px 6px var(--brick-important-glow) !important;
+}
+
+.task-item.is-important::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 22px;
+  height: 3px;
+  background-color: var(--brick-important);
+  border-top-right-radius: 8px;
+  z-index: 10;
+  pointer-events: none;
 }
