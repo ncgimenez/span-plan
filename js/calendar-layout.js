@@ -965,16 +965,6 @@ function renderTimedBlocks(tasks, dateStr) {
       `;
     }
 
-    const actionType = getTaskActionType(task);
-    let blockActionTagHtml = '';
-    if (actionType === 'call') {
-      blockActionTagHtml = `<span class="plan-action-tag-badge action-call" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Action: Call (cliquer pour changer)">📞 Call</span>`;
-    } else if (actionType === 'mail') {
-      blockActionTagHtml = `<span class="plan-action-tag-badge action-mail" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Action: Mail (cliquer pour changer)">✉️ Mail</span>`;
-    } else if (actionType === 'pay') {
-      blockActionTagHtml = `<span class="plan-action-tag-badge action-pay" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Action: Paiement (cliquer pour changer)">💳 Pay</span>`;
-    }
-
     let innerContentHtml = '';
     if (isCompact) {
       innerContentHtml = `
@@ -987,7 +977,7 @@ function renderTimedBlocks(tasks, dateStr) {
             </div>
           ` : ''}
           <span class="compact-time">${isContinuation ? `00:00 – ${endH}:${endM}` : task.time}</span>
-          <span class="schedule-block-title">${continuationPrefix}${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}${blockActionTagHtml ? ' ' + blockActionTagHtml : ''}</span>
+          <span class="schedule-block-title">${continuationPrefix}${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
           ${locationHtml}
           ${notesHtml}
           ${isLiveNow ? `
@@ -1012,7 +1002,7 @@ function renderTimedBlocks(tasks, dateStr) {
               ${task.completed ? '✓' : ''}
             </div>
           ` : ''}
-          <span class="schedule-block-title">${continuationPrefix}${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}${blockActionTagHtml ? ' ' + blockActionTagHtml : ''}</span>
+          <span class="schedule-block-title">${continuationPrefix}${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
           <div class="schedule-block-top-actions">
             ${progressPillHtml}
             <button type="button" class="btn-block-quick-add-subtask" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); quickAddSubtaskFromBlock('${task.id}')" title="Ajouter une sous-tâche">➕</button>

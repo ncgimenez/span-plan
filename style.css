@@ -491,19 +491,52 @@
 }
 
 [data-theme="light"] .multi-select-bar {
-  background: rgba(255, 255, 255, 0.95);
-  border-color: rgba(99, 102, 241, 0.4);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(99, 102, 241, 0.2);
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .multi-select-count-badge {
+  color: #0284c7;
+}
+
+[data-theme="light"] .multi-select-divider {
+  background: rgba(0, 0, 0, 0.1);
 }
 
 [data-theme="light"] .multi-select-action-btn {
-  background: rgba(0, 0, 0, 0.05);
-  border-color: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.08);
   color: #1e293b;
 }
 
 [data-theme="light"] .multi-select-action-btn:hover {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.14);
+}
+
+[data-theme="light"] .multi-select-action-btn.btn-sel-important .sel-icon-imp {
+  color: #dc2626;
+}
+
+[data-theme="light"] .multi-select-action-btn.danger {
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.25);
+  background: rgba(220, 38, 38, 0.06);
+}
+
+[data-theme="light"] .multi-select-action-btn.danger:hover {
+  background: rgba(220, 38, 38, 0.12);
+  border-color: rgba(220, 38, 38, 0.4);
+}
+
+[data-theme="light"] .multi-select-close-btn {
+  color: #64748b;
+}
+
+[data-theme="light"] .multi-select-close-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #0f172a;
 }
 
 
@@ -2458,6 +2491,8 @@ body {
   width: 100%;
   min-height: 1536px; /* 24 hours * 64px */
   position: relative;
+  padding-bottom: 96px; /* Dégagement de défilement pour garantir que la fin de journée (22h-24h) reste toujours 100% visible */
+  box-sizing: content-box;
 }
 
 /* TIME RULER (FIXED ON LEFT) */
@@ -3540,26 +3575,28 @@ body.is-card-dragging * {
   backdrop-filter: blur(2px);
 }
 
-/* BARRE D'ACTION FLOTTANTE MULTI-SÉLECTION */
+/* BARRE D'ACTION FLOTTANTE MULTI-SÉLECTION (CAPSULE ULTRA-COMPACTE & ÉLÉGANTE) */
 .multi-select-bar {
   position: fixed;
-  bottom: 24px;
+  bottom: 20px;
   left: 50%;
-  transform: translateX(-50%) translateY(100px);
+  transform: translateX(-50%) translateY(80px);
   opacity: 0;
   pointer-events: none;
-  background: rgba(24, 24, 27, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(56, 189, 248, 0.4);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(56, 189, 248, 0.2);
-  border-radius: 18px;
-  padding: 9px 18px;
+  background: rgba(20, 20, 24, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  border-radius: 999px;
+  padding: 5px 8px 5px 12px;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 8px;
+  height: 36px;
+  box-sizing: border-box;
   z-index: 100;
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s ease;
 }
 
 .multi-select-bar.show {
@@ -3568,49 +3605,83 @@ body.is-card-dragging * {
   pointer-events: auto;
 }
 
-.multi-select-count {
-  font-size: 13px;
-  font-weight: 600;
+.multi-select-count-badge {
+  font-size: 11.5px;
+  font-weight: 700;
   color: #38bdf8;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 
-.multi-select-hint {
-  font-size: 11.5px;
-  color: var(--text-muted);
-  font-style: italic;
-  padding: 0 4px;
+.multi-select-divider {
+  width: 1px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .multi-select-action-btn {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid var(--card-border);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--text-main);
-  border-radius: 10px;
-  padding: 6px 12px;
-  font-size: 12px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.15s ease;
+  line-height: 1;
+  transition: all 0.12s ease;
+  white-space: nowrap;
 }
 
 .multi-select-action-btn:hover {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-0.5px);
+}
+
+.multi-select-action-btn:active {
+  transform: translateY(0);
+}
+
+.multi-select-action-btn.btn-sel-important .sel-icon-imp {
+  color: #f87171;
+  font-weight: 800;
+  font-size: 12px;
 }
 
 .multi-select-action-btn.danger {
   color: #f87171;
-  border-color: rgba(248, 113, 113, 0.35);
+  border-color: rgba(248, 113, 113, 0.25);
+  background: rgba(239, 68, 68, 0.08);
 }
 
 .multi-select-action-btn.danger:hover {
-  background: rgba(248, 113, 113, 0.18);
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(248, 113, 113, 0.45);
+}
+
+.multi-select-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.12s ease;
+  margin-left: -2px;
+}
+
+.multi-select-close-btn:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 /* ==============================================================
@@ -3718,8 +3789,12 @@ body.is-card-dragging * {
 
 .schedule-block-item.is-short-block .schedule-block-title,
 .schedule-block-item.is-compact .schedule-block-title {
-  -webkit-line-clamp: 1;
+  display: block;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: unset;
 }
 
 .schedule-block-meta {
@@ -5814,36 +5889,32 @@ body.is-card-dragging * {
   .multi-select-bar {
     position: fixed;
     bottom: calc(56px + env(safe-area-inset-bottom, 16px) + 10px);
-    left: 14px;
-    right: 14px;
+    left: 50%;
+    right: auto;
     width: auto;
-    max-width: none;
-    transform: translateY(120px);
+    max-width: calc(100vw - 28px);
+    transform: translateX(-50%) translateY(120px);
     z-index: 1050;
-    padding: 8px 12px;
-    border-radius: 14px;
-    background: rgba(24, 24, 27, 0.96);
+    padding: 5px 8px 5px 12px;
+    border-radius: 999px;
+    background: rgba(20, 20, 24, 0.95);
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.65);
-    gap: 8px;
+    gap: 6px;
+    height: 36px;
   }
 
   .multi-select-bar.show {
-    transform: translateY(0);
+    transform: translateX(-50%) translateY(0);
   }
 
-  .multi-select-bar .multi-select-hint {
-    display: none; /* Libère tout l'espace sur petit écran */
-  }
-
-  .multi-select-bar .multi-select-count {
-    font-size: 12px;
+  .multi-select-bar .multi-select-count-badge {
+    font-size: 11px;
     white-space: nowrap;
   }
 
   .multi-select-bar .multi-select-action-btn {
-    padding: 6px 10px;
-    font-size: 12px;
-    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 11px;
   }
 
   /* CACHER LES POIGNÉES DE REDIMENSIONNEMENT TACTILE INADAPTÉES SUR MOBILE */

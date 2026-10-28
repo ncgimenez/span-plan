@@ -181,7 +181,7 @@ function updateSelectionVisuals() {
     if (selectedTaskIds.size > 0) {
       bar.classList.add('show');
       if (countSpan) {
-        countSpan.textContent = `${selectedTaskIds.size} selected`;
+        countSpan.textContent = `${selectedTaskIds.size} sélection${selectedTaskIds.size > 1 ? 's' : ''}`;
       }
     } else {
       bar.classList.remove('show');
