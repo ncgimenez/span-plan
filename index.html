@@ -17,7 +17,7 @@
   <link rel="shortcut icon" href="favicon.ico?v=7.42">
   <link rel="apple-touch-icon" href="span-logo-192.png?v=7.42">
 
-  <link rel="stylesheet" href="style.css?v=7.38">
+  <link rel="stylesheet" href="style.css?v=7.39">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -157,28 +157,17 @@
           </div>
         </div>
 
-        <!-- TOP CONTEXT SELECTOR PILLS -->
+        <!-- TOP CATEGORY TOGGLES (3 COLOR DOTS ONLY, CHECKABLE / COLORED) -->
         <div class="header-center">
-          <div class="header-context-pills" id="headerContextPills">
-            <button type="button" class="header-context-pill active" data-context="all" onclick="setContextFilter('all')">
-              <span class="context-indicator dot-all"></span>
-              <span class="context-label">All</span>
-              <span class="context-badge" id="countAllContext">0</span>
+          <div class="header-category-toggles" id="headerCategoryToggles" title="Filtrer les catégories (Cliquer pour masquer/afficher)">
+            <button type="button" class="category-toggle-dot cat-work is-active" id="toggleCatWork" onclick="toggleCategoryFilter('work')" title="Work (Visible - cliquer pour masquer)">
+              <span class="dot-disc"></span>
             </button>
-            <button type="button" class="header-context-pill" data-context="work" onclick="setContextFilter('work')">
-              <span class="context-indicator dot-work"></span>
-              <span class="context-label">Work</span>
-              <span class="context-badge" id="countWorkContext">0</span>
+            <button type="button" class="category-toggle-dot cat-life is-active" id="toggleCatLife" onclick="toggleCategoryFilter('life')" title="Life (Visible - cliquer pour masquer)">
+              <span class="dot-disc"></span>
             </button>
-            <button type="button" class="header-context-pill" data-context="life" onclick="setContextFilter('life')">
-              <span class="context-indicator dot-life"></span>
-              <span class="context-label">Life</span>
-              <span class="context-badge" id="countLifeContext">0</span>
-            </button>
-            <button type="button" class="header-context-pill" data-context="fun" onclick="setContextFilter('fun')">
-              <span class="context-indicator dot-fun"></span>
-              <span class="context-label">Fun</span>
-              <span class="context-badge" id="countFunContext">0</span>
+            <button type="button" class="category-toggle-dot cat-fun is-active" id="toggleCatFun" onclick="toggleCategoryFilter('fun')" title="Fun (Visible - cliquer pour masquer)">
+              <span class="dot-disc"></span>
             </button>
           </div>
         </div>
@@ -340,7 +329,7 @@
     </div>
     <button type="button" class="popover-item" onclick="popoverAction('edit')">✏️ Edit Details</button>
     <button type="button" class="popover-item" id="popoverItemToggleImportant" onclick="popoverAction('toggle-important')">
-      <span style="color: #e05244; font-weight: 800; font-size: 14px; margin-right: 4px; display: inline-block;">⌝</span>
+      <span style="color: #e05244; font-weight: 800; font-size: 14px; margin-right: 4px; display: inline-block;">┌</span>
       <span id="popoverImportantText">Marquer important (I)</span>
     </button>
     <button type="button" class="popover-item" id="popoverItemRollover" onclick="popoverAction('rollover')" style="display: none;">⟳ Reporter les sous-tâches...</button>
@@ -420,7 +409,7 @@
           <label class="important-switch-label" title="Marquer avec l'équerre rouge brique d'importance (Touche rapide : I)">
             <input type="checkbox" id="editTaskImportant">
             <span class="important-switch-box">
-              <span class="important-brick-bracket">⌝</span>
+              <span class="important-brick-bracket">┌</span>
               <span class="important-switch-text">Important / Priorité haute</span>
             </span>
           </label>
@@ -450,7 +439,7 @@
           </div>
         </div>
 
-        <input type="hidden" id="editTaskDuration" value="45">
+        <input type="hidden" id="editTaskDuration" value="30">
 
         <!-- RECURRENCE ROW -->
         <div class="form-row" id="rowTaskRecurrence">
@@ -660,7 +649,7 @@
           <div class="shortcut-row"><kbd>B</kbd> or <kbd>L</kbd><span>Toggle Backlog drawer</span></div>
           <div class="shortcut-row"><kbd>3</kbd>, <kbd>5</kbd>, <kbd>7</kbd><span>Switch visible days count</span></div>
           <div class="shortcut-row"><kbd>Click</kbd><span>Select / Deselect item</span></div>
-          <div class="shortcut-row"><kbd>I</kbd> or <kbd>!</kbd><span>Basculer l'importance (Équerre rouge ⌝)</span></div>
+          <div class="shortcut-row"><kbd>I</kbd> or <kbd>!</kbd><span>Basculer l'importance (Équerre rouge ┌)</span></div>
           <div class="shortcut-row"><kbd>Double-click</kbd><span>Edit task details</span></div>
           <div class="shortcut-row"><kbd>Enter</kbd><span>Edit selected item / Save modal</span></div>
           <div class="shortcut-row"><kbd>Del</kbd> / <kbd>Backspace</kbd><span>Delete selected item(s)</span></div>
@@ -924,7 +913,7 @@
     </div>
     <span class="multi-select-hint">Drag any block to move group</span>
     <button type="button" class="multi-select-action-btn" onclick="toggleSelectedTasksImportant()" title="Basculer l'importance (Touche I)">
-      <span style="color: #e05244; font-weight: 800;">⌝</span>
+      <span style="color: #e05244; font-weight: 800;">┌</span>
       <span>Important (I)</span>
     </button>
     <button type="button" class="multi-select-action-btn danger" onclick="deleteSelectedTasks()" title="Delete selected (Del / Backspace)">
@@ -936,9 +925,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=7.44"></script>
-  <script src="js/gcal.js?v=7.44"></script>
-  <script src="js/plan.js?v=7.44"></script>
-  <script src="js/app.js?v=7.44"></script>
+  <script src="js/sync.js?v=7.45"></script>
+  <script src="js/gcal.js?v=7.45"></script>
+  <script src="js/plan.js?v=7.45"></script>
+  <script src="js/app.js?v=7.45"></script>
 </body>
 </html>

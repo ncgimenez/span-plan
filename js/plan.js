@@ -58,15 +58,15 @@ function getPrevDateString(dateStr) {
 }
 
 function getEndTimeFromDuration(startTime, durationMinutes) {
-  if (!startTime) return '10:00';
+  if (!startTime) return '09:30';
   const startM = timeToMinutes(startTime);
-  const endTotal = startM + (durationMinutes || 45);
+  const endTotal = startM + (durationMinutes || 30);
   const endM = endTotal % (24 * 60);
   return minutesToTime(endM);
 }
 
 function getDurationFromTimes(startTime, endTime) {
-  if (!startTime || !endTime) return 45;
+  if (!startTime || !endTime) return 30;
   const startM = timeToMinutes(startTime);
   const endM = timeToMinutes(endTime);
   if (endM < startM) {
@@ -135,7 +135,7 @@ if (!hasStoredData) {
       recurrenceExceptions: Array.isArray(t.recurrenceExceptions) ? t.recurrenceExceptions : [],
       time: t.time || '',
       endTime: t.endTime || '',
-      duration: typeof t.duration === 'number' ? t.duration : 45,
+      duration: typeof t.duration === 'number' ? t.duration : 30,
       context: normalizePlanContext(t.context || t.category),
       completed: !!t.completed,
       isRollover: !!t.isRollover,
@@ -170,7 +170,7 @@ function isTaskOccurringOnDate(task, targetDateStr) {
     // Événements avec heure qui dépassent minuit (overnight / glissement sur le jour suivant)
     if (!isMultiDaySpan && task.time) {
       const startM = timeToMinutes(task.time);
-      const dur = task.duration || 45;
+      const dur = task.duration || 30;
       if (startM + dur > 1440) {
         const nextDay = getNextDateString(task.date);
         if (targetDateStr === nextDay) return true;
@@ -587,6 +587,54 @@ let currentContextFilter = 'all';
 let currentTagFilter = null;
 let isDrawerPinned = localStorage.getItem('span_plan_drawer_pinned') !== 'false';
 
+// FILTRAGE MULTI-CATÉGORIES VIA DOTS COLORÉS (WORK, LIFE, FUN)
+let activeCategoryFilters = {
+  work: true,
+  life: true,
+  fun: true
+};
+try {
+  const savedCats = JSON.parse(localStorage.getItem('span_plan_active_categories'));
+  if (savedCats && typeof savedCats === 'object') {
+    activeCategoryFilters = {
+      work: savedCats.work !== false,
+      life: savedCats.life !== false,
+      fun: savedCats.fun !== false
+    };
+  }
+} catch (e) {}
+
+function isTaskCategoryVisible(task) {
+  if (!task) return true;
+  const ctx = normalizePlanContext(task.context || 'work');
+  return activeCategoryFilters[ctx] !== false;
+}
+window.isTaskCategoryVisible = isTaskCategoryVisible;
+
+function toggleCategoryFilter(cat) {
+  if (!cat || !['work', 'life', 'fun'].includes(cat)) return;
+  activeCategoryFilters[cat] = !activeCategoryFilters[cat];
+  localStorage.setItem('span_plan_active_categories', JSON.stringify(activeCategoryFilters));
+  updateCategoryToggleVisuals();
+  renderPlanGrid(true);
+  renderBacklogDrawer();
+  updateCounters();
+}
+window.toggleCategoryFilter = toggleCategoryFilter;
+
+function updateCategoryToggleVisuals() {
+  ['work', 'life', 'fun'].forEach(cat => {
+    const btn = document.getElementById(`toggleCat${cat.charAt(0).toUpperCase() + cat.slice(1)}`);
+    if (btn) {
+      const isActive = activeCategoryFilters[cat] !== false;
+      btn.classList.toggle('is-active', isActive);
+      const catTitle = cat.charAt(0).toUpperCase() + cat.slice(1);
+      btn.title = `${catTitle} (${isActive ? 'Visible - cliquer pour masquer' : 'Masqué - cliquer pour afficher'})`;
+    }
+  });
+}
+window.updateCategoryToggleVisuals = updateCategoryToggleVisuals;
+
 let editingTaskId = null;
 let editingContext = 'work';
 let editingItemType = 'task';
@@ -901,7 +949,7 @@ function formatMinutesDuration(totalM) {
 }
 
 function getTaskDurationOnDate(t, dateStr) {
-  const dur = t.duration || 45;
+  const dur = t.duration || 30;
   if (!t.time || !dateStr) return dur;
   const startM = timeToMinutes(t.time);
   if (startM + dur > 1440) {
@@ -1080,7 +1128,7 @@ function renderAllDayContinuousRibbonHtml(visibleDates) {
     const isAllDay = !!task.allDay || (!task.time && !!task.date) || isMultiDay;
     if (!isAllDay) return;
 
-    const contextMatch = (currentContextFilter === 'all' || task.context === currentContextFilter);
+    const contextMatch = isTaskCategoryVisible(task);
     const tagMatch = !currentTagFilter || (task.title && task.title.toLowerCase().includes(`#${currentTagFilter.toLowerCase()}`));
     if (!contextMatch || !tagMatch) return;
 
@@ -1254,7 +1302,7 @@ function renderPlanGrid(forceRebuild = false) {
     const dateStr = getLocalDateString(dateObj);
     const dayTasks = (window.SpanPlanState.tasks || []).filter(t => {
       const occurs = isTaskOccurringOnDate(t, dateStr);
-      const contextMatch = (currentContextFilter === 'all' || t.context === currentContextFilter);
+      const contextMatch = isTaskCategoryVisible(t);
       const tagMatch = !currentTagFilter || (t.title && t.title.toLowerCase().includes(`#${currentTagFilter.toLowerCase()}`));
       return occurs && contextMatch && tagMatch;
     });
@@ -1564,7 +1612,7 @@ function computeOverlapLayout(tasks, dateStr = null) {
 
   const parsed = tasks.map(t => {
     const taskStartM = timeToMinutes(t.time || '00:00');
-    const totalDuration = t.duration || 45;
+    const totalDuration = t.duration || 30;
     const isOvernight = (taskStartM + totalDuration > 1440);
 
     let start = taskStartM;
@@ -2008,6 +2056,7 @@ function toggleBlockAccordion(event, taskId) {
 }
 
 function handleTaskRowClick(e, id) {
+  closeQuickAddPopover();
   e.stopPropagation();
   if (e.metaKey || e.ctrlKey || e.shiftKey) {
     toggleTaskSelection(id);
@@ -2101,9 +2150,9 @@ function applyDynamicScroll(onlyIfUnscrolled = false) {
 // REDIMENSIONNEMENT INTERACTIF (AVEC GESTION PROPRE DU DÉPASSEMENT NOCTURNE & OVERNIGHT)
 let resizingTaskId = null;
 let resizeStartY = 0;
-let resizeStartDuration = 45;
+let resizeStartDuration = 30;
 let resizeIsContinuation = false;
-let resizingProposedMinutes = 45;
+let resizingProposedMinutes = 30;
 
 function startResize(e, taskId) {
   e.preventDefault();
@@ -2117,7 +2166,7 @@ function startResize(e, taskId) {
   resizeIsContinuation = Boolean(blockEl && blockEl.dataset.isContinuation === 'true');
 
   const task = window.SpanPlanState.tasks.find(t => t.id === taskId);
-  resizeStartDuration = task ? (task.duration || 45) : 45;
+  resizeStartDuration = task ? (task.duration || 30) : 30;
   resizingProposedMinutes = resizeStartDuration;
 
   if (blockEl) {
@@ -2303,6 +2352,7 @@ function handleBlockPointerDown(e, taskId, dateStr) {
   if (e.button !== 0) return;
   if (window.draggedSubtaskInfo || window.draggedBatchSubtasksInfo) return;
 
+  closeQuickAddPopover();
   e.stopPropagation();
 
   const isModifier = (e.metaKey || e.ctrlKey || e.shiftKey);
@@ -2349,7 +2399,7 @@ function handleBlockPointerDown(e, taskId, dateStr) {
         el,
         initialTop: currentTop,
         initialStartMinutes: startM,
-        duration: task.duration || 45,
+        duration: task.duration || 30,
         date: task.date
       });
     }
@@ -2715,7 +2765,7 @@ function handleBlockPointerUp(e) {
         const startM = String(itemStartM % 60).padStart(2, '0');
         const timeVal = `${startH}:${startM}`;
         const dateVal = targetDateStr || info.task.date;
-        const dur = info.task.duration || 45;
+        const dur = info.task.duration || 30;
         const endDateVal = (itemStartM + dur > 1440) ? getNextDateString(dateVal) : dateVal;
         const endTimeVal = getEndTimeFromDuration(timeVal, dur);
 
@@ -3009,7 +3059,7 @@ function pastePlanTask() {
     let pastedTime = targetTime;
     if (index > 0 && targetTime) {
       const [th, tm] = targetTime.split(':').map(Number);
-      const newMinutes = (th * 60 + tm + (index * (srcTask.duration || 45))) % (24 * 60);
+      const newMinutes = (th * 60 + tm + (index * (srcTask.duration || 30))) % (24 * 60);
       const nh = String(Math.floor(newMinutes / 60)).padStart(2, '0');
       const nm = String(newMinutes % 60).padStart(2, '0');
       pastedTime = `${nh}:${nm}`;
@@ -4128,7 +4178,7 @@ function allowCanvasDrop(e) {
 
   if (!draggedTaskId) return;
   const task = window.SpanPlanState.tasks.find(t => t.id === draggedTaskId);
-  const duration = task ? (task.duration || 45) : 45;
+  const duration = task ? (task.duration || 30) : 30;
   const context = task ? (task.context || 'work') : 'work';
   const isEvent = task ? (task.type === 'event') : false;
 
@@ -4375,7 +4425,7 @@ function handleSubtaskDropToCanvas(e, targetDate) {
     date: targetDate,
     endDate: targetDate,
     time: newTime,
-    duration: 45,
+    duration: 30,
     allDay: false,
     type: 'task',
     context: subtask.context || sourceParent.context || 'work',
@@ -4674,12 +4724,27 @@ function handleBackdropClick(event, modalId) {
   }
 }
 
+document.addEventListener('pointerdown', (e) => {
+  if (e.target.closest('#calendarQuickAddPopover')) return;
+  // Clic sur un événement existant, un ruban all-day, un item de backlog ou la barre de titre
+  if (e.target.closest('.schedule-block-item') || 
+      e.target.closest('.cal-allday-ribbon') || 
+      e.target.closest('.task-item') || 
+      e.target.closest('.app-header') || 
+      e.target.closest('.app-sidebar')) {
+    closeQuickAddPopover();
+  }
+});
+
 document.addEventListener('click', (e) => {
   if (!e.target.closest('#taskPopoverMenu') && !e.target.closest('.btn-task-menu')) {
     closeTaskPopover();
   }
-  if (!e.target.closest('#calendarQuickAddPopover') && !e.target.closest('.schedule-grid-canvas')) {
-    closeQuickAddPopover();
+  if (!e.target.closest('#calendarQuickAddPopover')) {
+    // Si ce n'est pas un clic direct sur le canvas pour créer un slot, fermer le popover
+    if (!e.target.classList.contains('schedule-grid-canvas') && !e.target.classList.contains('canvas-hour-slot')) {
+      closeQuickAddPopover();
+    }
   }
   if (!e.target.closest('.schedule-block-item.is-expanded') && !e.target.closest('.subtasks-unfold-btn') && !e.target.closest('.subtasks-mini-unfold-btn')) {
     if (window.expandedBlockAccordionIds && window.expandedBlockAccordionIds.size > 0) {
@@ -4834,7 +4899,7 @@ function toggleSelectedTasksImportant() {
 
   if (typeof showToast === 'function') {
     const msg = newStatus
-      ? (tasks.length > 1 ? `${tasks.length} éléments marqués importants ⌝` : `"${tasks[0].title}" marqué important ⌝`)
+      ? (tasks.length > 1 ? `${tasks.length} éléments marqués importants ┌` : `"${tasks[0].title}" marqué important ┌`)
       : (tasks.length > 1 ? `Importance retirée pour ${tasks.length} éléments` : `Importance retirée`);
     showToast(msg, 'info');
   }
@@ -4855,7 +4920,7 @@ function popoverAction(action) {
       task.updated_at = new Date().toISOString();
       savePlanState();
       if (typeof showToast === 'function') {
-        showToast(task.important ? 'Marqué important ⌝' : 'Importance retirée', 'info');
+        showToast(task.important ? 'Marqué important ┌' : 'Importance retirée', 'info');
       }
     }
     return;
@@ -5070,7 +5135,7 @@ function renderBacklogDrawer() {
 
   const allBacklogTasks = (window.SpanPlanState.tasks || []).filter(t => {
     const isUnscheduled = !t.date;
-    const contextMatch = (currentContextFilter === 'all' || t.context === currentContextFilter);
+    const contextMatch = isTaskCategoryVisible(t);
     const tagMatch = !currentTagFilter || (t.title && t.title.toLowerCase().includes(`#${currentTagFilter.toLowerCase()}`));
     return isUnscheduled && contextMatch && tagMatch;
   });
@@ -5365,6 +5430,9 @@ function pushToSpanFocus(id) {
 
 // GESTION DU CLIC SUR LA GRILLE (CRÉATION DIRECTE PAR MANIPULATION DIRECTE)
 function handleCanvasClick(e, dateStr) {
+  // Fermer tout popover existant
+  closeQuickAddPopover();
+
   // Ignorer si le clic touche un bloc de tâche, le redimensionnement ou la ligne now
   if (e.target.closest('.schedule-block-item') || e.target.closest('.resize-handle') || e.target.closest('.now-timeline-marker')) {
     return;
@@ -5383,6 +5451,7 @@ function handleCanvasClick(e, dateStr) {
   const m = String(totalMinutes % 60).padStart(2, '0');
   const clickedTime = `${h}:${m}`;
 
+  e.stopPropagation();
   openQuickAddPopover(dateStr, clickedTime, e.clientX, e.clientY);
 }
 
@@ -5460,8 +5529,8 @@ function submitQuickAdd() {
     extractedContext = 'fun';
   }
 
-  // Détection de la durée (ex: 30m, 45m, 1h, 1h30, 2h)
-  let extractedDuration = 45;
+  // Détection de la durée (ex: 15m, 30m, 45m, 1h, 1h30, 2h)
+  let extractedDuration = 30;
   const durMatch = rawText.match(/\b(\d+)\s*(m|min|h|hour|heure)(?:(\d+))?\b/i);
   if (durMatch) {
     const val = parseInt(durMatch[1], 10);
@@ -5554,7 +5623,7 @@ function addBacklogTask() {
     actionType: (sidebarBacklogAction === 'auto') ? null : sidebarBacklogAction,
     date: null,
     time: '',
-    duration: 45,
+    duration: 30,
     context: currentContextFilter === 'all' ? 'work' : normalizePlanContext(currentContextFilter),
     completed: false,
     important: isImportant,
@@ -5565,7 +5634,7 @@ function addBacklogTask() {
   if (input) input.value = '';
   savePlanState();
   if (typeof showToast === 'function') {
-    showToast(`Added to Backlog: "${newTask.title}"${isImportant ? ' ⌝' : ''}`, 'info');
+    showToast(`Added to Backlog: "${newTask.title}"${isImportant ? ' ┌' : ''}`, 'info');
   }
 }
 
@@ -5588,7 +5657,7 @@ function addSidebarBacklogTask() {
     actionType: (sidebarBacklogAction === 'auto') ? null : sidebarBacklogAction,
     date: null,
     time: '',
-    duration: 45,
+    duration: 30,
     context: currentContextFilter === 'all' ? 'work' : normalizePlanContext(currentContextFilter),
     completed: false,
     important: isImportant,
@@ -6175,10 +6244,10 @@ function openQuickAddPopover(dateStr, timeStr, clickX, clickY) {
   quickAddState.context = currentContextFilter === 'all' ? 'work' : normalizePlanContext(currentContextFilter);
   setQuickAddPopoverAction('auto');
 
-  // Preview date & horaire
+  // Preview date & horaire (durée par défaut : 30 minutes)
   const [hStr, mStr] = (quickAddState.timeStr || '09:00').split(':');
   const startMin = parseInt(hStr, 10) * 60 + parseInt(mStr, 10);
-  const endMin = Math.min(23 * 60 + 59, startMin + 45);
+  const endMin = Math.min(23 * 60 + 59, startMin + 30);
   const endH = String(Math.floor(endMin / 60)).padStart(2, '0');
   const endM = String(endMin % 60).padStart(2, '0');
   const timeRangePreview = `${quickAddState.timeStr} – ${endH}:${endM}`;
@@ -6283,7 +6352,7 @@ function saveQuickAdd() {
 
   const date = quickAddState.dateStr || TODAY_STR;
   const time = quickAddState.timeStr || '09:00';
-  const duration = 45;
+  const duration = 30;
   const type = quickAddState.type || 'event';
   const context = quickAddState.context || 'work';
 
@@ -6388,7 +6457,7 @@ function handleModalStartTimeChange() {
   const durInput = document.getElementById('editTaskDuration');
   if (!startInput || !endInput) return;
 
-  const currentDur = parseInt(durInput ? durInput.value : 45, 10) || 45;
+  const currentDur = parseInt(durInput ? durInput.value : 30, 10) || 30;
   if (startInput.value) {
     endInput.value = getEndTimeFromDuration(startInput.value, currentDur);
   }
@@ -6467,9 +6536,9 @@ function openCreateModalWithDefaults(dateStr = TODAY_STR, timeStr = '') {
 
   const endTimeEl = document.getElementById('editTaskEndTime');
   const durEl = document.getElementById('editTaskDuration');
-  if (durEl) durEl.value = 45;
+  if (durEl) durEl.value = 30;
   if (endTimeEl) {
-    endTimeEl.value = getEndTimeFromDuration(timeStr || '09:00', 45);
+    endTimeEl.value = getEndTimeFromDuration(timeStr || '09:00', 30);
   }
 
   const headerSpan = document.getElementById('modalHeaderTitle') || document.querySelector('#editModalOverlay .modal-header span');
@@ -6535,7 +6604,7 @@ function openEditModal(id) {
 
   const endTimeEl = document.getElementById('editTaskEndTime');
   const durEl = document.getElementById('editTaskDuration');
-  const dur = task.duration || 45;
+  const dur = task.duration || 30;
   if (durEl) durEl.value = dur;
   if (endTimeEl) {
     endTimeEl.value = getEndTimeFromDuration(task.time || '09:00', dur);
@@ -6604,7 +6673,7 @@ function saveTaskModal() {
 
   let timeVal = '';
   let endTimeVal = '';
-  let durationVal = 45;
+  let durationVal = 30;
 
   if (!isAllDay) {
     timeVal = document.getElementById('editTaskTime').value || '';
@@ -6612,8 +6681,8 @@ function saveTaskModal() {
     if (timeVal && endTimeVal) {
       durationVal = getDurationFromTimes(timeVal, endTimeVal);
     } else if (timeVal) {
-      durationVal = 45;
-      endTimeVal = getEndTimeFromDuration(timeVal, 45);
+      durationVal = 30;
+      endTimeVal = getEndTimeFromDuration(timeVal, 30);
     }
   }
 
@@ -6651,7 +6720,7 @@ function saveTaskModal() {
     }
     if (typeof showToast === 'function') {
       const label = editingItemType === 'event' ? 'Event updated' : 'Task updated';
-      showToast(`${label}${isImportant ? ' ⌝' : ''}`, 'info');
+      showToast(`${label}${isImportant ? ' ┌' : ''}`, 'info');
     }
   } else {
     const nowIso = new Date().toISOString();
@@ -6989,6 +7058,7 @@ window.addEventListener('DOMContentLoaded', () => {
   applyPinState();
   updateMiniCalCollapseUI();
   setSidebarBacklogAction('auto');
+  updateCategoryToggleVisuals();
   renderPlanGrid();
   renderBacklogDrawer();
   updateCounters();
