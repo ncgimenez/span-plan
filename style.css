@@ -1401,7 +1401,7 @@ body {
 }
 
 .mobile-only-btn {
-  display: none;
+  display: none !important;
 }
 
 @media (max-width: 768px) {
@@ -1412,7 +1412,7 @@ body {
     display: none !important;
   }
   .mobile-only-btn {
-    display: flex !important;
+    display: inline-flex !important;
   }
   .app-main-area {
     padding: env(safe-area-inset-top, 6px) 8px env(safe-area-inset-bottom, 8px) 8px;
@@ -1423,10 +1423,11 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 20px 12px 20px;
-  gap: 16px;
+  padding: 8px 16px 10px 16px;
+  gap: 12px;
   flex-shrink: 0;
   width: 100%;
+  box-sizing: border-box;
   position: relative;
   z-index: 50;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
@@ -1435,14 +1436,66 @@ body {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
+  gap: 10px;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .header-center {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-settings {
+  flex-shrink: 0 !important;
+  display: inline-flex !important;
+}
+
+@media (max-width: 1100px) and (min-width: 769px) {
+  .app-header {
+    padding: 8px 12px 10px 12px;
+    gap: 8px;
+  }
+  .header-left {
+    gap: 8px;
+  }
+  .current-range-label {
+    font-size: 12.5px;
+  }
+  .pill-btn {
+    padding: 0 7px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 960px) and (min-width: 769px) {
+  .app-header {
+    padding: 6px 10px 8px 10px;
+    gap: 6px;
+  }
+  .current-range-label {
+    font-size: 11.5px;
+  }
+  .btn-new-task {
+    padding: 0 8px;
+  }
+}
   flex: 1;
 }
 
@@ -1516,18 +1569,6 @@ body {
 }
 .category-toggle-dot:not(.is-active):hover {
   opacity: 0.65;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.btn-settings {
-  flex-shrink: 0;
-  display: inline-flex;
 }
 
 /* BRAND LOGO */
