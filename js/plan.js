@@ -2413,6 +2413,20 @@ function handleBlockPointerMove(e) {
 
     const elUnder = document.elementFromPoint(e.clientX, e.clientY);
 
+    // Détection du survol de la zone Backlog (sidebar, drawer, bouton toggle, onglet mobile)
+    const targetBacklog = elUnder?.closest('.sidebar-backlog-section, .sidebar-backlog-scroll, #backlogDrawer, .backlog-drawer, .btn-backlog-toggle, #btnToggleDrawer, #mobileNavBacklog, #backlogTaskList');
+
+    document.querySelectorAll('.sidebar-backlog-section.drag-over, .sidebar-backlog-scroll.drag-over, #backlogDrawer.drag-over, .backlog-drawer.drag-over, .btn-backlog-toggle.drag-over, #btnToggleDrawer.drag-over, #mobileNavBacklog.drag-over, #backlogTaskList.drag-over').forEach(el => {
+      if (el !== targetBacklog) el.classList.remove('drag-over');
+    });
+
+    if (targetBacklog) {
+      targetBacklog.classList.add('drag-over');
+      document.querySelectorAll('[id^="pointerDragGhost_"]').forEach(g => g.remove());
+      document.querySelectorAll('.day-dock.dock-drop-hover, .cal-allday-drop-cell.drag-over, .schedule-block-item.subtask-drop-target').forEach(d => d.classList.remove('dock-drop-hover', 'drag-over', 'subtask-drop-target'));
+      return;
+    }
+
     // Détection de survol d'un autre bloc pour imbrication directe en sous-tâche
     const targetBlockEl = elUnder?.closest('.schedule-block-item');
     const targetBlockId = targetBlockEl?.dataset.taskId;
@@ -2462,12 +2476,16 @@ function handleBlockPointerMove(e) {
         const itemStartM = Math.max(0, Math.min(23 * 60 + 45, info.initialStartMinutes + diffM));
         const itemEndM = itemStartM + info.duration;
         const snappedTop = ((itemStartM - START_HOUR * 60) / 60) * HOUR_HEIGHT;
-        const height = Math.max(30, (info.duration / 60) * HOUR_HEIGHT);
+        const isOvernightGhost = (itemEndM > 1440);
+        const ghostDuration = isOvernightGhost ? Math.max(15, 1440 - itemStartM) : info.duration;
+        const height = Math.max(30, (ghostDuration / 60) * HOUR_HEIGHT);
 
         const startH = String(Math.floor(itemStartM / 60)).padStart(2, '0');
         const startM = String(itemStartM % 60).padStart(2, '0');
-        const endH = String(Math.floor(itemEndM / 60)).padStart(2, '0');
-        const endM = String(itemEndM % 60).padStart(2, '0');
+        const endTotal = itemEndM % 1440;
+        const endH = String(Math.floor(endTotal / 60)).padStart(2, '0');
+        const endM = String(endTotal % 60).padStart(2, '0');
+        const overnightSuffix = isOvernightGhost ? ' (+1j)' : '';
 
         const ghostId = `pointerDragGhost_${info.task.id}`;
         let ghost = document.getElementById(ghostId);
@@ -2479,14 +2497,14 @@ function handleBlockPointerMove(e) {
           ghost.remove();
           activeCanvas.appendChild(ghost);
         }
-        ghost.className = `drag-preview-slot cat-${info.task.context || 'work'}`;
+        ghost.className = `drag-preview-slot cat-${info.task.context || 'work'} ${isOvernightGhost ? 'is-overnight-start' : ''}`;
         ghost.style.top = `${snappedTop}px`;
         ghost.style.height = `${height}px`;
         ghost.style.left = '4px';
         ghost.style.right = '4px';
         const isEvent = (info.task.type === 'event');
         ghost.innerHTML = `
-          <div class="ghost-time-label">${isEvent ? '📅 ' : '⏱ '}${startH}:${startM} – ${endH}:${endM} (${info.duration}m)</div>
+          <div class="ghost-time-label">${isEvent ? '📅 ' : '⏱ '}${startH}:${startM} – ${endH}:${endM}${overnightSuffix} (${info.duration}m)</div>
           <div class="ghost-title-label">${info.task.title}</div>
         `;
       });
@@ -2509,7 +2527,7 @@ function handleBlockPointerUp(e) {
   if (avatar) avatar.remove();
 
   document.querySelectorAll('[id^="pointerDragGhost_"]').forEach(g => g.remove());
-  document.querySelectorAll('.day-dock.dock-drop-hover, .cal-allday-drop-cell.drag-over').forEach(d => d.classList.remove('dock-drop-hover', 'drag-over'));
+  document.querySelectorAll('.day-dock.dock-drop-hover, .cal-allday-drop-cell.drag-over, .sidebar-backlog-section.drag-over, .sidebar-backlog-scroll.drag-over, #backlogDrawer.drag-over, .backlog-drawer.drag-over, .btn-backlog-toggle.drag-over, #btnToggleDrawer.drag-over, #mobileNavBacklog.drag-over, #backlogTaskList.drag-over').forEach(d => d.classList.remove('dock-drop-hover', 'drag-over'));
 
   dragInitialTops.forEach(info => {
     info.el.classList.remove('is-batch-dragging');
@@ -2558,6 +2576,68 @@ function handleBlockPointerUp(e) {
 
   if (wasDragging) {
     const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+
+    // DÉPÔT DANS LE BACKLOG DEPUIS LA GRILLE DU PLANNING
+    const targetBacklog = elUnder?.closest('.sidebar-backlog-section, .sidebar-backlog-scroll, #backlogDrawer, .backlog-drawer, .btn-backlog-toggle, #btnToggleDrawer, #mobileNavBacklog, #backlogTaskList');
+    if (targetBacklog) {
+      let movedCount = 0;
+      const movedTitles = [];
+      dragInitialTops.forEach(info => {
+        info.task.date = null;
+        info.task.endDate = null;
+        info.task.time = '';
+        info.task.allDay = false;
+        info.task.isRollover = false;
+        info.task.updated_at = new Date().toISOString();
+        movedTitles.push(info.task.title);
+        movedCount++;
+      });
+
+      // Synchronisation avec span_tasks (Focus) si présent dans localStorage
+      try {
+        const focusTasksRaw = localStorage.getItem('span_tasks');
+        if (focusTasksRaw) {
+          let fTasks = JSON.parse(focusTasksRaw);
+          let fModified = false;
+          fTasks = fTasks.map(ft => {
+            if (dragInitialTops.has(ft.id)) {
+              fModified = true;
+              return {
+                ...ft,
+                date: null,
+                scheduledDate: null,
+                time: '',
+                scheduledTime: '',
+                updated_at: new Date().toISOString()
+              };
+            }
+            return ft;
+          });
+          if (fModified) {
+            localStorage.setItem('span_tasks', JSON.stringify(fTasks));
+          }
+        }
+      } catch (err) {
+        console.warn('Failed syncing to span_tasks:', err);
+      }
+
+      dragInitialTops.clear();
+      clearSelection();
+      savePlanState();
+      if (typeof syncPlanToCloud === 'function') syncPlanToCloud();
+      renderPlanGrid(true);
+      if (typeof renderBacklogTasks === 'function') renderBacklogTasks();
+      if (typeof updateBacklogCountBadge === 'function') updateBacklogCountBadge();
+
+      if (typeof showToast === 'function') {
+        const msg = movedCount === 1 
+          ? `Déplacé dans le Backlog : "${movedTitles[0]}"`
+          : `${movedCount} items déplacés dans le Backlog`;
+        showToast(msg, 'info');
+      }
+      return;
+    }
+
     const targetBlockEl = elUnder?.closest('.schedule-block-item');
     const targetBlockId = targetBlockEl?.dataset.taskId;
     const isOverOtherBlock = Boolean(targetBlockId && targetBlockId !== anchorId && !dragInitialTops.has(targetBlockId));
@@ -2628,9 +2708,13 @@ function handleBlockPointerUp(e) {
         info.task.time = `${startH}:${startM}`;
         info.task.allDay = false;
         info.task.date = targetDateStr || info.task.date;
-        info.task.endDate = targetDateStr || info.task.date;
-        info.task.isRollover = false;
         const dur = info.task.duration || 45;
+        if (itemStartM + dur > 1440) {
+          info.task.endDate = getNextDateString(targetDateStr || info.task.date);
+        } else {
+          info.task.endDate = targetDateStr || info.task.date;
+        }
+        info.task.isRollover = false;
         info.task.endTime = getEndTimeFromDuration(info.task.time, dur);
         info.task.updated_at = new Date().toISOString();
         movedCount++;
@@ -6188,6 +6272,10 @@ function saveTaskModal() {
   const notesEl = document.getElementById('editTaskNotes');
   const notesVal = notesEl ? notesEl.value.trim() : '';
 
+  const computedEndDate = isAllDay 
+    ? endDateVal 
+    : (timeVal && (timeToMinutes(timeVal) + durationVal > 1440) ? getNextDateString(dateVal) : dateVal);
+
   if (editingTaskId) {
     const task = window.SpanPlanState.tasks.find(t => t.id === editingTaskId);
     if (task) {
@@ -6195,7 +6283,7 @@ function saveTaskModal() {
       task.type = editingItemType;
       task.allDay = isAllDay;
       task.date = dateVal;
-      task.endDate = isAllDay ? endDateVal : dateVal;
+      task.endDate = computedEndDate;
       task.recurrence = recurrenceVal;
       task.time = timeVal;
       task.endTime = endTimeVal;
@@ -6218,7 +6306,7 @@ function saveTaskModal() {
       type: editingItemType,
       allDay: isAllDay,
       date: dateVal,
-      endDate: isAllDay ? endDateVal : dateVal,
+      endDate: computedEndDate,
       recurrence: recurrenceVal,
       recurrenceExceptions: [],
       time: timeVal,
