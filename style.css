@@ -696,6 +696,41 @@ body {
   padding: 2px 14px 12px 14px;
   flex-shrink: 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: padding 0.15s ease;
+}
+
+.mini-calendar-widget.is-collapsed {
+  padding-bottom: 4px;
+}
+
+.mini-calendar-widget.is-collapsed .mini-cal-header {
+  margin-bottom: 0;
+}
+
+.mini-calendar-widget.is-collapsed .mini-cal-body {
+  display: none !important;
+}
+
+.mini-cal-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+  padding: 3px 6px;
+  border-radius: 6px;
+  transition: background 0.12s ease;
+}
+
+.mini-cal-title-wrap:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mini-cal-collapse-icon {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: inline-block;
+  line-height: 1;
 }
 
 .mini-cal-header {
@@ -889,10 +924,81 @@ body {
   padding-bottom: 8px;
 }
 
+.sidebar-backlog-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-mini-toggle-hide {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.btn-mini-toggle-hide:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
+}
+.btn-mini-toggle-hide.active {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.45);
+  color: #818cf8;
+}
+.btn-mini-toggle-hide .mini-toggle-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
 .sidebar-backlog-input-wrap {
   display: flex;
+  align-items: center;
   gap: 6px;
   margin-bottom: 8px;
+}
+
+.btn-sidebar-action-select {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+.btn-sidebar-action-select:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: scale(1.04);
+}
+.btn-sidebar-action-select.action-call {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: #3b82f6;
+  color: #60a5fa;
+}
+.btn-sidebar-action-select.action-mail {
+  background: rgba(168, 85, 247, 0.2);
+  border-color: #a855f7;
+  color: #c084fc;
+}
+.btn-sidebar-action-select.action-pay {
+  background: rgba(234, 179, 8, 0.2);
+  border-color: #eab308;
+  color: #facc15;
 }
 
 .sidebar-backlog-input-wrap input {
@@ -1295,6 +1401,79 @@ body {
   align-items: center;
   justify-content: center;
   flex: 1;
+}
+
+/* TOP CONTEXT PILLS (HEADER CENTER) */
+.header-context-pills {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--card-border);
+  padding: 3px 5px;
+  border-radius: 20px;
+}
+.header-context-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3.5px 10px;
+  border-radius: 14px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.header-context-pill:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.08);
+}
+.header-context-pill.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.header-context-pill .context-indicator {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.header-context-pill .dot-all { background: #94a3b8; }
+.header-context-pill .dot-work { background: #3b82f6; }
+.header-context-pill .dot-life { background: #10b981; }
+.header-context-pill .dot-fun { background: #ec4899; }
+
+.header-context-pill .context-badge {
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.75;
+  margin-left: 2px;
+}
+
+[data-theme="light"] .header-context-pills {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .header-context-pill.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .btn-sidebar-action-select {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #0f172a;
+}
+[data-theme="light"] .btn-mini-toggle-hide.active {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #2563eb;
 }
 
 .header-right {
@@ -6049,12 +6228,59 @@ body.is-card-dragging * {
 .btn-backlog-toggle.drag-over,
 #mobileNavBacklog.drag-over,
 .sidebar-backlog-section.drag-over,
+#sidebarBacklogScroll.drag-over,
 .backlog-drawer.drag-over {
   outline: 2px dashed #38bdf8 !important;
   outline-offset: 2px !important;
   background: rgba(56, 189, 248, 0.18) !important;
-  transform: scale(1.05);
+  transform: scale(1.03);
   transition: all 0.12s ease;
+}
+
+/* Événements nocturnes dépassant minuit (Overnight / Spillover) */
+.schedule-block-item.is-overnight-resizing {
+  border-bottom: 2px dashed #38bdf8 !important;
+}
+
+.schedule-block-item.is-overnight-resizing::after {
+  content: attr(data-overnight-info);
+  position: absolute;
+  bottom: 3px;
+  left: 3px;
+  right: 3px;
+  background: rgba(15, 23, 42, 0.95);
+  color: #38bdf8;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  z-index: 100;
+  pointer-events: none;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  text-align: center;
+}
+
+.schedule-block-item.is-overnight-continuation {
+  border-top: 2px dashed rgba(56, 189, 248, 0.7) !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+}
+
+.schedule-block-item.is-overnight-start {
+  border-bottom: 2px dashed rgba(56, 189, 248, 0.7) !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+.overnight-continuation-badge {
+  color: #38bdf8;
+  font-weight: 700;
+  font-size: 11px;
+  margin-right: 3px;
 }
 
 #subtasksModalOverlay.dragging-subtask-active {

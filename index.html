@@ -61,68 +61,47 @@
         </button>
       </div>
 
-      <!-- Mini Month Calendar (Datepicker Widget) -->
+      <!-- Mini Month Calendar (Datepicker Widget - Collapsible) -->
       <div class="mini-calendar-widget" id="miniCalendarWidget">
-        <div class="mini-cal-header">
-          <span class="mini-cal-title" id="miniCalMonthYear">Month Year</span>
-          <div class="mini-cal-nav">
+        <div class="mini-cal-header" onclick="toggleMiniCalCollapse()" title="Cliquer pour plier / déplier le calendrier">
+          <div class="mini-cal-title-wrap">
+            <span class="mini-cal-collapse-icon" id="miniCalCollapseIcon">▾</span>
+            <span class="mini-cal-title" id="miniCalMonthYear">Month Year</span>
+          </div>
+          <div class="mini-cal-nav" onclick="event.stopPropagation()">
             <button type="button" class="mini-nav-btn" onclick="navigateMiniCal(-1)" title="Previous month">‹</button>
             <button type="button" class="mini-nav-btn" onclick="navigateMiniCal(1)" title="Next month">›</button>
           </div>
         </div>
-        <div class="mini-cal-weekdays">
-          <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
-        </div>
-        <div class="mini-cal-grid" id="miniCalGrid"></div>
-      </div>
-
-      <!-- Context Filters -->
-      <div class="sidebar-section">
-        <div class="sidebar-section-header">
-          <span class="sidebar-section-title">Contexts</span>
-        </div>
-        <div class="sidebar-context-list">
-          <button type="button" class="sidebar-context-item active" data-context="all" onclick="setContextFilter('all')">
-            <span class="context-indicator dot-all"></span>
-            <span class="context-label">All Contexts</span>
-            <span class="context-count" id="countAllContext">0</span>
-          </button>
-          <button type="button" class="sidebar-context-item" data-context="work" onclick="setContextFilter('work')">
-            <span class="context-indicator dot-work"></span>
-            <span class="context-label">Work</span>
-            <span class="context-count" id="countWorkContext">0</span>
-          </button>
-          <button type="button" class="sidebar-context-item" data-context="life" onclick="setContextFilter('life')">
-            <span class="context-indicator dot-life"></span>
-            <span class="context-label">Life</span>
-            <span class="context-count" id="countLifeContext">0</span>
-          </button>
-          <button type="button" class="sidebar-context-item" data-context="fun" onclick="setContextFilter('fun')">
-            <span class="context-indicator dot-fun"></span>
-            <span class="context-label">Fun</span>
-            <span class="context-count" id="countFunContext">0</span>
-          </button>
+        <div class="mini-cal-body" id="miniCalBody">
+          <div class="mini-cal-weekdays">
+            <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+          </div>
+          <div class="mini-cal-grid" id="miniCalGrid"></div>
         </div>
       </div>
 
       <!-- Backlog / Unscheduled Tasks List -->
       <div class="sidebar-section sidebar-backlog-section">
         <div class="sidebar-section-header">
-          <span class="sidebar-section-title">Backlog / Inbox</span>
-          <span class="backlog-counter-pill" id="sidebarBacklogCount">0</span>
+          <div class="sidebar-backlog-title-wrap">
+            <span class="sidebar-section-title">Backlog / Inbox</span>
+            <span class="backlog-counter-pill" id="sidebarBacklogCount">0</span>
+          </div>
+          <button type="button" class="btn-mini-toggle-hide active" id="btnMiniToggleHideActions" onclick="togglePlanHideActionsInAll()" title="Masquer les actions (Calls, Mails, Paiements) dans 'Tous'">
+            <span class="mini-toggle-eye">👁️‍🗨️</span>
+            <span class="mini-toggle-badge" id="planToggleBadgeText">ON</span>
+          </button>
         </div>
+
         <div class="sidebar-backlog-input-wrap">
+          <button type="button" class="btn-sidebar-action-select" id="btnSidebarActionTypeSelect" onclick="cycleSidebarBacklogAction()" title="Type d'action : ⚡ Auto (Cliquer pour changer : Call, Mail, Pay)">
+            <span id="sidebarActionTypeIcon">⚡</span>
+          </button>
           <input type="text" id="sidebarBacklogInput" placeholder="Add unscheduled task..." onkeydown="if(event.key==='Enter') addSidebarBacklogTask()">
           <button type="button" class="btn-sidebar-add" onclick="addSidebarBacklogTask()" title="Add to Backlog">+</button>
         </div>
-        <!-- QUICK ACTION CHIPS FOR NEW BACKLOG TASKS -->
-        <div class="quick-add-action-chips sidebar-backlog-action-chips" id="sidebarBacklogActionChips">
-          <span class="quick-action-chips-label">Type:</span>
-          <button type="button" class="quick-action-chip active" data-action="auto" onclick="setSidebarBacklogAction('auto')" title="Détection automatique">⚡ Auto</button>
-          <button type="button" class="quick-action-chip action-call" data-action="call" onclick="setSidebarBacklogAction('call')" title="Marquer comme Appel">📞 Call</button>
-          <button type="button" class="quick-action-chip action-mail" data-action="mail" onclick="setSidebarBacklogAction('mail')" title="Marquer comme Email">✉️ Mail</button>
-          <button type="button" class="quick-action-chip action-pay" data-action="pay" onclick="setSidebarBacklogAction('pay')" title="Marquer comme Paiement">💳 Pay</button>
-        </div>
+
         <!-- ACTION FILTER PILLS -->
         <div class="sidebar-action-filter-pills" id="sidebarActionFilterPills">
           <button type="button" class="plan-filter-pill active" data-filter="all" onclick="setPlanBacklogActionFilter('all')">Tous</button>
@@ -130,20 +109,11 @@
           <button type="button" class="plan-filter-pill" data-filter="mail" onclick="setPlanBacklogActionFilter('mail')">✉️ <span class="pill-count" id="planCountMail">0</span></button>
           <button type="button" class="plan-filter-pill" data-filter="pay" onclick="setPlanBacklogActionFilter('pay')">💳 <span class="pill-count" id="planCountPay">0</span></button>
         </div>
+
         <div class="sidebar-backlog-scroll" ondragover="allowDrop(event)" ondragleave="handleBacklogDragLeave(event)" ondrop="handleDropToBacklog(event)">
           <ul class="task-list sidebar-task-list" id="sidebarBacklogList" ondragover="allowDrop(event)" ondragleave="handleBacklogDragLeave(event)" ondrop="handleDropToBacklog(event)">
             <!-- Rendered dynamically by plan.js -->
           </ul>
-        </div>
-        <!-- BACKLOG ACTION VISIBILITY TOGGLE (AT BOTTOM OF BACKLOG) -->
-        <div class="backlog-bottom-action-toggle" id="sidebarBacklogBottomToggle">
-          <button type="button" class="btn-toggle-action-hide active" id="btnToggleHideActionsPlan" onclick="togglePlanHideActionsInAll()" title="Cliquer pour afficher ou masquer Calls/Mails/Pay dans la vue 'Tous'">
-            <span class="toggle-left">
-              <span class="toggle-icon">👁️‍🗨️</span>
-              <span class="toggle-text">Masquer actions dans "Tous"</span>
-            </span>
-            <span class="toggle-status-badge" id="planToggleBadgeText">ON</span>
-          </button>
         </div>
       </div>
 
@@ -179,6 +149,32 @@
               <button class="nav-arrow-btn nav-next" onclick="navigateTimeline(1)" title="Next period (→)">›</button>
             </div>
             <span class="current-range-label" id="currentRangeLabel">Loading...</span>
+          </div>
+        </div>
+
+        <!-- TOP CONTEXT SELECTOR PILLS -->
+        <div class="header-center">
+          <div class="header-context-pills" id="headerContextPills">
+            <button type="button" class="header-context-pill active" data-context="all" onclick="setContextFilter('all')">
+              <span class="context-indicator dot-all"></span>
+              <span class="context-label">All</span>
+              <span class="context-badge" id="countAllContext">0</span>
+            </button>
+            <button type="button" class="header-context-pill" data-context="work" onclick="setContextFilter('work')">
+              <span class="context-indicator dot-work"></span>
+              <span class="context-label">Work</span>
+              <span class="context-badge" id="countWorkContext">0</span>
+            </button>
+            <button type="button" class="header-context-pill" data-context="life" onclick="setContextFilter('life')">
+              <span class="context-indicator dot-life"></span>
+              <span class="context-label">Life</span>
+              <span class="context-badge" id="countLifeContext">0</span>
+            </button>
+            <button type="button" class="header-context-pill" data-context="fun" onclick="setContextFilter('fun')">
+              <span class="context-indicator dot-fun"></span>
+              <span class="context-label">Fun</span>
+              <span class="context-badge" id="countFunContext">0</span>
+            </button>
           </div>
         </div>
 
@@ -915,9 +911,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/sync.js?v=7.40"></script>
-  <script src="js/gcal.js?v=7.40"></script>
-  <script src="js/plan.js?v=7.40"></script>
-  <script src="js/app.js?v=7.40"></script>
+  <script src="js/sync.js?v=7.41"></script>
+  <script src="js/gcal.js?v=7.41"></script>
+  <script src="js/plan.js?v=7.41"></script>
+  <script src="js/app.js?v=7.41"></script>
 </body>
 </html>

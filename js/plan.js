@@ -43,10 +43,25 @@ function minutesToTime(totalM) {
   return `${h}:${m}`;
 }
 
+function getNextDateString(dateStr) {
+  if (!dateStr) return TODAY_STR;
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + 1);
+  return getLocalDateString(d);
+}
+
+function getPrevDateString(dateStr) {
+  if (!dateStr) return TODAY_STR;
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() - 1);
+  return getLocalDateString(d);
+}
+
 function getEndTimeFromDuration(startTime, durationMinutes) {
   if (!startTime) return '10:00';
   const startM = timeToMinutes(startTime);
-  const endM = Math.min(24 * 60 - 1, startM + (durationMinutes || 45));
+  const endTotal = startM + (durationMinutes || 45);
+  const endM = endTotal % (24 * 60);
   return minutesToTime(endM);
 }
 
@@ -54,7 +69,11 @@ function getDurationFromTimes(startTime, endTime) {
   if (!startTime || !endTime) return 45;
   const startM = timeToMinutes(startTime);
   const endM = timeToMinutes(endTime);
-  if (endM <= startM) return 30;
+  if (endM < startM) {
+    // Événement nocturne dépassant minuit (ex: 22:00 à 02:00 -> 4h)
+    return (24 * 60 - startM) + endM;
+  }
+  if (endM === startM) return 24 * 60; // 24h
   return endM - startM;
 }
 
@@ -147,6 +166,15 @@ function isTaskOccurringOnDate(task, targetDateStr) {
     const isMultiDaySpan = !!(task.allDay || !task.time);
     if (isMultiDaySpan && task.endDate && task.endDate >= task.date) {
       return task.date <= targetDateStr && targetDateStr <= task.endDate;
+    }
+    // Événements avec heure qui dépassent minuit (overnight / glissement sur le jour suivant)
+    if (!isMultiDaySpan && task.time) {
+      const startM = timeToMinutes(task.time);
+      const dur = task.duration || 45;
+      if (startM + dur > 1440) {
+        const nextDay = getNextDateString(task.date);
+        if (targetDateStr === nextDay) return true;
+      }
     }
     return task.date === targetDateStr;
   }
@@ -872,10 +900,21 @@ function formatMinutesDuration(totalM) {
   return m > 0 ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`;
 }
 
-function renderDayCapacityHtml(timedTasks) {
-  const workM = timedTasks.filter(t => t.context === 'work').reduce((acc, t) => acc + (t.duration || 45), 0);
-  const lifeM = timedTasks.filter(t => t.context === 'life').reduce((acc, t) => acc + (t.duration || 45), 0);
-  const funM  = timedTasks.filter(t => t.context === 'fun').reduce((acc, t) => acc + (t.duration || 45), 0);
+function getTaskDurationOnDate(t, dateStr) {
+  const dur = t.duration || 45;
+  if (!t.time || !dateStr) return dur;
+  const startM = timeToMinutes(t.time);
+  if (startM + dur > 1440) {
+    if (dateStr === t.date) return Math.max(0, 1440 - startM);
+    if (dateStr > t.date) return Math.max(0, Math.min(1440, (startM + dur) - 1440));
+  }
+  return dur;
+}
+
+function renderDayCapacityHtml(timedTasks, dateStr = null) {
+  const workM = timedTasks.filter(t => t.context === 'work').reduce((acc, t) => acc + getTaskDurationOnDate(t, dateStr), 0);
+  const lifeM = timedTasks.filter(t => t.context === 'life').reduce((acc, t) => acc + getTaskDurationOnDate(t, dateStr), 0);
+  const funM  = timedTasks.filter(t => t.context === 'fun').reduce((acc, t) => acc + getTaskDurationOnDate(t, dateStr), 0);
   const totalM = workM + lifeM + funM;
 
   if (totalM <= 0) return ''; // Pas de texte encombrant ni de barre inutile si journée libre
@@ -1234,7 +1273,7 @@ function renderPlanGrid(forceRebuild = false) {
     const dayNumber = dateObj.getDate();
     const { timedTasks } = dayDataMap.get(dateStr);
 
-    const capacityHtml = renderDayCapacityHtml(timedTasks);
+    const capacityHtml = renderDayCapacityHtml(timedTasks, dateStr);
 
     return `
       <div class="cal-day-header-cell ${isToday ? 'is-today' : ''}" data-date="${dateStr}">
@@ -1323,6 +1362,26 @@ function renderPlanGrid(forceRebuild = false) {
 // ==============================================================
 let miniCalYear = (new Date()).getFullYear();
 let miniCalMonth = (new Date()).getMonth(); // 0-indexed
+let isMiniCalCollapsed = localStorage.getItem('span_plan_mini_cal_collapsed') === 'true';
+
+function updateMiniCalCollapseUI() {
+  const widget = document.getElementById('miniCalendarWidget');
+  const icon = document.getElementById('miniCalCollapseIcon');
+  if (widget) {
+    widget.classList.toggle('is-collapsed', isMiniCalCollapsed);
+  }
+  if (icon) {
+    icon.textContent = isMiniCalCollapsed ? '▸' : '▾';
+  }
+}
+window.updateMiniCalCollapseUI = updateMiniCalCollapseUI;
+
+function toggleMiniCalCollapse() {
+  isMiniCalCollapsed = !isMiniCalCollapsed;
+  localStorage.setItem('span_plan_mini_cal_collapsed', isMiniCalCollapsed ? 'true' : 'false');
+  updateMiniCalCollapseUI();
+}
+window.toggleMiniCalCollapse = toggleMiniCalCollapse;
 
 function navigateMiniCal(deltaMonth) {
   miniCalMonth += deltaMonth;
@@ -1360,6 +1419,7 @@ function selectDateFromMiniCal(dateStr) {
 }
 
 function renderMiniMonthCalendar() {
+  updateMiniCalCollapseUI();
   const widget = document.getElementById('miniCalendarWidget');
   if (!widget) return;
 
@@ -1369,17 +1429,22 @@ function renderMiniMonthCalendar() {
   let gridEl = document.getElementById('miniCalGrid');
   if (!gridEl) {
     widget.innerHTML = `
-      <div class="mini-cal-header">
-        <span class="mini-cal-title" id="miniCalMonthYear">${monthName} ${miniCalYear}</span>
-        <div class="mini-cal-nav">
+      <div class="mini-cal-header" onclick="toggleMiniCalCollapse()" title="Cliquer pour plier / déplier le calendrier">
+        <div class="mini-cal-title-wrap">
+          <span class="mini-cal-collapse-icon" id="miniCalCollapseIcon">${isMiniCalCollapsed ? '▸' : '▾'}</span>
+          <span class="mini-cal-title" id="miniCalMonthYear">${monthName} ${miniCalYear}</span>
+        </div>
+        <div class="mini-cal-nav" onclick="event.stopPropagation()">
           <button type="button" class="mini-nav-btn" onclick="navigateMiniCal(-1)" title="Previous month">‹</button>
           <button type="button" class="mini-nav-btn" onclick="navigateMiniCal(1)" title="Next month">›</button>
         </div>
       </div>
-      <div class="mini-cal-weekdays">
-        <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+      <div class="mini-cal-body" id="miniCalBody">
+        <div class="mini-cal-weekdays">
+          <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+        </div>
+        <div class="mini-cal-grid" id="miniCalGrid"></div>
       </div>
-      <div class="mini-cal-grid" id="miniCalGrid"></div>
     `;
     gridEl = document.getElementById('miniCalGrid');
   }
@@ -1493,15 +1558,33 @@ function toggleSidebar(forceOpen = null) {
 }
 
 // ALGORITHME DE RÉSOLUTION DES CHEVAUCHEMENTS D'HORAIRES (MULTI-COLONNES STYLE GOOGLE/APPLE CALENDAR)
-function computeOverlapLayout(tasks) {
+function computeOverlapLayout(tasks, dateStr = null) {
   if (!tasks || tasks.length === 0) return [];
 
   const parsed = tasks.map(t => {
-    const parts = (t.time || '00:00').split(':');
-    const start = parseInt(parts[0], 10) * 60 + (parseInt(parts[1], 10) || 0);
-    const duration = t.duration || 45;
+    const taskStartM = timeToMinutes(t.time || '00:00');
+    const totalDuration = t.duration || 45;
+    const isOvernight = (taskStartM + totalDuration > 1440);
+
+    let start = taskStartM;
+    let duration = totalDuration;
+    let isContinuation = false;
+
+    if (isOvernight && dateStr) {
+      if (dateStr === t.date) {
+        // Premier jour de l'événement nocturne : s'arrête exactement à minuit (1440)
+        start = taskStartM;
+        duration = 1440 - taskStartM;
+      } else if (dateStr > t.date) {
+        // Jour suivant (glissement sur le début du jour suivant) : de 00:00 jusqu'au restant
+        start = 0;
+        duration = Math.min(1440, (taskStartM + totalDuration) - 1440);
+        isContinuation = true;
+      }
+    }
+
     const end = start + duration;
-    return { task: t, start, end, duration };
+    return { task: t, start, end, duration, isContinuation, isOvernight, totalDuration };
   });
 
   // Tri par heure de début croissante, puis par durée décroissante
@@ -1598,11 +1681,11 @@ function renderEmptyDayGuidanceHtml() {
 }
 
 function renderTimedBlocks(tasks, dateStr) {
-  const layoutItems = computeOverlapLayout(tasks);
+  const layoutItems = computeOverlapLayout(tasks, dateStr);
   const now = new Date();
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-  return layoutItems.map(({ task, start, duration, colIndex, totalCols }) => {
+  return layoutItems.map(({ task, start, duration, colIndex, totalCols, isContinuation, isOvernight, totalDuration }) => {
     const isEvent = task.type === 'event';
     const isSelected = selectedTaskIds.has(task.id);
     const isLiveNow = (dateStr === TODAY_STR && currentMinutes >= start && currentMinutes < (start + duration));
@@ -1615,7 +1698,21 @@ function renderTimedBlocks(tasks, dateStr) {
     const endTotal = start + duration;
     const endH = String(Math.floor(endTotal / 60)).padStart(2, '0');
     const endM = String(endTotal % 60).padStart(2, '0');
-    const timeRangeStr = `${task.time} – ${endH}:${endM}`;
+
+    let timeRangeStr = '';
+    if (isContinuation) {
+      timeRangeStr = `00:00 – ${endH}:${endM} (suite)`;
+    } else if (isOvernight) {
+      const fullEndM = (timeToMinutes(task.time) + totalDuration) % 1440;
+      const fullEndH = String(Math.floor(fullEndM / 60)).padStart(2, '0');
+      const fullEndMin = String(fullEndM % 60).padStart(2, '0');
+      timeRangeStr = `${task.time} – ${fullEndH}:${fullEndMin} (+1j)`;
+    } else {
+      timeRangeStr = `${task.time} – ${endH}:${endM}`;
+    }
+
+    const continuationPrefix = isContinuation ? '<span class="overnight-continuation-badge" title="Suite de la veille">↳ </span>' : '';
+    const overnightClass = isContinuation ? 'is-overnight-continuation' : (isOvernight ? 'is-overnight-start' : '');
 
     const rolloverClass = task.isRollover ? 'rollover' : '';
     const rolloverPrefix = task.isRollover ? '⟳ ' : '';
@@ -1782,8 +1879,8 @@ function renderTimedBlocks(tasks, dateStr) {
               ${task.completed ? '✓' : ''}
             </div>
           ` : ''}
-          <span class="compact-time">${task.time}</span>
-          <span class="schedule-block-title">${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}${blockActionTagHtml ? ' ' + blockActionTagHtml : ''}</span>
+          <span class="compact-time">${isContinuation ? `00:00 – ${endH}:${endM}` : task.time}</span>
+          <span class="schedule-block-title">${continuationPrefix}${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}${blockActionTagHtml ? ' ' + blockActionTagHtml : ''}</span>
           ${locationHtml}
           ${notesHtml}
           ${isLiveNow ? `
@@ -1808,7 +1905,7 @@ function renderTimedBlocks(tasks, dateStr) {
               ${task.completed ? '✓' : ''}
             </div>
           ` : ''}
-          <span class="schedule-block-title">${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}${blockActionTagHtml ? ' ' + blockActionTagHtml : ''}</span>
+          <span class="schedule-block-title">${continuationPrefix}${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}${blockActionTagHtml ? ' ' + blockActionTagHtml : ''}</span>
           <div class="schedule-block-top-actions">
             ${progressPillHtml}
             <button type="button" class="btn-block-quick-add-subtask" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); quickAddSubtaskFromBlock('${task.id}')" title="Ajouter une sous-tâche">➕</button>
@@ -1836,10 +1933,11 @@ function renderTimedBlocks(tasks, dateStr) {
     const locTooltip = (task.location && task.location.trim()) ? `\n📍 ${task.location.trim()}` : '';
 
     return `
-      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass} ${completedClass} ${isCompact ? 'is-compact' : ''} ${hasSubtasksClass} ${shortBlockClass} ${expandedClass} ${narrowColClass}" 
-           id="block_${task.id}"
+      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass} ${completedClass} ${isCompact ? 'is-compact' : ''} ${hasSubtasksClass} ${shortBlockClass} ${expandedClass} ${narrowColClass} ${overnightClass}" 
+           id="block_${task.id}${isContinuation ? '_cont' : ''}"
            data-task-id="${task.id}"
            data-date="${dateStr}"
+           data-is-continuation="${isContinuation ? 'true' : 'false'}"
            ${overflowAttr}
            style="--block-height: ${height}px; ${positionStyle}"
            onpointerdown="handleBlockPointerDown(event, '${task.id}', '${dateStr}')"
@@ -1870,7 +1968,7 @@ function toggleBlockAccordion(event, taskId) {
   if (!window.expandedBlockAccordionIds) {
     window.expandedBlockAccordionIds = new Set();
   }
-  const blockEl = document.getElementById(`block_${taskId}`);
+  const blockEl = document.getElementById(`block_${taskId}`) || document.getElementById(`block_${taskId}_cont`);
   const isExpanded = window.expandedBlockAccordionIds.has(taskId);
   if (isExpanded) {
     window.expandedBlockAccordionIds.delete(taskId);
@@ -1995,10 +2093,12 @@ function applyDynamicScroll(onlyIfUnscrolled = false) {
   viewport.scrollTop = scrollPx;
 }
 
-// REDIMENSIONNEMENT INTERACTIF
+// REDIMENSIONNEMENT INTERACTIF (AVEC GESTION PROPRE DU DÉPASSEMENT NOCTURNE & OVERNIGHT)
 let resizingTaskId = null;
 let resizeStartY = 0;
-let resizeStartHeight = 0;
+let resizeStartDuration = 45;
+let resizeIsContinuation = false;
+let resizingProposedMinutes = 45;
 
 function startResize(e, taskId) {
   e.preventDefault();
@@ -2008,9 +2108,14 @@ function startResize(e, taskId) {
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
   resizeStartY = clientY;
   
-  const blockEl = document.getElementById(`block_${taskId}`);
+  const blockEl = e.target.closest('.schedule-block-item') || document.getElementById(`block_${taskId}`) || document.getElementById(`block_${taskId}_cont`);
+  resizeIsContinuation = Boolean(blockEl && blockEl.dataset.isContinuation === 'true');
+
+  const task = window.SpanPlanState.tasks.find(t => t.id === taskId);
+  resizeStartDuration = task ? (task.duration || 45) : 45;
+  resizingProposedMinutes = resizeStartDuration;
+
   if (blockEl) {
-    resizeStartHeight = blockEl.offsetHeight;
     blockEl.classList.add('is-resizing');
   }
 
@@ -2026,40 +2131,78 @@ function handleResizeMove(e) {
 
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
   const deltaY = clientY - resizeStartY;
-  const newHeight = Math.max(28, resizeStartHeight + deltaY);
+  const deltaMinutes = (deltaY / HOUR_HEIGHT) * 60;
 
-  const blockEl = document.getElementById(`block_${resizingTaskId}`);
-  if (blockEl) {
-    blockEl.style.height = `${newHeight}px`;
+  let proposedMinutes = Math.round((resizeStartDuration + deltaMinutes) / 15) * 15;
+  // Plafond strict : 24h maximum (1440 min) et minimum 15 min
+  proposedMinutes = Math.max(15, Math.min(1440, proposedMinutes));
+  resizingProposedMinutes = proposedMinutes;
+
+  const task = window.SpanPlanState.tasks.find(t => t.id === resizingTaskId);
+  const taskStartM = task ? timeToMinutes(task.time || '00:00') : 0;
+
+  const blockEl = document.getElementById(`block_${resizingTaskId}`) || document.getElementById(`block_${resizingTaskId}_cont`);
+  if (!blockEl) return;
+
+  if (!resizeIsContinuation) {
+    if (taskStartM + proposedMinutes > 1440) {
+      // Dépasse minuit : le bloc du jour s'arrête exactement à minuit
+      const day1Minutes = Math.max(15, 1440 - taskStartM);
+      const day1Height = Math.max(22, (day1Minutes / 60) * HOUR_HEIGHT - 2);
+      blockEl.style.height = `${day1Height}px`;
+
+      const overflowM = (taskStartM + proposedMinutes) - 1440;
+      const nextDayEndH = String(Math.floor(overflowM / 60)).padStart(2, '0');
+      const nextDayEndM = String(overflowM % 60).padStart(2, '0');
+      blockEl.classList.add('is-overnight-resizing');
+      blockEl.setAttribute('data-overnight-info', `↳ Glisse sur le jour suivant jusqu'à ${nextDayEndH}:${nextDayEndM} (+${overflowM}m)`);
+    } else {
+      blockEl.classList.remove('is-overnight-resizing');
+      blockEl.removeAttribute('data-overnight-info');
+      const normalHeight = Math.max(22, (proposedMinutes / 60) * HOUR_HEIGHT - 2);
+      blockEl.style.height = `${normalHeight}px`;
+    }
+  } else {
+    // Redimensionnement depuis le segment de continuation
+    const contMinutes = Math.max(15, (taskStartM + proposedMinutes) - 1440);
+    const contHeight = Math.max(22, (contMinutes / 60) * HOUR_HEIGHT - 2);
+    blockEl.style.height = `${contHeight}px`;
   }
 }
 
 function handleResizeEnd() {
   if (!resizingTaskId) return;
 
-  const blockEl = document.getElementById(`block_${resizingTaskId}`);
-  if (blockEl) {
-    blockEl.classList.remove('is-resizing');
-    const finalHeight = blockEl.offsetHeight;
-    
-    let minutes = Math.round((finalHeight / HOUR_HEIGHT) * 60);
-    minutes = Math.max(15, Math.round(minutes / 15) * 15);
-
-    const task = window.SpanPlanState.tasks.find(t => t.id === resizingTaskId);
-    if (task) {
-      task.duration = minutes;
-      if (task.time) {
-        task.endTime = getEndTimeFromDuration(task.time, minutes);
-      }
-      savePlanState();
-    }
-  }
-
+  const taskId = resizingTaskId;
   resizingTaskId = null;
   window.removeEventListener('mousemove', handleResizeMove);
   window.removeEventListener('mouseup', handleResizeEnd);
   window.removeEventListener('touchmove', handleResizeMove);
   window.removeEventListener('touchend', handleResizeEnd);
+
+  document.querySelectorAll('.is-resizing, .is-overnight-resizing').forEach(el => {
+    el.classList.remove('is-resizing', 'is-overnight-resizing');
+    el.removeAttribute('data-overnight-info');
+  });
+
+  const task = window.SpanPlanState.tasks.find(t => t.id === taskId);
+  if (task) {
+    const finalMinutes = Math.max(15, Math.min(1440, resizingProposedMinutes));
+    task.duration = finalMinutes;
+    const taskStartM = timeToMinutes(task.time || '00:00');
+    if (task.time) {
+      task.endTime = getEndTimeFromDuration(task.time, finalMinutes);
+    }
+    if (taskStartM + finalMinutes > 1440) {
+      task.endDate = getNextDateString(task.date);
+    } else if (!task.allDay) {
+      task.endDate = task.date;
+    }
+    task.updated_at = new Date().toISOString();
+    savePlanState();
+    if (typeof syncPlanToCloud === 'function') syncPlanToCloud();
+    renderPlanGrid(true);
+  }
 }
 
 // MULTI-SÉLECTION & DÉPLACEMENT DE GROUPE (SYSTÈME EXACT DU PORTFOLIO)
@@ -2178,7 +2321,7 @@ function handleBlockPointerDown(e, taskId, dateStr) {
   hasMovedBeyondThreshold = false;
   isPointerDragging = false;
 
-  const anchorEl = document.getElementById(`block_${taskId}`);
+  const anchorEl = document.getElementById(`block_${taskId}`) || document.getElementById(`block_${taskId}_cont`);
   if (anchorEl) {
     const rect = anchorEl.getBoundingClientRect();
     dragGrabOffsetX = Math.max(10, Math.min(rect.width - 10, e.clientX - rect.left));
@@ -2191,7 +2334,7 @@ function handleBlockPointerDown(e, taskId, dateStr) {
   dragInitialTops.clear();
   selectedTaskIds.forEach(id => {
     const task = window.SpanPlanState.tasks.find(t => t.id === id);
-    const el = document.getElementById(`block_${id}`);
+    const el = document.getElementById(`block_${id}`) || document.getElementById(`block_${id}_cont`);
     if (task && el) {
       const parts = (task.time || '00:00').split(':');
       const startM = parseInt(parts[0], 10) * 60 + (parseInt(parts[1], 10) || 0);
@@ -4421,11 +4564,31 @@ let sidebarBacklogAction = 'auto';
 
 function setSidebarBacklogAction(action) {
   sidebarBacklogAction = action || 'auto';
+  const iconEl = document.getElementById('sidebarActionTypeIcon');
+  const btnEl = document.getElementById('btnSidebarActionTypeSelect');
+  const icons = { auto: '⚡', call: '📞', mail: '✉️', pay: '💳', other: '📦' };
+  const labels = { auto: 'Auto', call: 'Call', mail: 'Mail', pay: 'Paiement', other: 'Standard' };
+  if (iconEl) iconEl.textContent = icons[sidebarBacklogAction] || '⚡';
+  if (btnEl) {
+    btnEl.className = `btn-sidebar-action-select action-${sidebarBacklogAction}`;
+    btnEl.title = `Type d'action : ${labels[sidebarBacklogAction] || sidebarBacklogAction} (Cliquer pour changer : Call, Mail, Pay)`;
+  }
   document.querySelectorAll('#sidebarBacklogActionChips .quick-action-chip').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.action === sidebarBacklogAction);
   });
 }
 window.setSidebarBacklogAction = setSidebarBacklogAction;
+
+function cycleSidebarBacklogAction() {
+  const order = ['auto', 'call', 'mail', 'pay'];
+  const nextIdx = (order.indexOf(sidebarBacklogAction) + 1) % order.length;
+  setSidebarBacklogAction(order[nextIdx]);
+  if (typeof showToast === 'function') {
+    const labels = { auto: '⚡ Action: Détection auto', call: '📞 Action: Call', mail: '✉️ Action: Mail', pay: '💳 Action: Paiement' };
+    showToast(labels[order[nextIdx]] || 'Type d\'action modifié', 'info');
+  }
+}
+window.cycleSidebarBacklogAction = cycleSidebarBacklogAction;
 
 function setPlanTaskAction(taskId, action) {
   const task = (window.SpanPlanState.tasks || []).find(t => t.id === taskId);
@@ -4477,12 +4640,13 @@ window.getTaskActionType = getTaskActionType;
 let planHideActionsInAll = localStorage.getItem('span_plan_hide_actions_in_all') !== 'false'; // default true
 
 function updatePlanHideActionsToggleUI() {
+  const btnMini = document.getElementById('btnMiniToggleHideActions');
   const btnSidebar = document.getElementById('btnToggleHideActionsPlan');
   const btnDrawer = document.getElementById('btnToggleHideActionsDrawer');
   const badgeSidebar = document.getElementById('planToggleBadgeText');
   const badgeDrawer = document.getElementById('drawerToggleBadgeText');
 
-  [btnSidebar, btnDrawer].forEach(btn => {
+  [btnMini, btnSidebar, btnDrawer].forEach(btn => {
     if (btn) btn.classList.toggle('active', planHideActionsInAll);
   });
   [badgeSidebar, badgeDrawer].forEach(b => {
@@ -6127,7 +6291,7 @@ function setVisibleDays(num) {
 
 function setContextFilter(ctx) {
   currentContextFilter = ctx;
-  document.querySelectorAll('.context-menu-item, #contextSwitch .context-btn, .sidebar-context-item').forEach(btn => {
+  document.querySelectorAll('.context-menu-item, #contextSwitch .context-btn, .sidebar-context-item, .header-context-pill').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.context === ctx);
   });
   
@@ -6379,6 +6543,8 @@ window.addEventListener('DOMContentLoaded', () => {
   setVisibleDays(visibleDaysCount);
   setMobileDayView('agenda');
   applyPinState();
+  updateMiniCalCollapseUI();
+  setSidebarBacklogAction('auto');
   renderPlanGrid();
   renderBacklogDrawer();
   updateCounters();
