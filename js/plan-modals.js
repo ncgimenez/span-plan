@@ -391,16 +391,13 @@ window.addEventListener('keydown', (e) => {
     } else if (e.key === '[') {
       e.preventDefault();
       toggleSidebar();
-    } else if (e.key === '1') {
+    } else if (e.key === '1' || e.key === 'd' || e.key === 'D') {
       e.preventDefault();
       setVisibleDays(1);
     } else if (e.key === '3') {
       e.preventDefault();
       setVisibleDays(3);
-    } else if (e.key === '5') {
-      e.preventDefault();
-      setVisibleDays(5);
-    } else if (e.key === '7') {
+    } else if (e.key === '7' || e.key === 'w' || e.key === 'W') {
       e.preventDefault();
       setVisibleDays(7);
     } else if (e.key === 't' || e.key === 'T') {

@@ -375,9 +375,17 @@ window.addEventListener('keydown', (e) => {
     } else if (typeof openCreateModalWithDefaults === 'function') {
       openCreateModalWithDefaults();
     }
-  } else if (['1', '3', '5', '7'].includes(e.key)) {
+  } else if (['1', '3', '7'].includes(e.key)) {
     if (typeof setVisibleDays === 'function') {
       setVisibleDays(parseInt(e.key, 10));
+    }
+  } else if (e.key === 'd' || e.key === 'D') {
+    if (typeof setVisibleDays === 'function') {
+      setVisibleDays(1);
+    }
+  } else if (e.key === 'w' || e.key === 'W') {
+    if (typeof setVisibleDays === 'function') {
+      setVisibleDays(7);
     }
   }
 });

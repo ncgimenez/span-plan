@@ -1849,7 +1849,10 @@ function jumpToToday() {
 }
 
 function setVisibleDays(num) {
-  num = Math.max(1, parseInt(num, 10) || 7);
+  num = parseInt(num, 10) || 7;
+  if (![1, 3, 7].includes(num)) {
+    num = 7;
+  }
   visibleDaysCount = num;
   localStorage.setItem('span_plan_visible_days', num);
   document.querySelectorAll('#daysSelectorGroup .pill-btn').forEach(btn => {
