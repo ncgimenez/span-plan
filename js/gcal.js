@@ -287,7 +287,7 @@ async function pushSpanBlocksToGoogle(calendarId) {
     } else {
       const startIso = `${task.date}T${task.time}:00`;
       const [h, m] = task.time.split(':').map(Number);
-      const duration = task.duration || 45;
+      const duration = task.duration || 30;
       const endMinutesTotal = h * 60 + m + duration;
       const endH = String(Math.floor(endMinutesTotal / 60)).padStart(2, '0');
       const endM = String(endMinutesTotal % 60).padStart(2, '0');

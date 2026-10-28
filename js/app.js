@@ -101,7 +101,7 @@ function exportIcsFile(category = 'all') {
     const [hours, minutes] = (timeStr || '09:00').split(':').map(Number);
     
     const startDate = new Date(year, month - 1, day, hours, minutes, 0);
-    const endDate = new Date(startDate.getTime() + (durationMinutes || 45) * 60 * 1000);
+    const endDate = new Date(startDate.getTime() + (durationMinutes || 30) * 60 * 1000);
     
     const y = endDate.getFullYear();
     const m = String(endDate.getMonth() + 1).padStart(2, '0');
@@ -200,7 +200,7 @@ function exportIcsFile(category = 'all') {
       icsLines.push(`DTEND;VALUE=DATE:${dtEnd}`);
     } else {
       const dtStart = formatIcsDateTime(task.date, task.time);
-      const dtEnd = calculateIcsEndDateTime(task.date, task.time, task.duration || 45);
+      const dtEnd = calculateIcsEndDateTime(task.date, task.time, task.duration || 30);
       icsLines.push(`DTSTART:${dtStart}`);
       icsLines.push(`DTEND:${dtEnd}`);
     }

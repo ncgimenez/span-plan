@@ -87,6 +87,73 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
+function extractTaskUrl(task) {
+  if (!task) return '';
+
+  // 1. Champs directs
+  for (const field of [task.url, task.link]) {
+    if (typeof field === 'string' && field.trim()) {
+      const u = field.trim();
+      return /^https?:\/\//i.test(u) ? u : `https://${u}`;
+    }
+  }
+
+  // Helper pour extraire un lien d'une chaîne
+  function findUrlInString(str, allowDomainWithoutProtocol = false) {
+    if (!str || typeof str !== 'string') return '';
+    
+    // A. URL explicite http:// ou https://
+    const httpMatch = str.match(/https?:\/\/[^\s<>"')]+/i);
+    if (httpMatch) {
+      return httpMatch[0].replace(/[.,;:!?)]+$/, '');
+    }
+
+    // B. URL commençant par www.
+    const wwwMatch = str.match(/\bwww\.[a-zA-Z0-9\-._~:/?#[\]@!$&'()*+,;=%]+/i);
+    if (wwwMatch) {
+      return `https://${wwwMatch[0].replace(/[.,;:!?)]+$/, '')}`;
+    }
+
+    // C. Outils de réunion ou webcasts connus sans http
+    const meetingMatch = str.match(/\b([a-zA-Z0-9-]+\.)*(meet\.google\.com|zoom\.us|teams\.microsoft\.com|webex\.com|webcasts\.com)[^\s<>"')]*\b/i);
+    if (meetingMatch) {
+      return `https://${meetingMatch[0].replace(/[.,;:!?)]+$/, '')}`;
+    }
+
+    // D. Tout domaine valide si autorisé (utile pour le champ location type "ibm.webcasts.com/..." ou "notion.so/...")
+    if (allowDomainWithoutProtocol) {
+      const domainMatch = str.match(/\b([a-zA-Z0-9-]+\.)+(?:com|org|net|io|edu|gov|fr|be|ch|ca|app|dev|me|ai|co)\b(?:\/[^\s<>"')*)\]]*)?/i);
+      if (domainMatch) {
+        return `https://${domainMatch[0].replace(/[.,;:!?)]+$/, '')}`;
+      }
+    }
+
+    return '';
+  }
+
+  // 2. Recherche prioritaire dans Location (autorise les domaines sans http comme ibm.webcasts.com)
+  if (task.location) {
+    const locUrl = findUrlInString(task.location, true);
+    if (locUrl) return locUrl;
+  }
+
+  // 3. Recherche dans Notes / Description
+  for (const field of [task.notes, task.description]) {
+    if (field) {
+      const notesUrl = findUrlInString(field, false);
+      if (notesUrl) return notesUrl;
+    }
+  }
+
+  // 4. Recherche dans le Titre (uniquement URLs explicites)
+  if (task.title) {
+    const titleUrl = findUrlInString(task.title, false);
+    if (titleUrl) return titleUrl;
+  }
+
+  return '';
+}
+
 function renderTitleWithTagsHtml(titleStr) {
   if (!titleStr) return 'Untitled';
   return titleStr.replace(/#([\w\-]+)/g, (match, tag) => {
@@ -1236,15 +1303,11 @@ function renderAllDayContinuousRibbonHtml(visibleDates) {
     ].filter(Boolean).join(' ');
 
     let alldayLocHtml = '';
-    if (task.location && task.location.trim()) {
-      const locRaw = task.location.trim();
-      const isUrl = /^https?:\/\//i.test(locRaw) || /^www\./i.test(locRaw) || locRaw.includes('meet.google.com') || locRaw.includes('zoom.us');
-      const safeHref = /^https?:\/\//i.test(locRaw) ? locRaw : `https://${locRaw}`;
-      if (isUrl) {
-        alldayLocHtml = `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="ribbon-link-pill" onclick="event.stopPropagation()" title="Ouvrir : ${escapeHtml(locRaw)}">🔗</a>`;
-      } else {
-        alldayLocHtml = `<span class="ribbon-location-pill" title="Lieu : ${escapeHtml(locRaw)}">📍</span>`;
-      }
+    const ribbonUrl = extractTaskUrl(task);
+    if (ribbonUrl) {
+      alldayLocHtml = `<a href="${ribbonUrl}" target="_blank" rel="noopener noreferrer" class="ribbon-link-pill" onclick="event.stopPropagation()" title="Ouvrir : ${escapeHtml(ribbonUrl)}"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></a>`;
+    } else if (task.location && task.location.trim()) {
+      alldayLocHtml = `<span class="ribbon-location-pill" title="Lieu : ${escapeHtml(task.location.trim())}">📍</span>`;
     }
 
     return `
@@ -1854,35 +1917,35 @@ function renderTimedBlocks(tasks, dateStr) {
       `;
     }
 
+    const taskUrl = extractTaskUrl(task);
+    const cornerLinkHtml = taskUrl ? `
+      <a href="${taskUrl}" target="_blank" rel="noopener noreferrer" 
+         class="block-corner-link-btn" 
+         onpointerdown="event.stopPropagation()" 
+         onclick="event.stopPropagation()" 
+         title="Ouvrir le lien web : ${escapeHtml(taskUrl)}">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </a>
+    ` : '';
+
     let locationHtml = '';
     if (task.location && task.location.trim()) {
       const locRaw = task.location.trim();
-      const isUrl = /^https?:\/\//i.test(locRaw) || /^www\./i.test(locRaw) || locRaw.includes('meet.google.com') || locRaw.includes('zoom.us') || locRaw.includes('teams.microsoft.com');
-      const safeHref = /^https?:\/\//i.test(locRaw) ? locRaw : `https://${locRaw}`;
+      const locAsUrl = extractTaskUrl({ location: locRaw });
+      // Si task.location est UNIQUEMENT une URL, on n'affiche pas la pastille texte de lieu
+      // car le bouton vectoriel dans le coin inférieur droit s'en charge déjà parfaitement !
+      const isPureUrl = Boolean(locAsUrl && (
+        locRaw.toLowerCase() === locAsUrl.toLowerCase() ||
+        locRaw.toLowerCase() === locAsUrl.replace(/^https?:\/\//i, '').toLowerCase() ||
+        locRaw.toLowerCase().startsWith('http://') ||
+        locRaw.toLowerCase().startsWith('https://') ||
+        locRaw.toLowerCase().startsWith('www.')
+      ));
 
-      if (isUrl) {
-        let linkLabel = 'Lien';
-        if (locRaw.includes('meet.google.com')) linkLabel = 'Meet';
-        else if (locRaw.includes('zoom.us')) linkLabel = 'Zoom';
-        else if (locRaw.includes('teams.microsoft.com')) linkLabel = 'Teams';
-        else {
-          try {
-            const domain = new URL(safeHref).hostname.replace(/^www\./, '');
-            linkLabel = domain.length > 14 ? domain.slice(0, 12) + '…' : domain;
-          } catch (e) {
-            linkLabel = 'Lien';
-          }
-        }
-        locationHtml = `
-          <a href="${safeHref}" target="_blank" rel="noopener noreferrer" 
-             class="block-link-pill" 
-             onpointerdown="event.stopPropagation()"
-             onclick="event.stopPropagation()" 
-             title="Ouvrir le lien (${escapeHtml(locRaw)})">
-            🔗 ${escapeHtml(linkLabel)} ↗
-          </a>
-        `;
-      } else {
+      if (!isPureUrl) {
         locationHtml = `
           <span class="block-location-pill" 
                 onpointerdown="event.stopPropagation()"
@@ -1984,7 +2047,7 @@ function renderTimedBlocks(tasks, dateStr) {
     const importantClass = task.important ? 'is-important' : '';
 
     return `
-      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass} ${completedClass} ${isCompact ? 'is-compact' : ''} ${hasSubtasksClass} ${shortBlockClass} ${expandedClass} ${narrowColClass} ${overnightClass} ${importantClass}" 
+      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass} ${completedClass} ${isCompact ? 'is-compact' : ''} ${hasSubtasksClass} ${shortBlockClass} ${expandedClass} ${narrowColClass} ${overnightClass} ${importantClass} ${taskUrl ? 'has-corner-link' : ''}" 
            id="block_${task.id}${isContinuation ? '_cont' : ''}"
            data-task-id="${task.id}"
            data-date="${dateStr}"
@@ -1997,8 +2060,9 @@ function renderTimedBlocks(tasks, dateStr) {
            ondragover="handleBlockDragOver(event, '${task.id}')"
            ondragleave="handleBlockDragLeave(event, '${task.id}')"
            ondrop="handleBlockDrop(event, '${task.id}')"
-           title="${isEvent ? '📅 Event: ' : '📋 Task: '}${escapeHtml(task.title)} (${timeRangeStr})${locTooltip}${notesTooltip}">
+           title="${isEvent ? '📅 Event: ' : '📋 Task: '}${escapeHtml(task.title)} (${timeRangeStr})${locTooltip}${notesTooltip}${taskUrl ? `\n🔗 ${taskUrl}` : ''}">
         ${innerContentHtml}
+        ${cornerLinkHtml}
         <div class="resize-handle" 
              onmousedown="startResize(event, '${task.id}')"
              ontouchstart="startResize(event, '${task.id}')"
@@ -2087,6 +2151,19 @@ function renderUnscheduledList(tasks) {
       : '';
 
     const importantClass = task.important ? 'is-important' : '';
+    const backlogUrl = extractTaskUrl(task);
+    const backlogLinkHtml = backlogUrl ? `
+      <a href="${backlogUrl}" target="_blank" rel="noopener noreferrer" 
+         class="task-row-link-btn" 
+         onpointerdown="event.stopPropagation()" 
+         onclick="event.stopPropagation()" 
+         title="Ouvrir le lien web : ${escapeHtml(backlogUrl)}">
+        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </a>
+    ` : '';
 
     return `
       <li class="task-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${isSelected ? 'is-selected' : ''} ${importantClass}"
@@ -2104,6 +2181,7 @@ function renderUnscheduledList(tasks) {
           <span class="task-text">
             ${rolloverPrefix}${renderTitleWithTagsHtml(task.title)}
           </span>
+          ${backlogLinkHtml}
           <div class="schedule-block-top-actions">
             ${progressPillHtml}
             <button type="button" class="btn-block-quick-add-subtask" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); quickAddSubtaskFromBlock('${task.id}')" title="Ajouter une sous-tâche">➕</button>
@@ -5236,6 +5314,19 @@ function renderBacklogDrawer() {
 
       const li = document.createElement('li');
       const importantClass = task.important ? 'is-important' : '';
+      const backlogUrl = extractTaskUrl(task);
+      const backlogLinkHtml = backlogUrl ? `
+        <a href="${backlogUrl}" target="_blank" rel="noopener noreferrer" 
+           class="task-row-link-btn" 
+           onpointerdown="event.stopPropagation()" 
+           onclick="event.stopPropagation()" 
+           title="Ouvrir le lien web : ${escapeHtml(backlogUrl)}">
+          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+          </svg>
+        </a>
+      ` : '';
       li.className = `task-item cat-${task.context || 'work'} ${isEvent ? 'is-event' : ''} ${completedClass} ${isSelected ? 'is-selected' : ''} ${importantClass}`;
       li.draggable = true;
       li.ondragstart = (e) => handleDragStart(e, task.id);
@@ -5251,6 +5342,7 @@ function renderBacklogDrawer() {
             </div>
           `}
           <span class="task-text ${completedClass}">${renderTitleWithTagsHtml(task.title)}${actionTagHtml}</span>
+          ${backlogLinkHtml}
           <div class="schedule-block-top-actions">
             ${progressPillHtml}
             <button type="button" class="btn-block-quick-add-subtask" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); quickAddSubtaskFromBlock('${task.id}')" title="Ajouter une sous-tâche">➕</button>
