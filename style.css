@@ -570,10 +570,10 @@ body {
   max-width: 100vw;
   height: 100vh;
   height: 100dvh;
-  display: flex !important;
-  flex-direction: row !important;
-  padding: 0 !important;
-  margin: 0 !important;
+  display: flex;
+  flex-direction: row;
+  padding: 0;
+  margin: 0;
   box-sizing: border-box;
   position: relative;
   overflow: hidden;
@@ -605,13 +605,13 @@ body {
 }
 
 .desktop-shell.sidebar-collapsed .app-sidebar {
-  width: 0 !important;
-  min-width: 0 !important;
-  max-width: 0 !important;
-  margin-left: 0 !important;
-  border-right-color: transparent !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
+  width: 0;
+  min-width: 0;
+  max-width: 0;
+  margin-left: 0;
+  border-right-color: transparent;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .sidebar-header {
@@ -715,7 +715,7 @@ body {
 }
 
 .mini-calendar-widget.is-collapsed .mini-cal-body {
-  display: none !important;
+  display: none;
 }
 
 .mini-cal-title-wrap {
@@ -1490,8 +1490,8 @@ body {
 }
 
 .btn-settings {
-  flex-shrink: 0 !important;
-  display: inline-flex !important;
+  flex-shrink: 0;
+  display: inline-flex;
 }
 
 /* BRAND LOGO */
@@ -1794,10 +1794,10 @@ body {
 }
 
 .btn-new-task {
-  background: var(--text-main) !important;
-  color: var(--bg) !important;
-  border: 1px solid var(--text-main) !important;
-  font-weight: 700 !important;
+  background: var(--text-main);
+  color: var(--bg);
+  border: 1px solid var(--text-main);
+  font-weight: 700;
   height: 32px;
   padding: 0 13px;
   border-radius: 10px;
@@ -3240,18 +3240,18 @@ body {
 
 /* Uniquement quand l'utilisateur a CLIQUÉ pour déplier (.is-expanded) */
 .schedule-block-item.is-expanded {
-  z-index: 70 !important;
-  height: auto !important;
+  z-index: 70;
+  height: auto;
   min-height: var(--block-height, 40px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.25) !important;
-  border-color: rgba(255, 255, 255, 0.3) !important;
-  overflow: visible !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.25);
+  border-color: rgba(255, 255, 255, 0.3);
+  overflow: visible;
 }
 
 [data-theme="light"] .schedule-block-item.is-expanded {
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.08) !important;
-  border-color: rgba(0, 0, 0, 0.25) !important;
-  background: #ffffff !important;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.25);
+  background: #ffffff;
 }
 
 /* Au repos (non déplié) sur blocs compacts ou courts (< 75px) : cacher la liste */
@@ -3267,11 +3267,11 @@ body {
 
 /* Quand déplié : afficher toutes les sous-tâches */
 .schedule-block-item.is-expanded .accordion-subtasks {
-  display: flex !important;
+  display: flex;
 }
 
 .schedule-block-item.is-expanded .subtask-overflow-item {
-  display: flex !important;
+  display: flex;
   animation: fadeInDown 0.14s ease-out;
 }
 
@@ -3447,10 +3447,10 @@ body {
 
 /* ÉTAT MULTI-SÉLECTIONNÉ */
 .schedule-block-item.is-selected {
-  border-color: #38bdf8 !important;
-  box-shadow: 0 0 0 2.5px rgba(56, 189, 248, 0.65), 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2.5px rgba(56, 189, 248, 0.65), 0 8px 24px rgba(0, 0, 0, 0.5);
   transform: translateY(-1px) scale(1.01);
-  z-index: 35 !important;
+  z-index: 35;
 }
 
 /* CIBLE DE DÉPÔT EN SOUS-TÂCHE */
@@ -3497,17 +3497,17 @@ body.is-card-dragging * {
 
 .is-floating-drag-avatar,
 .is-floating-drag-avatar * {
-  pointer-events: none !important;
+  pointer-events: none;
 }
 
 .is-floating-drag-avatar {
-  position: fixed !important;
-  z-index: 999999 !important;
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7), 0 0 0 1.5px rgba(255, 255, 255, 0.25) !important;
-  transform: scale(1.02) rotate(1deg) !important;
-  transition: transform 0.1s ease, box-shadow 0.1s ease !important;
-  opacity: 0.96 !important;
-  margin: 0 !important;
+  position: fixed;
+  z-index: 999999;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7), 0 0 0 1.5px rgba(255, 255, 255, 0.25);
+  transform: scale(1.02) rotate(1deg);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  opacity: 0.96;
+  margin: 0;
 }
 
 .day-dock.dock-drop-hover {
@@ -3517,9 +3517,9 @@ body.is-card-dragging * {
 }
 
 .schedule-block-item.is-batch-dragging {
-  cursor: grabbing !important;
-  opacity: 0.35 !important;
-  transition: none !important;
+  cursor: grabbing;
+  opacity: 0.35;
+  transition: none;
 }
 
 /* RECTANGLE MARQUEE DE SÉLECTION */
@@ -4745,8 +4745,8 @@ body.is-card-dragging * {
 
 @media (min-width: 900px) {
   .backlog-drawer.pinned {
-    position: relative !important;
-    transform: none !important;
+    position: relative;
+    transform: none;
     flex-shrink: 0;
   }
 }
@@ -5372,20 +5372,20 @@ body.is-card-dragging * {
 
 /* NAVIGATION MOBILE AU BAS DE L'ÉCRAN */
 .mobile-nav {
-  position: fixed !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  height: calc(48px + env(safe-area-inset-bottom, 0px)) !important;
-  background: rgba(13, 13, 15, 0.95) !important;
-  backdrop-filter: blur(12px) !important;
-  border-top: 1px solid var(--card-border) !important;
-  display: flex !important;
-  justify-content: center !important;
-  align-items: flex-start !important;
-  padding-top: 4px !important;
-  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
-  z-index: 100 !important;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(48px + env(safe-area-inset-bottom, 0px));
+  background: rgba(13, 13, 15, 0.95);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--card-border);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 4px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  z-index: 100;
 }
 
 .nav-items {
@@ -5411,7 +5411,7 @@ body.is-card-dragging * {
   .mobile-nav,
   .mobile-date-strip-container,
   .mobile-day-segmented {
-    display: none !important;
+    display: none;
   }
 }
 
@@ -5420,16 +5420,16 @@ body.is-card-dragging * {
    ============================================================== */
 @media (max-width: 768px) {
   .desktop-shell {
-    height: 100% !important;
-    height: -webkit-fill-available !important;
-    max-height: 100% !important;
-    min-height: -webkit-fill-available !important;
-    padding-top: max(48px, env(safe-area-inset-top, 44px)) !important;
-    padding-left: 8px !important;
-    padding-right: 8px !important;
-    padding-bottom: calc(56px + env(safe-area-inset-bottom, 16px)) !important;
-    overflow: hidden !important;
-    box-sizing: border-box !important;
+    height: 100%;
+    height: -webkit-fill-available;
+    max-height: 100%;
+    min-height: -webkit-fill-available;
+    padding-top: max(48px, env(safe-area-inset-top, 44px));
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-bottom: calc(56px + env(safe-area-inset-bottom, 16px));
+    overflow: hidden;
+    box-sizing: border-box;
   }
 
   /* Header compact 1 seule ligne avec dégagement du notch */
@@ -5637,77 +5637,77 @@ body.is-card-dragging * {
 
   /* Mode Agenda : Agenda prend tout, Dock masqué */
   .mobile-mode-agenda .day-dock {
-    display: none !important;
+    display: none;
   }
   .mobile-mode-agenda .day-schedule-scroll {
-    display: block !important;
-    flex: 1 !important;
-    height: auto !important;
+    display: block;
+    flex: 1;
+    height: auto;
   }
 
   /* Mode To-do : Grille masquée, Dock prend tout */
   .mobile-mode-todo .day-schedule-scroll {
-    display: none !important;
+    display: none;
   }
   .mobile-mode-todo .day-dock {
-    display: flex !important;
-    flex: 1 !important;
-    height: 100% !important;
-    border-top: none !important;
-    padding: 12px 10px !important;
-    overflow-y: auto !important;
+    display: flex;
+    flex: 1;
+    height: 100%;
+    border-top: none;
+    padding: 12px 10px;
+    overflow-y: auto;
   }
   .mobile-mode-todo .dock-task-list {
-    max-height: none !important;
-    flex: 1 !important;
-    overflow-y: auto !important;
+    max-height: none;
+    flex: 1;
+    overflow-y: auto;
   }
 
   /* Mode Backlog : Journée et contrôles de date masqués, Backlog prend tout l'espace */
   .mobile-mode-backlog #mobileDateStripContainer,
   .mobile-mode-backlog #mobileDaySegmented,
   .mobile-mode-backlog .planner-board-container {
-    display: none !important;
+    display: none;
   }
   .mobile-mode-backlog .backlog-drawer {
-    display: flex !important;
-    position: static !important;
-    transform: none !important;
-    width: 100% !important;
-    height: 100% !important;
-    max-width: 100% !important;
-    z-index: 10 !important;
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-    border-radius: 14px !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    box-shadow: none !important;
+    display: flex;
+    position: static;
+    transform: none;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    z-index: 10;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: none;
   }
 
 
 
   /* TIROIR BACKLOG SUR MOBILE (FERMÉ PAR DÉFAUT, AUCUN DÉBORDEMENT) */
   .backlog-drawer {
-    display: none !important;
+    display: none;
   }
 
   .backlog-drawer.open {
-    display: flex !important;
-    position: fixed !important;
-    top: calc(44px + env(safe-area-inset-top, 14px)) !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: calc(54px + env(safe-area-inset-bottom, 14px)) !important;
-    width: 100vw !important;
-    height: auto !important;
-    max-width: 100vw !important;
-    z-index: 900 !important;
-    background: #0d0d0f !important;
-    border-left: none !important;
-    border-radius: 0 !important;
-    padding-top: 8px !important;
-    padding-bottom: 12px !important;
-    animation: fadeInSheet 0.22s ease-out !important;
+    display: flex;
+    position: fixed;
+    top: calc(44px + env(safe-area-inset-top, 14px));
+    left: 0;
+    right: 0;
+    bottom: calc(54px + env(safe-area-inset-bottom, 14px));
+    width: 100vw;
+    height: auto;
+    max-width: 100vw;
+    z-index: 900;
+    background: #0d0d0f;
+    border-left: none;
+    border-radius: 0;
+    padding-top: 8px;
+    padding-bottom: 12px;
+    animation: fadeInSheet 0.22s ease-out;
   }
 
   @keyframes fadeInSheet {
@@ -5716,13 +5716,13 @@ body.is-card-dragging * {
   }
 
   .backlog-drawer .drawer-header {
-    padding: 12px 16px !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
   .backlog-drawer .drawer-title {
-    font-size: 15px !important;
-    font-weight: 700 !important;
-    color: #ffffff !important;
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff;
   }
   #btnPinDrawer {
     display: none !important;
@@ -5730,20 +5730,20 @@ body.is-card-dragging * {
 
   /* BARRE DE NAVIGATION INFÉRIEURE MODERNE FIXÉE AU BAS ABSOLU */
   .mobile-nav {
-    display: flex !important;
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    width: 100vw !important;
-    height: calc(56px + env(safe-area-inset-bottom, 16px)) !important;
-    padding-bottom: env(safe-area-inset-bottom, 16px) !important;
-    background: rgba(15, 15, 18, 0.96) !important;
-    backdrop-filter: blur(24px) !important;
-    -webkit-backdrop-filter: blur(24px) !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
-    z-index: 1000 !important;
-    box-sizing: border-box !important;
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100vw;
+    height: calc(56px + env(safe-area-inset-bottom, 16px));
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+    background: rgba(15, 15, 18, 0.96);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    z-index: 1000;
+    box-sizing: border-box;
   }
 
   .mobile-nav .nav-items {
@@ -5772,7 +5772,7 @@ body.is-card-dragging * {
   }
 
   .mobile-nav .nav-btn.active {
-    color: #ffffff !important;
+    color: #ffffff;
   }
 
   .mobile-nav .nav-icon {
@@ -5806,38 +5806,38 @@ body.is-card-dragging * {
 
   /* BARRE FLOTTANTE MULTI-SÉLECTION : POSITIONNÉE CLAIREMENT AU-DESSUS DE LA BARRE BASSE */
   .multi-select-bar {
-    position: fixed !important;
-    bottom: calc(56px + env(safe-area-inset-bottom, 16px) + 10px) !important;
-    left: 14px !important;
-    right: 14px !important;
-    width: auto !important;
-    max-width: none !important;
-    transform: translateY(120px) !important;
-    z-index: 1050 !important;
-    padding: 8px 12px !important;
-    border-radius: 14px !important;
-    background: rgba(24, 24, 27, 0.96) !important;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.65) !important;
-    gap: 8px !important;
+    position: fixed;
+    bottom: calc(56px + env(safe-area-inset-bottom, 16px) + 10px);
+    left: 14px;
+    right: 14px;
+    width: auto;
+    max-width: none;
+    transform: translateY(120px);
+    z-index: 1050;
+    padding: 8px 12px;
+    border-radius: 14px;
+    background: rgba(24, 24, 27, 0.96);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.65);
+    gap: 8px;
   }
 
   .multi-select-bar.show {
-    transform: translateY(0) !important;
+    transform: translateY(0);
   }
 
   .multi-select-bar .multi-select-hint {
-    display: none !important; /* Libère tout l'espace sur petit écran */
+    display: none; /* Libère tout l'espace sur petit écran */
   }
 
   .multi-select-bar .multi-select-count {
-    font-size: 12px !important;
-    white-space: nowrap !important;
+    font-size: 12px;
+    white-space: nowrap;
   }
 
   .multi-select-bar .multi-select-action-btn {
-    padding: 6px 10px !important;
-    font-size: 12px !important;
-    border-radius: 8px !important;
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 8px;
   }
 
   /* CACHER LES POIGNÉES DE REDIMENSIONNEMENT TACTILE INADAPTÉES SUR MOBILE */
@@ -6475,9 +6475,9 @@ body.is-card-dragging * {
 }
 
 .btn-subtask-quick-backlog:hover {
-  opacity: 1 !important;
-  color: #38bdf8 !important;
-  background: rgba(56, 189, 248, 0.2) !important;
+  opacity: 1;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.2);
 }
 
 /* Drag hover on Backlog button and drawer */
@@ -6486,9 +6486,9 @@ body.is-card-dragging * {
 .sidebar-backlog-section.drag-over,
 #sidebarBacklogScroll.drag-over,
 .backlog-drawer.drag-over {
-  outline: 2px dashed #38bdf8 !important;
-  outline-offset: 2px !important;
-  background: rgba(56, 189, 248, 0.18) !important;
+  outline: 2px dashed #38bdf8;
+  outline-offset: 2px;
+  background: rgba(56, 189, 248, 0.18);
   transform: scale(1.03);
   transition: all 0.12s ease;
 }
@@ -6521,15 +6521,15 @@ body.is-card-dragging * {
 }
 
 .schedule-block-item.is-overnight-continuation {
-  border-top: 2px dashed rgba(56, 189, 248, 0.7) !important;
-  border-top-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
+  border-top: 2px dashed rgba(56, 189, 248, 0.7);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
 }
 
 .schedule-block-item.is-overnight-start {
-  border-bottom: 2px dashed rgba(56, 189, 248, 0.7) !important;
-  border-bottom-left-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
+  border-bottom: 2px dashed rgba(56, 189, 248, 0.7);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 .overnight-continuation-badge {
