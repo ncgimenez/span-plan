@@ -4977,7 +4977,7 @@ function toggleSelectedTasksImportant() {
 
   if (typeof showToast === 'function') {
     const msg = newStatus
-      ? (tasks.length > 1 ? `${tasks.length} éléments marqués importants ┌` : `"${tasks[0].title}" marqué important ┌`)
+      ? (tasks.length > 1 ? `${tasks.length} éléments marqués importants !` : `"${tasks[0].title}" marqué important !`)
       : (tasks.length > 1 ? `Importance retirée pour ${tasks.length} éléments` : `Importance retirée`);
     showToast(msg, 'info');
   }
@@ -4998,7 +4998,7 @@ function popoverAction(action) {
       task.updated_at = new Date().toISOString();
       savePlanState();
       if (typeof showToast === 'function') {
-        showToast(task.important ? 'Marqué important ┌' : 'Importance retirée', 'info');
+        showToast(task.important ? 'Marqué important !' : 'Importance retirée', 'info');
       }
     }
     return;
@@ -5726,7 +5726,7 @@ function addBacklogTask() {
   if (input) input.value = '';
   savePlanState();
   if (typeof showToast === 'function') {
-    showToast(`Added to Backlog: "${newTask.title}"${isImportant ? ' ┌' : ''}`, 'info');
+    showToast(`Added to Backlog: "${newTask.title}"${isImportant ? ' !' : ''}`, 'info');
   }
 }
 
@@ -6812,7 +6812,7 @@ function saveTaskModal() {
     }
     if (typeof showToast === 'function') {
       const label = editingItemType === 'event' ? 'Event updated' : 'Task updated';
-      showToast(`${label}${isImportant ? ' ┌' : ''}`, 'info');
+      showToast(`${label}${isImportant ? ' !' : ''}`, 'info');
     }
   } else {
     const nowIso = new Date().toISOString();

@@ -40,7 +40,7 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="style.css?v=7.40">
+  <link rel="stylesheet" href="style.css?v=7.41">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -352,7 +352,7 @@
     </div>
     <button type="button" class="popover-item" onclick="popoverAction('edit')">✏️ Edit Details</button>
     <button type="button" class="popover-item" id="popoverItemToggleImportant" onclick="popoverAction('toggle-important')">
-      <span style="color: #e05244; font-weight: 800; font-size: 14px; margin-right: 4px; display: inline-block;">┌</span>
+      <span style="color: var(--brick-important); font-weight: 800; font-size: 14px; margin-right: 4px; display: inline-block;">!</span>
       <span id="popoverImportantText">Marquer important (I)</span>
     </button>
     <button type="button" class="popover-item" id="popoverItemRollover" onclick="popoverAction('rollover')" style="display: none;">⟳ Reporter les sous-tâches...</button>
@@ -432,7 +432,7 @@
           <label class="important-switch-label" title="Marquer avec l'équerre rouge brique d'importance (Touche rapide : I)">
             <input type="checkbox" id="editTaskImportant">
             <span class="important-switch-box">
-              <span class="important-brick-bracket">┌</span>
+              <span class="important-brick-bracket">!</span>
               <span class="important-switch-text">Important / Priorité haute</span>
             </span>
           </label>
@@ -672,7 +672,7 @@
           <div class="shortcut-row"><kbd>B</kbd> or <kbd>L</kbd><span>Toggle Backlog drawer</span></div>
           <div class="shortcut-row"><kbd>3</kbd>, <kbd>5</kbd>, <kbd>7</kbd><span>Switch visible days count</span></div>
           <div class="shortcut-row"><kbd>Click</kbd><span>Select / Deselect item</span></div>
-          <div class="shortcut-row"><kbd>I</kbd> or <kbd>!</kbd><span>Basculer l'importance (Équerre rouge ┌)</span></div>
+          <div class="shortcut-row"><kbd>I</kbd> or <kbd>!</kbd><span>Basculer l'importance (Liseré rouge !)</span></div>
           <div class="shortcut-row"><kbd>Double-click</kbd><span>Edit task details</span></div>
           <div class="shortcut-row"><kbd>Enter</kbd><span>Edit selected item / Save modal</span></div>
           <div class="shortcut-row"><kbd>Del</kbd> / <kbd>Backspace</kbd><span>Delete selected item(s)</span></div>
@@ -936,7 +936,7 @@
     </div>
     <span class="multi-select-hint">Drag any block to move group</span>
     <button type="button" class="multi-select-action-btn" onclick="toggleSelectedTasksImportant()" title="Basculer l'importance (Touche I)">
-      <span style="color: #e05244; font-weight: 800;">┌</span>
+      <span style="color: var(--brick-important); font-weight: 800;">!</span>
       <span>Important (I)</span>
     </button>
     <button type="button" class="multi-select-action-btn danger" onclick="deleteSelectedTasks()" title="Delete selected (Del / Backspace)">
