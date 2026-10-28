@@ -3196,6 +3196,8 @@ body {
   flex: 1;
   letter-spacing: -0.01em;
   line-height: 15px;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 [data-theme="light"] .subtask-row-title {
@@ -3482,10 +3484,14 @@ body.is-card-dragging * {
   cursor: grabbing !important;
 }
 
+.is-floating-drag-avatar,
+.is-floating-drag-avatar * {
+  pointer-events: none !important;
+}
+
 .is-floating-drag-avatar {
   position: fixed !important;
   z-index: 999999 !important;
-  pointer-events: none !important;
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7), 0 0 0 1.5px rgba(255, 255, 255, 0.25) !important;
   transform: scale(1.02) rotate(1deg) !important;
   transition: transform 0.1s ease, box-shadow 0.1s ease !important;
@@ -4213,6 +4219,40 @@ body.is-card-dragging * {
 .task-inline-tag:hover {
   background: rgba(255, 255, 255, 0.16);
   color: var(--text-main);
+}
+
+/* Slot ciblé sur la grille (pour Coller Cmd+V) */
+.grid-target-slot-marker {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  height: 2px;
+  background: #6366f1;
+  z-index: 15;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.8);
+  animation: slotMarkerPulse 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.5s ease;
+}
+.grid-target-slot-marker span {
+  background: #6366f1;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 6px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+}
+.grid-target-slot-marker.fade-out {
+  opacity: 0;
+}
+@keyframes slotMarkerPulse {
+  0% { transform: scaleY(3); opacity: 0.5; }
+  100% { transform: scaleY(1); opacity: 1; }
 }
 
 /* ==============================================================

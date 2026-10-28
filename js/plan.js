@@ -1306,6 +1306,7 @@ function renderPlanGrid(forceRebuild = false) {
              id="canvas_${dateStr}" 
              data-date="${dateStr}"
              onpointerdown="handleCanvasPointerDown(event, '${dateStr}')"
+             ondblclick="handleCanvasDoubleClick(event, '${dateStr}')"
              onpointermove="handleCanvasHoverMove(event)"
              onpointerleave="handleCanvasHoverLeave(event)"
              ondragover="allowCanvasDrop(event)" 
@@ -2700,33 +2701,72 @@ function handleBlockPointerUp(e) {
       const diffM = targetStartM - anchorStartM;
       const targetDateStr = targetCol.dataset.date || activeCanvas.dataset.date;
 
+      const isAltDuplicate = Boolean(e.altKey);
       let movedCount = 0;
+      const duplicatedIds = [];
+
       dragInitialTops.forEach(info => {
         const itemStartM = Math.max(0, Math.min(23 * 60 + 45, info.initialStartMinutes + diffM));
         const startH = String(Math.floor(itemStartM / 60)).padStart(2, '0');
         const startM = String(itemStartM % 60).padStart(2, '0');
-        info.task.time = `${startH}:${startM}`;
-        info.task.allDay = false;
-        info.task.date = targetDateStr || info.task.date;
+        const timeVal = `${startH}:${startM}`;
+        const dateVal = targetDateStr || info.task.date;
         const dur = info.task.duration || 45;
-        if (itemStartM + dur > 1440) {
-          info.task.endDate = getNextDateString(targetDateStr || info.task.date);
+        const endDateVal = (itemStartM + dur > 1440) ? getNextDateString(dateVal) : dateVal;
+        const endTimeVal = getEndTimeFromDuration(timeVal, dur);
+
+        if (isAltDuplicate) {
+          // DUPLIQUER LA TÂCHE (Option+Glisser)
+          const newId = 'plan_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+          const clonedSubtasks = Array.isArray(info.task.subtasks) ? info.task.subtasks.map(s => ({
+            ...s,
+            id: 'sub_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+            completed: false
+          })) : [];
+
+          const newTask = {
+            ...info.task,
+            id: newId,
+            time: timeVal,
+            endTime: endTimeVal,
+            date: dateVal,
+            endDate: endDateVal,
+            subtasks: clonedSubtasks,
+            allDay: false,
+            isRollover: false,
+            completed: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          window.SpanPlanState.tasks.push(newTask);
+          duplicatedIds.push(newId);
         } else {
-          info.task.endDate = targetDateStr || info.task.date;
+          // DÉPLACER LA TÂCHE ORIGINALE
+          info.task.time = timeVal;
+          info.task.allDay = false;
+          info.task.date = dateVal;
+          info.task.endDate = endDateVal;
+          info.task.isRollover = false;
+          info.task.endTime = endTimeVal;
+          info.task.updated_at = new Date().toISOString();
         }
-        info.task.isRollover = false;
-        info.task.endTime = getEndTimeFromDuration(info.task.time, dur);
-        info.task.updated_at = new Date().toISOString();
         movedCount++;
       });
 
       dragInitialTops.clear();
       savePlanState();
 
+      if (isAltDuplicate && duplicatedIds.length > 0) {
+        selectedTaskIds.clear();
+        duplicatedIds.forEach(id => selectedTaskIds.add(id));
+        updateSelectionVisuals();
+      }
+
       if (typeof showToast === 'function') {
         const dateObj = new Date(targetDateStr + 'T00:00:00');
         const dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-        showToast(`${movedCount} item${movedCount > 1 ? 's' : ''} moved to ${dateLabel} (${targetStartM ? `${String(Math.floor(targetStartM / 60)).padStart(2, '0')}:${String(targetStartM % 60).padStart(2, '0')}` : ''})`, 'success');
+        const actionLabel = isAltDuplicate ? 'dupliqué(s) (⌥+Glisser)' : 'déplacé(s)';
+        showToast(`✨ ${movedCount} élément(s) ${actionLabel} le ${dateLabel} (${String(Math.floor(targetStartM / 60)).padStart(2, '0')}:${String(targetStartM % 60).padStart(2, '0')})`, 'success');
       }
       return;
     }
@@ -2844,7 +2884,7 @@ function handleCanvasPointerUp(e) {
   marqueeCanvas = null;
   marqueeMoved = false;
 
-  // Si clic simple sans glissement -> Création par manipulation directe
+  // Si clic simple sans glissement : cibler le créneau pour Cmd+V et fermer popovers
   if (!wasMoved && canvas) {
     const dateStr = canvas.dataset.date;
     const rect = canvas.getBoundingClientRect();
@@ -2859,9 +2899,151 @@ function handleCanvasPointerUp(e) {
     const m = String(totalMinutes % 60).padStart(2, '0');
     const clickedTime = `${h}:${m}`;
 
-    openQuickAddPopover(dateStr, clickedTime, e.clientX, e.clientY);
+    setTargetGridSlot(dateStr, clickedTime);
+
+    if (selectedTaskIds.size > 0) {
+      clearSelection();
+    }
+    closeQuickAddPopover();
+    closeTaskPopover();
   }
 }
+
+// CRÉATION PAR DOUBLE-CLIC SUR LA GRILLE DU PLANNING
+function handleCanvasDoubleClick(e, dateStr) {
+  if (e.target.closest('.schedule-block-item') || e.target.closest('.resize-handle') || e.target.closest('.now-timeline-marker')) {
+    return;
+  }
+  const canvas = e.currentTarget || document.getElementById(`canvas_${dateStr}`);
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  const offsetY = e.clientY - rect.top;
+
+  const hoursFraction = offsetY / HOUR_HEIGHT;
+  let totalMinutes = Math.round((START_HOUR * 60) + (hoursFraction * 60));
+  totalMinutes = Math.round(totalMinutes / 15) * 15;
+  totalMinutes = Math.max(0, Math.min(23 * 60 + 45, totalMinutes));
+
+  const h = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
+  const m = String(totalMinutes % 60).padStart(2, '0');
+  const clickedTime = `${h}:${m}`;
+
+  setTargetGridSlot(dateStr, clickedTime);
+  openQuickAddPopover(dateStr, clickedTime, e.clientX, e.clientY);
+}
+window.handleCanvasDoubleClick = handleCanvasDoubleClick;
+
+// COPIER-COLLER D'ÉVÉNEMENTS (CMD+C / CMD+V)
+let copiedPlanTasks = [];
+let targetGridSlot = null; // { date: 'YYYY-MM-DD', time: 'HH:MM' }
+
+function setTargetGridSlot(dateStr, timeStr) {
+  targetGridSlot = { date: dateStr, time: timeStr };
+  // Visual indicator: brief marker on targeted hour slot
+  const canvas = document.getElementById(`canvas_${dateStr}`);
+  if (canvas) {
+    document.querySelectorAll('.grid-target-slot-marker').forEach(el => el.remove());
+    const [h, m] = (timeStr || '09:00').split(':').map(Number);
+    const topPx = (h - START_HOUR + m / 60) * HOUR_HEIGHT;
+    const marker = document.createElement('div');
+    marker.className = 'grid-target-slot-marker';
+    marker.style.top = `${topPx}px`;
+    marker.innerHTML = `<span>${timeStr}</span>`;
+    canvas.appendChild(marker);
+    setTimeout(() => marker.classList.add('fade-out'), 2500);
+    setTimeout(() => marker.remove(), 3000);
+  }
+}
+window.setTargetGridSlot = setTargetGridSlot;
+
+function copySelectedPlanTask() {
+  const idsToCopy = selectedTaskIds.size > 0 ? Array.from(selectedTaskIds) : (popoverTargetTaskId ? [popoverTargetTaskId] : []);
+  if (idsToCopy.length === 0) return false;
+
+  const tasksToCopy = (window.SpanPlanState.tasks || []).filter(t => idsToCopy.includes(t.id));
+  if (tasksToCopy.length === 0) return false;
+
+  copiedPlanTasks = JSON.parse(JSON.stringify(tasksToCopy));
+  try {
+    localStorage.setItem('span_plan_copied_tasks', JSON.stringify(copiedPlanTasks));
+  } catch (err) {}
+
+  if (typeof showToast === 'function') {
+    const title = tasksToCopy.length === 1 ? `"${tasksToCopy[0].title}"` : `${tasksToCopy.length} éléments`;
+    showToast(`📋 Copié : ${title} (cliquez sur un créneau et faites ⌘V)`, 'success');
+  }
+  return true;
+}
+window.copySelectedPlanTask = copySelectedPlanTask;
+
+function pastePlanTask() {
+  if (!copiedPlanTasks || copiedPlanTasks.length === 0) {
+    try {
+      copiedPlanTasks = JSON.parse(localStorage.getItem('span_plan_copied_tasks')) || [];
+    } catch (err) {}
+  }
+  if (!copiedPlanTasks || copiedPlanTasks.length === 0) {
+    if (typeof showToast === 'function') {
+      showToast('Presse-papier vide. Cliquez sur un événement et faites ⌘C d\'abord.', 'info');
+    }
+    return false;
+  }
+
+  const targetDate = (targetGridSlot && targetGridSlot.date) ? targetGridSlot.date : TODAY_STR;
+  const targetTime = (targetGridSlot && targetGridSlot.time) ? targetGridSlot.time : '09:00';
+
+  const newPastedIds = [];
+  copiedPlanTasks.forEach((srcTask, index) => {
+    const newId = 'plan_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+    
+    const clonedSubtasks = Array.isArray(srcTask.subtasks) ? srcTask.subtasks.map(s => ({
+      ...s,
+      id: 'sub_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      completed: false
+    })) : [];
+
+    let pastedTime = targetTime;
+    if (index > 0 && targetTime) {
+      const [th, tm] = targetTime.split(':').map(Number);
+      const newMinutes = (th * 60 + tm + (index * (srcTask.duration || 45))) % (24 * 60);
+      const nh = String(Math.floor(newMinutes / 60)).padStart(2, '0');
+      const nm = String(newMinutes % 60).padStart(2, '0');
+      pastedTime = `${nh}:${nm}`;
+    }
+
+    const newTask = {
+      ...srcTask,
+      id: newId,
+      date: targetDate,
+      time: srcTask.allDay ? '' : pastedTime,
+      subtasks: clonedSubtasks,
+      completed: false,
+      isRollover: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    window.SpanPlanState.tasks.push(newTask);
+    newPastedIds.push(newId);
+  });
+
+  savePlanState();
+  renderPlanGrid(true);
+  if (typeof renderBacklogDrawer === 'function') renderBacklogDrawer();
+
+  selectedTaskIds.clear();
+  newPastedIds.forEach(id => selectedTaskIds.add(id));
+  updateSelectionVisuals();
+
+  if (typeof showToast === 'function') {
+    const label = newPastedIds.length === 1 
+      ? `📋 Collé : "${copiedPlanTasks[0].title}" à ${targetTime} (${targetDate})`
+      : `📋 ${newPastedIds.length} éléments collés le ${targetDate}`;
+    showToast(label, 'success');
+  }
+  return true;
+}
+window.pastePlanTask = pastePlanTask;
 
 // DRAG & DROP HTML5 POUR LE DOCK / BACKLOG / SOUS-TÂCHES
 let draggedTaskId = null;
@@ -4386,14 +4568,39 @@ function handleDropToBacklog(e) {
     return;
   }
 
-  if (window.draggedSubtaskInfo) {
-    handleSubtaskDropToBacklog(e);
+  // Vérification de sous-tâche glissée (via état global ou via dataTransfer)
+  let subtaskDropInfo = window.draggedSubtaskInfo;
+  if (!subtaskDropInfo && e.dataTransfer) {
+    try {
+      const raw = e.dataTransfer.getData('text/plain');
+      if (raw && raw.startsWith('{')) {
+        const parsed = JSON.parse(raw);
+        if (parsed.type === 'subtask' && parsed.parentId && parsed.subtaskId) {
+          subtaskDropInfo = parsed;
+        }
+      }
+    } catch (err) {}
+  }
+
+  if (subtaskDropInfo) {
+    const { parentId, subtaskId, subtask } = subtaskDropInfo;
+    const targetSubId = subtaskId || (subtask ? subtask.id : null);
+    moveSubtaskToBacklog(parentId, targetSubId);
+    handleSubtaskDragEnd(e);
     return;
   }
 
-  if (!draggedTaskId) return;
+  let effectiveTaskId = draggedTaskId;
+  if (!effectiveTaskId && e.dataTransfer) {
+    try {
+      const raw = e.dataTransfer.getData('text/plain');
+      if (raw && !raw.startsWith('{')) effectiveTaskId = raw.trim();
+    } catch (err) {}
+  }
 
-  const task = window.SpanPlanState.tasks.find(t => t.id === draggedTaskId);
+  if (!effectiveTaskId) return;
+
+  const task = window.SpanPlanState.tasks.find(t => t.id === effectiveTaskId);
   if (task) {
     task.date = null;
     task.endDate = null;
@@ -4402,6 +4609,7 @@ function handleDropToBacklog(e) {
     task.isRollover = false;
     task.updated_at = new Date().toISOString();
     savePlanState();
+    if (typeof syncPlanToCloud === 'function') syncPlanToCloud();
     if (typeof showToast === 'function') {
       showToast(`Déplacé dans le Backlog : "${task.title}"`, 'info');
     }
@@ -4513,6 +4721,22 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault();
     toggleQuickAddBar();
     return;
+  }
+
+  // ⌘C / Ctrl+C : Copier la tâche sélectionnée
+  if (!isTyping && (e.metaKey || e.ctrlKey) && (e.key === 'c' || e.key === 'C')) {
+    if (copySelectedPlanTask()) {
+      e.preventDefault();
+      return;
+    }
+  }
+
+  // ⌘V / Ctrl+V : Coller la tâche copiée sur le créneau ciblé
+  if (!isTyping && (e.metaKey || e.ctrlKey) && (e.key === 'v' || e.key === 'V')) {
+    if (pastePlanTask()) {
+      e.preventDefault();
+      return;
+    }
   }
 
   // Raccourcis une touche (hors saisie)
