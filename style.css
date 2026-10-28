@@ -2743,16 +2743,16 @@ body {
   left: 0;
   right: 0;
   height: var(--hour-height);
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-top: 1px solid rgba(255, 255, 255, 0.025);
   display: flex;
   align-items: flex-start;
   pointer-events: none;
 }
 
 .hour-label {
-  font-size: 10.5px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.28);
+  font-size: 10px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.25);
   padding: 2px 8px;
   width: 48px;
   text-align: right;
@@ -2761,7 +2761,7 @@ body {
 }
 
 [data-theme="light"] .hour-label {
-  color: rgba(0, 0, 0, 0.35);
+  color: rgba(0, 0, 0, 0.32);
 }
 
 .hour-line {
@@ -2770,12 +2770,12 @@ body {
 }
 
 .hour-row.is-night {
-  opacity: 0.38;
-  border-top-color: rgba(255, 255, 255, 0.02);
+  opacity: 0.25;
+  border-top-color: rgba(255, 255, 255, 0.008);
 }
 
 .hour-row.is-night .hour-label {
-  color: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.15);
 }
 
 /* RECTANGLE D'INVITATION AU SURVOL DE LA GRILLE */
@@ -2926,30 +2926,30 @@ body {
 
 /* TÂCHES ORDINAIRES (CARTE SOMBRE POLIE AVEC LISERÉ CATÉGORIE SUR LE CÔTÉ DROIT) */
 .schedule-block-item:not(.is-event) {
-  background: #18181b;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-right: 3.5px solid var(--cat-none, #71717a);
+  background: rgba(24, 24, 27, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-right: 3px solid var(--cat-none, #71717a);
 }
 
 .schedule-block-item:not(.is-event).cat-work {
   border-right-color: var(--color-work);
 }
 .schedule-block-item:not(.is-event).cat-work:hover {
-  border-color: rgba(129, 140, 248, 0.35);
+  border-color: rgba(129, 140, 248, 0.3);
 }
 
 .schedule-block-item:not(.is-event).cat-life {
   border-right-color: var(--color-life);
 }
 .schedule-block-item:not(.is-event).cat-life:hover {
-  border-color: rgba(16, 185, 129, 0.35);
+  border-color: rgba(16, 185, 129, 0.3);
 }
 
 .schedule-block-item:not(.is-event).cat-fun {
   border-right-color: var(--color-fun);
 }
 .schedule-block-item:not(.is-event).cat-fun:hover {
-  border-color: rgba(245, 158, 11, 0.35);
+  border-color: rgba(245, 158, 11, 0.3);
 }
 
 .schedule-block-item.rollover .schedule-block-title {
@@ -2971,28 +2971,28 @@ body {
    ============================================================== */
 .schedule-block-item.is-event {
   border-radius: 8px;
-  background-color: #18181b;
+  background-color: rgba(24, 24, 27, 0.88);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .schedule-block-item.is-event.cat-work {
-  background: linear-gradient(145deg, rgba(99, 102, 241, 0.16) 0%, rgba(79, 70, 229, 0.08) 100%);
-  border-color: rgba(129, 140, 248, 0.32);
-  border-right: 3.5px solid var(--color-work);
+  background: linear-gradient(145deg, rgba(99, 102, 241, 0.12) 0%, rgba(79, 70, 229, 0.05) 100%);
+  border-color: rgba(129, 140, 248, 0.25);
+  border-right: 3px solid var(--color-work);
 }
 
 .schedule-block-item.is-event.cat-life {
-  background: linear-gradient(145deg, rgba(16, 185, 129, 0.16) 0%, rgba(5, 150, 105, 0.08) 100%);
-  border-color: rgba(52, 211, 153, 0.32);
-  border-right: 3.5px solid var(--color-life);
+  background: linear-gradient(145deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.05) 100%);
+  border-color: rgba(52, 211, 153, 0.25);
+  border-right: 3px solid var(--color-life);
 }
 
 .schedule-block-item.is-event.cat-fun {
-  background: linear-gradient(145deg, rgba(245, 158, 11, 0.16) 0%, rgba(217, 119, 6, 0.08) 100%);
-  border-color: rgba(245, 158, 11, 0.32);
-  border-right: 3.5px solid var(--color-fun);
+  background: linear-gradient(145deg, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.05) 100%);
+  border-color: rgba(245, 158, 11, 0.25);
+  border-right: 3px solid var(--color-fun);
 }
 
 .schedule-block-item.is-event:hover {
