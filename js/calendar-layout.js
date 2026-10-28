@@ -830,17 +830,17 @@ function renderTimedBlocks(tasks, dateStr) {
     const completedClass = task.completed ? 'is-completed' : '';
     const isCompact = height < 38;
 
-    // Gestion propre des colonnes de chevauchement pleine largeur
-    let positionStyle = `top: ${top}px; height: ${height}px;`;
-    if (totalCols > 1) {
-      positionStyle += ` left: calc(4px + (100% - 8px) * ${colIndex} / ${totalCols}); width: calc((100% - 8px) / ${totalCols} - 3px);`;
-    }
-    const narrowColClass = totalCols >= 3 ? 'is-narrow-col' : (totalCols === 2 ? 'is-semi-narrow-col' : '');
-
     const childSubtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
     const doneSubCount = childSubtasks.filter(s => s.completed).length;
     const isExpanded = window.expandedBlockAccordionIds && window.expandedBlockAccordionIds.has(task.id);
     const expandedClass = isExpanded ? 'is-expanded' : '';
+
+    // Gestion propre des colonnes de chevauchement pleine largeur
+    let positionStyle = `top: ${top}px; height: ${isExpanded ? 'auto' : `${height}px`};`;
+    if (totalCols > 1) {
+      positionStyle += ` left: calc(4px + (100% - 8px) * ${colIndex} / ${totalCols}); width: calc((100% - 8px) / ${totalCols} - 3px);`;
+    }
+    const narrowColClass = totalCols >= 3 ? 'is-narrow-col' : (totalCols === 2 ? 'is-semi-narrow-col' : '');
     const progressPillHtml = childSubtasks.length > 0 
       ? `<span class="event-progress-pill clickable-pill" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); toggleBlockAccordion(event, '${task.id}')" title="Sous-tâches (${doneSubCount}/${childSubtasks.length}) - Cliquer pour ${isExpanded ? 'replier' : 'déplier'}">☑ ${doneSubCount}/${childSubtasks.length} ${isExpanded ? '▴' : '▾'}</span>` 
       : '';
@@ -1048,6 +1048,7 @@ function renderTimedBlocks(tasks, dateStr) {
            data-date="${dateStr}"
            data-is-continuation="${isContinuation ? 'true' : 'false'}"
            ${overflowAttr}
+           data-original-height="${height}"
            style="--block-height: ${height}px; ${positionStyle}"
            onpointerdown="handleBlockPointerDown(event, '${task.id}', '${dateStr}')"
            ondblclick="event.stopPropagation(); openEditModal('${task.id}')"
@@ -1084,6 +1085,7 @@ function toggleBlockAccordion(event, taskId) {
     window.expandedBlockAccordionIds.delete(taskId);
     if (blockEl) {
       blockEl.classList.remove('is-expanded');
+      blockEl.style.height = blockEl.dataset.originalHeight ? `${blockEl.dataset.originalHeight}px` : '';
       const btn = blockEl.querySelector('.subtasks-unfold-btn');
       if (btn) {
         const remaining = parseInt(blockEl.dataset.overflowCount || '1', 10);
@@ -1100,6 +1102,7 @@ function toggleBlockAccordion(event, taskId) {
     window.expandedBlockAccordionIds.add(taskId);
     if (blockEl) {
       blockEl.classList.add('is-expanded');
+      blockEl.style.height = 'auto';
       const btn = blockEl.querySelector('.subtasks-unfold-btn');
       if (btn) {
         btn.innerHTML = `<span class="unfold-btn-text">Moins</span><span class="unfold-btn-arrow">▴</span>`;
