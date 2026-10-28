@@ -390,3 +390,39 @@ window.addEventListener('DOMContentLoaded', () => {
   const toggleBtn = document.getElementById('themeToggleBtn');
   if (toggleBtn) toggleBtn.textContent = savedTheme.charAt(0).toUpperCase() + savedTheme.slice(1);
 });
+
+// Unobtrusive Event Delegation for [data-action] attributes
+document.addEventListener('click', (e) => {
+  const target = e.target.closest('[data-action]');
+  if (!target) return;
+  const action = target.getAttribute('data-action');
+  switch (action) {
+    case 'toggle-theme':
+      toggleTheme();
+      break;
+    case 'open-settings':
+      openSettingsModal(target.getAttribute('data-tab') || 'sync');
+      break;
+    case 'close-settings':
+      closeSettingsModal();
+      break;
+    case 'toggle-backlog':
+      if (typeof toggleBacklogDrawer === 'function') toggleBacklogDrawer();
+      break;
+    case 'jump-today':
+      if (typeof jumpToToday === 'function') jumpToToday();
+      break;
+    case 'open-shortcuts':
+      if (typeof openShortcutsModal === 'function') openShortcutsModal();
+      break;
+    case 'close-shortcuts':
+      if (typeof closeShortcutsModal === 'function') closeShortcutsModal();
+      break;
+    case 'quick-add':
+      if (typeof toggleQuickAddBar === 'function') toggleQuickAddBar(true);
+      break;
+    case 'new-task':
+      if (typeof openCreateModalWithDefaults === 'function') openCreateModalWithDefaults();
+      break;
+  }
+});

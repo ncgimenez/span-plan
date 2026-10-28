@@ -191,7 +191,7 @@ if (!hasStoredData) {
     if (!isAllDay && t.time && (!t.recurrence || t.recurrence === 'none')) {
       endDateVal = dateVal;
     }
-    return {
+    const base = {
       id: t.id || ('p_' + Math.random().toString(36).substr(2, 9)),
       title: t.title || 'Untitled',
       type: t.type === 'event' ? 'event' : 'task',
@@ -212,7 +212,18 @@ if (!hasStoredData) {
       created_at: t.created_at || new Date().toISOString(),
       updated_at: t.updated_at || new Date().toISOString()
     };
+    return (typeof SpanCore !== 'undefined' && SpanCore.normalizeTask)
+      ? SpanCore.normalizeTask(base)
+      : base;
   });
+}
+
+// Reactive Store Anchor
+window.SpanPlanStore = (typeof SpanCore !== 'undefined' && SpanCore.createStore)
+  ? SpanCore.createStore('span_plan_tasks')
+  : null;
+if (window.SpanPlanStore) {
+  window.SpanPlanStore.tasks = window.SpanPlanState.tasks;
 }
 
 // ==============================================================
@@ -994,7 +1005,12 @@ function syncPlanTasksToFocusStorage() {
 
 function savePlanState() {
   syncPlanTasksToFocusStorage();
-  localStorage.setItem('span_plan_tasks', JSON.stringify(window.SpanPlanState.tasks));
+  if (window.SpanPlanStore) {
+    window.SpanPlanStore.tasks = window.SpanPlanState.tasks;
+    window.SpanPlanStore.save();
+  } else {
+    localStorage.setItem('span_plan_tasks', JSON.stringify(window.SpanPlanState.tasks));
+  }
   renderPlanGrid();
   renderBacklogDrawer();
   updateCounters();
