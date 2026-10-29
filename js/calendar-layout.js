@@ -835,14 +835,19 @@ function renderTimedBlocks(tasks, dateStr) {
     const isExpanded = window.expandedBlockAccordionIds && window.expandedBlockAccordionIds.has(task.id);
     const expandedClass = isExpanded ? 'is-expanded' : '';
 
+    const isViewNarrow = (typeof visibleDaysCount !== 'undefined' && visibleDaysCount >= 5);
+    const isNarrowCol = isViewNarrow || totalCols >= 2;
+    const isUltraNarrow = (isViewNarrow && totalCols >= 2) || totalCols >= 3;
+
     // Gestion propre des colonnes de chevauchement pleine largeur
     let positionStyle = `top: ${top}px; height: ${isExpanded ? 'auto' : `${height}px`};`;
     if (totalCols > 1) {
-      positionStyle += ` left: calc(4px + (100% - 8px) * ${colIndex} / ${totalCols}); width: calc((100% - 8px) / ${totalCols} - 3px);`;
+      const marginEdge = isNarrowCol ? 2 : 4;
+      positionStyle += ` left: calc(${marginEdge}px + (100% - ${marginEdge * 2}px) * ${colIndex} / ${totalCols}); width: calc((100% - ${marginEdge * 2}px) / ${totalCols} - 2px);`;
     }
-    const narrowColClass = totalCols >= 3 ? 'is-narrow-col' : (totalCols === 2 ? 'is-semi-narrow-col' : '');
+    const narrowColClass = isUltraNarrow ? 'is-ultra-narrow-col is-narrow-col' : (isNarrowCol ? 'is-narrow-col' : '');
     const progressPillHtml = childSubtasks.length > 0 
-      ? `<span class="event-progress-pill clickable-pill" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); toggleBlockAccordion(event, '${task.id}')" title="Sous-tâches (${doneSubCount}/${childSubtasks.length}) - Cliquer pour ${isExpanded ? 'replier' : 'déplier'}">☑ ${doneSubCount}/${childSubtasks.length} ${isExpanded ? '▴' : '▾'}</span>` 
+      ? `<span class="event-progress-pill clickable-pill" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); toggleBlockAccordion(event, '${task.id}')" title="Sous-tâches (${doneSubCount}/${childSubtasks.length}) - Cliquer pour ${isExpanded ? 'replier' : 'déplier'}"><span class="progress-pill-icon">☑</span> <span class="progress-pill-count">${doneSubCount}/${childSubtasks.length}</span><span class="progress-pill-arrow">${isExpanded ? '▴' : '▾'}</span></span>` 
       : '';
 
     const remainingMinutes = Math.max(0, endTotal - currentMinutes);
@@ -993,6 +998,10 @@ function renderTimedBlocks(tasks, dateStr) {
         ${subtasksHtml}
       `;
     } else {
+      const displayTimeStr = isUltraNarrow 
+        ? task.time 
+        : (isNarrowCol && !isOvernight && !isContinuation ? `${task.time}–${endH}:${endM}` : timeRangeStr);
+
       innerContentHtml = `
         <div class="schedule-block-top">
           ${!isEvent ? `
@@ -1004,13 +1013,14 @@ function renderTimedBlocks(tasks, dateStr) {
           ` : ''}
           <span class="schedule-block-title">${continuationPrefix}${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
           <div class="schedule-block-top-actions">
-            ${progressPillHtml}
+            ${isNarrowCol ? '' : progressPillHtml}
             <button type="button" class="btn-block-quick-add-subtask" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); quickAddSubtaskFromBlock('${task.id}')" title="Ajouter une sous-tâche">➕</button>
             <button type="button" class="btn-task-menu" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
           </div>
         </div>
         <div class="schedule-block-meta">
-          <span class="schedule-block-time">${timeRangeStr}</span>
+          <span class="schedule-block-time">${displayTimeStr}</span>
+          ${isNarrowCol ? progressPillHtml : ''}
           ${isLiveNow ? `
             <span class="live-meta-divider">•</span>
             <span class="live-status-pill mini"><span class="live-status-dot"></span>LIVE</span>
@@ -1024,7 +1034,7 @@ function renderTimedBlocks(tasks, dateStr) {
     }
 
     const hasSubtasksClass = childSubtasks.length > 0 ? 'has-subtasks' : '';
-    const shortBlockClass = height < 75 ? 'is-short-block' : '';
+    const shortBlockClass = height < 42 ? 'is-short-block' : '';
     const overflowAttr = childSubtasks.length > 0 ? `data-overflow-count="${overflowCount}"` : '';
     const notesTooltip = (task.notes && task.notes.trim()) ? `\n📝 ${task.notes.trim().slice(0, 100)}` : '';
     const locTooltip = (task.location && task.location.trim()) ? `\n📍 ${task.location.trim()}` : '';

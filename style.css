@@ -3855,17 +3855,102 @@ body.is-card-dragging * {
   white-space: nowrap;
 }
 
-.schedule-block-item.is-narrow-col .schedule-block-time {
-  font-size: 10px;
+.schedule-block-item.is-narrow-col {
+  left: 2px;
+  right: 2px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  gap: 1px;
 }
 
-.schedule-block-item.is-narrow-col .event-progress-pill {
-  font-size: 8.5px;
-  padding: 1px 4px;
+.schedule-block-item.is-narrow-col .schedule-block-top {
+  gap: 4px;
+  min-height: 16px;
+}
+
+.schedule-block-item.is-narrow-col .schedule-block-top .checkbox {
+  width: 13px;
+  height: 13px;
+  font-size: 8px;
+  margin-top: 1px;
+  border-radius: 3px;
 }
 
 .schedule-block-item.is-narrow-col .schedule-block-title {
-  font-size: 11.5px;
+  font-size: 11px;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  word-break: break-word;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+
+.schedule-block-item.is-narrow-col .schedule-block-meta {
+  gap: 3px;
+  margin-top: 1px;
+  align-items: center;
+}
+
+.schedule-block-item.is-narrow-col .schedule-block-time {
+  font-size: 9.5px;
+  letter-spacing: -0.02em;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.schedule-block-item.is-narrow-col .event-progress-pill {
+  font-size: 8px;
+  padding: 1px 3.5px;
+  border-radius: 4px;
+}
+
+.schedule-block-item.is-narrow-col .btn-block-quick-add-subtask,
+.schedule-block-item.is-narrow-col .btn-task-menu {
+  width: 17px;
+  height: 17px;
+  font-size: 9px;
+}
+
+.schedule-block-item.is-narrow-col .block-location-pill {
+  max-width: 75px;
+  font-size: 8.5px;
+  padding: 1px 3px;
+}
+
+/* Colonnes ultra-étroites (ex: 2+ tâches superposées en vue 7 jours) */
+.schedule-block-item.is-ultra-narrow-col {
+  left: 1px;
+  right: 1px;
+  padding: 2px 3px;
+  border-radius: 5px;
+}
+
+.schedule-block-item.is-ultra-narrow-col .schedule-block-top {
+  gap: 2px;
+}
+
+.schedule-block-item.is-ultra-narrow-col .schedule-block-top .checkbox {
+  width: 11px;
+  height: 11px;
+  font-size: 7px;
+}
+
+.schedule-block-item.is-ultra-narrow-col .schedule-block-title {
+  font-size: 9.5px;
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+
+.schedule-block-item.is-ultra-narrow-col .schedule-block-time {
+  font-size: 8.5px;
+}
+
+.schedule-block-item.is-ultra-narrow-col .event-progress-pill {
+  font-size: 7.5px;
+  padding: 0 2px;
+}
+
+.schedule-block-item.is-ultra-narrow-col .progress-pill-arrow {
+  display: none;
 }
 
 /* Pastilles Lieu et Notes dans les blocs */
@@ -4311,7 +4396,7 @@ body.is-card-dragging * {
   position: static !important;
   width: 19px;
   height: 19px;
-  display: inline-flex;
+  display: none;
   align-items: center;
   justify-content: center;
   border-radius: 4px;
@@ -4345,6 +4430,7 @@ body.is-card-dragging * {
 .schedule-block-item.is-selected .btn-task-menu,
 .schedule-block-item:focus-within .btn-block-quick-add-subtask,
 .schedule-block-item:focus-within .btn-task-menu {
+  display: inline-flex;
   opacity: 0.85;
   pointer-events: auto;
 }
