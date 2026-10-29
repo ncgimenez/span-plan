@@ -3336,9 +3336,10 @@ body {
   background: #ffffff;
 }
 
-/* Au repos (non déplié) sur blocs compacts ou courts (< 75px) : cacher la liste */
+/* Au repos (non déplié) sur blocs compacts, courts ou sans sous-tâches visibles : cacher la liste */
 .schedule-block-item.is-compact:not(.is-expanded) .accordion-subtasks,
-.schedule-block-item.is-short-block:not(.is-expanded) .accordion-subtasks {
+.schedule-block-item.is-short-block:not(.is-expanded) .accordion-subtasks,
+.schedule-block-item.has-zero-subtasks-visible:not(.is-expanded) .accordion-subtasks {
   display: none !important;
 }
 
@@ -3949,7 +3950,18 @@ body.is-card-dragging * {
   padding: 0 2px;
 }
 
-.schedule-block-item.is-ultra-narrow-col .progress-pill-arrow {
+.schedule-block-item.is-ultra-narrow-col .progress-pill-arrow,
+.schedule-block-item.is-ultra-narrow-col .progress-pill-icon {
+  display: none;
+}
+
+.schedule-block-item.is-ultra-narrow-col .schedule-block-meta {
+  gap: 2px;
+  margin-top: 1px;
+}
+
+.schedule-block-item.is-ultra-narrow-col.is-compact .compact-time,
+.schedule-block-item.is-ultra-narrow-col.is-compact .event-progress-pill {
   display: none;
 }
 
@@ -4018,12 +4030,33 @@ body.is-card-dragging * {
 }
 
 /* Espacements pour garantir l'absence totale de chevauchement */
+.schedule-block-item.has-corner-link {
+  padding-right: 24px;
+}
+
+.schedule-block-item.is-narrow-col.has-corner-link {
+  padding-right: 20px;
+}
+
+.schedule-block-item.is-narrow-col .block-corner-link-btn {
+  width: 16px;
+  height: 16px;
+  bottom: 3px;
+  right: 3px;
+  border-radius: 4px;
+}
+
+.schedule-block-item.is-narrow-col .block-corner-link-btn svg {
+  width: 9.5px;
+  height: 9.5px;
+}
+
 .schedule-block-item.is-compact.has-corner-link .schedule-block-top-actions {
-  margin-right: 22px;
+  margin-right: 20px;
 }
 
 .schedule-block-item:not(.is-compact).has-corner-link .schedule-block-meta {
-  padding-right: 24px;
+  padding-right: 20px;
 }
 
 [data-theme="light"] .block-corner-link-btn {
@@ -4426,8 +4459,6 @@ body.is-card-dragging * {
 
 .schedule-block-item:hover .btn-block-quick-add-subtask,
 .schedule-block-item:hover .btn-task-menu,
-.schedule-block-item.is-selected .btn-block-quick-add-subtask,
-.schedule-block-item.is-selected .btn-task-menu,
 .schedule-block-item:focus-within .btn-block-quick-add-subtask,
 .schedule-block-item:focus-within .btn-task-menu {
   display: inline-flex;

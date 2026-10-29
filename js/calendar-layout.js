@@ -828,7 +828,6 @@ function renderTimedBlocks(tasks, dateStr) {
     const selectedClass = isSelected ? 'is-selected' : '';
     const liveClass = isLiveNow ? 'is-live-now' : '';
     const completedClass = task.completed ? 'is-completed' : '';
-    const isCompact = height < 38;
 
     const childSubtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
     const doneSubCount = childSubtasks.filter(s => s.completed).length;
@@ -838,6 +837,7 @@ function renderTimedBlocks(tasks, dateStr) {
     const isViewNarrow = (typeof visibleDaysCount !== 'undefined' && visibleDaysCount >= 5);
     const isNarrowCol = isViewNarrow || totalCols >= 2;
     const isUltraNarrow = (isViewNarrow && totalCols >= 2) || totalCols >= 3;
+    const isCompact = height < 26 || (!isUltraNarrow && height < 38);
 
     // Gestion propre des colonnes de chevauchement pleine largeur
     let positionStyle = `top: ${top}px; height: ${isExpanded ? 'auto' : `${height}px`};`;
@@ -854,6 +854,7 @@ function renderTimedBlocks(tasks, dateStr) {
 
     let subtasksHtml = '';
     const baseVisibleLimit = height >= 95 ? 2 : (height >= 75 ? 1 : 0);
+    const zeroVisibleClass = (!isExpanded && baseVisibleLimit === 0) ? 'has-zero-subtasks-visible' : '';
     const overflowCount = Math.max(0, childSubtasks.length - baseVisibleLimit);
     const hasOverflow = overflowCount > 0;
 
@@ -903,7 +904,7 @@ function renderTimedBlocks(tasks, dateStr) {
               + Ajouter sous-tâche
             </button>
           ` : ''}
-          ${hasOverflow ? `
+          ${(isExpanded || (baseVisibleLimit > 0 && hasOverflow)) ? `
             <button type="button" 
                     class="subtasks-unfold-btn" 
                     onpointerdown="event.stopPropagation()"
@@ -991,7 +992,7 @@ function renderTimedBlocks(tasks, dateStr) {
           ` : ''}
           <div class="schedule-block-top-actions">
             ${progressPillHtml}
-            <button type="button" class="btn-block-quick-add-subtask" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); quickAddSubtaskFromBlock('${task.id}')" title="Ajouter une sous-tâche">➕</button>
+            ${!isEvent ? `<button type="button" class="btn-block-quick-add-subtask" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); quickAddSubtaskFromBlock('${task.id}')" title="Ajouter une sous-tâche">➕</button>` : ''}
             <button type="button" class="btn-task-menu" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
           </div>
         </div>
@@ -1014,7 +1015,7 @@ function renderTimedBlocks(tasks, dateStr) {
           <span class="schedule-block-title">${continuationPrefix}${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
           <div class="schedule-block-top-actions">
             ${isNarrowCol ? '' : progressPillHtml}
-            <button type="button" class="btn-block-quick-add-subtask" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); quickAddSubtaskFromBlock('${task.id}')" title="Ajouter une sous-tâche">➕</button>
+            ${!isEvent ? `<button type="button" class="btn-block-quick-add-subtask" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); quickAddSubtaskFromBlock('${task.id}')" title="Ajouter une sous-tâche">➕</button>` : ''}
             <button type="button" class="btn-task-menu" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
           </div>
         </div>
@@ -1034,7 +1035,7 @@ function renderTimedBlocks(tasks, dateStr) {
     }
 
     const hasSubtasksClass = childSubtasks.length > 0 ? 'has-subtasks' : '';
-    const shortBlockClass = height < 42 ? 'is-short-block' : '';
+    const shortBlockClass = height < 52 ? 'is-short-block' : '';
     const overflowAttr = childSubtasks.length > 0 ? `data-overflow-count="${overflowCount}"` : '';
     const notesTooltip = (task.notes && task.notes.trim()) ? `\n📝 ${task.notes.trim().slice(0, 100)}` : '';
     const locTooltip = (task.location && task.location.trim()) ? `\n📍 ${task.location.trim()}` : '';
@@ -1042,7 +1043,7 @@ function renderTimedBlocks(tasks, dateStr) {
     const importantClass = task.important ? 'is-important' : '';
 
     return `
-      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass} ${completedClass} ${isCompact ? 'is-compact' : ''} ${hasSubtasksClass} ${shortBlockClass} ${expandedClass} ${narrowColClass} ${overnightClass} ${importantClass} ${taskUrl ? 'has-corner-link' : ''}" 
+      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass} ${completedClass} ${isCompact ? 'is-compact' : ''} ${hasSubtasksClass} ${shortBlockClass} ${expandedClass} ${narrowColClass} ${overnightClass} ${importantClass} ${zeroVisibleClass} ${taskUrl ? 'has-corner-link' : ''}" 
            id="block_${task.id}${isContinuation ? '_cont' : ''}"
            data-task-id="${task.id}"
            data-date="${dateStr}"
