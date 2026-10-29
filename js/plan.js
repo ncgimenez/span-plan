@@ -1231,6 +1231,9 @@ window.togglePlanHideActionsInAll = togglePlanHideActionsInAll;
 // BACKLOG DRAWER & SIDEBAR BACKLOG
 function renderBacklogDrawer() {
   updatePlanHideActionsToggleUI();
+  if (typeof setupBacklogSwipe === 'function') {
+    setupBacklogSwipe();
+  }
   const targets = [
     document.getElementById('sidebarBacklogList'),
     document.getElementById('backlogTaskList')
@@ -2016,11 +2019,24 @@ const BACKLOG_FILTER_CATEGORIES = ['all', 'call', 'mail', 'pay', 'content'];
 
 function isEventInBacklog(e) {
   const path = e.composedPath ? e.composedPath() : [];
-  if (path.some(el => el.id === 'backlogDrawer' || el.id === 'sidebarBacklogSection' || (el.classList && (el.classList.contains('sidebar-backlog-section') || el.classList.contains('backlog-drawer') || el.classList.contains('sidebar-backlog-scroll'))))) {
+  // 1. Mobile Drawer ou vue mobile backlog
+  if (path.some(el => el.id === 'backlogDrawer' || (el.classList && el.classList.contains('backlog-drawer')))) {
     return true;
   }
+  // 2. Sidebar Backlog section ou n'importe où dans la sidebar (hors mini calendrier)
+  const inSidebar = path.some(el => el.id === 'appSidebar' || el.id === 'sidebarBacklogSection' || (el.classList && (el.classList.contains('app-sidebar') || el.classList.contains('sidebar-backlog-section'))));
+  const inMiniCal = path.some(el => el.id === 'miniCalendarWidget' || (el.classList && el.classList.contains('mini-calendar-widget')));
+  if (inSidebar && !inMiniCal) {
+    return true;
+  }
+  // 3. Fallback target.closest
   if (e.target && e.target.closest) {
-    return !!(e.target.closest('#backlogDrawer') || e.target.closest('.sidebar-backlog-section') || e.target.closest('.sidebar-backlog-scroll'));
+    if (e.target.closest('#backlogDrawer') || e.target.closest('#sidebarBacklogSection') || e.target.closest('.sidebar-backlog-section') || e.target.closest('.sidebar-backlog-scroll')) {
+      return true;
+    }
+    if (e.target.closest('#appSidebar') && !e.target.closest('#miniCalendarWidget')) {
+      return true;
+    }
   }
   return false;
 }
@@ -2046,6 +2062,14 @@ function cycleBacklogCategory(direction) {
   const nextCat = BACKLOG_FILTER_CATEGORIES[nextIdx];
   setPlanBacklogActionFilter(nextCat);
 
+  // Animation fluide de transition de liste
+  const lists = document.querySelectorAll('.sidebar-task-list, .drawer-list');
+  lists.forEach(l => {
+    l.classList.remove('anim-fade');
+    void l.offsetWidth; // trigger reflow
+    l.classList.add('anim-fade');
+  });
+
   const labels = {
     all: 'Tous',
     call: '📞 Calls',
@@ -2059,7 +2083,91 @@ function cycleBacklogCategory(direction) {
 }
 window.cycleBacklogCategory = cycleBacklogCategory;
 
-// SWIPE TACTILE UNIVERSEL (Écran tactile / Mobile / Tablette)
+// ÉCOUTEURS DIRECTS SUR LE CONTENEUR BACKLOG (SIDEBAR & DRAWER)
+function setupBacklogSwipe() {
+  const containers = [
+    document.getElementById('sidebarBacklogSection'),
+    document.querySelector('.sidebar-backlog-section'),
+    document.getElementById('backlogDrawer')
+  ].filter(Boolean);
+
+  containers.forEach(container => {
+    if (container._backlogSwipeReady) return;
+    container._backlogSwipeReady = true;
+
+    // Trackpad Wheel direct
+    let accumulatedX = 0;
+    let wheelTimer = null;
+    let isLocked = false;
+    let lastTime = 0;
+
+    container.addEventListener('wheel', (e) => {
+      if (document.body.classList.contains('is-card-dragging')) return;
+
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.1 && Math.abs(e.deltaX) > 5) {
+        e.stopPropagation();
+
+        clearTimeout(wheelTimer);
+        wheelTimer = setTimeout(() => {
+          isLocked = false;
+          accumulatedX = 0;
+        }, 180);
+
+        const now = Date.now();
+        if (isLocked || now - lastTime < 380) return;
+
+        accumulatedX += e.deltaX;
+        if (Math.abs(accumulatedX) >= 30) {
+          isLocked = true;
+          lastTime = now;
+          const dir = accumulatedX > 0 ? 1 : -1;
+          accumulatedX = 0;
+          cycleBacklogCategory(dir);
+        }
+      } else {
+        if (!isLocked && Math.abs(e.deltaY) > Math.abs(e.deltaX) * 2) {
+          accumulatedX = 0;
+        }
+      }
+    }, { passive: true });
+
+    // Touch direct
+    let startX = 0;
+    let startY = 0;
+    let startTime = 0;
+    let lastTouchTime = 0;
+
+    container.addEventListener('touchstart', (e) => {
+      if (document.body.classList.contains('is-card-dragging')) return;
+      const t = e.touches[0];
+      startX = t.clientX;
+      startY = t.clientY;
+      startTime = Date.now();
+    }, { passive: true });
+
+    container.addEventListener('touchend', (e) => {
+      if (!startX) return;
+      const t = e.changedTouches[0];
+      const diffX = t.clientX - startX;
+      const diffY = t.clientY - startY;
+      const elapsed = Date.now() - startTime;
+      startX = 0;
+      startY = 0;
+
+      const now = Date.now();
+      if (now - lastTouchTime < 320) return;
+
+      if (Math.abs(diffX) > 30 && Math.abs(diffX) > Math.abs(diffY) * 1.15 && elapsed < 650) {
+        e.stopPropagation();
+        lastTouchTime = now;
+        cycleBacklogCategory(diffX < 0 ? 1 : -1);
+      }
+    }, { passive: true });
+  });
+}
+window.setupBacklogSwipe = setupBacklogSwipe;
+
+// SWIPE TACTILE GLOBAL (Écran tactile / Mobile / Tablette)
 let touchStartX = 0;
 let touchStartY = 0;
 let touchStartTime = 0;
@@ -2090,14 +2198,12 @@ window.addEventListener('touchend', (e) => {
   touchTargetIsBacklog = false;
 
   const now = Date.now();
-  if (now - lastTouchNavTime < 450) return; // Anti double-jump debounce
+  if (now - lastTouchNavTime < 350) return; // Anti-rebond
 
-  // Seuil horizontal franc : au moins 50px et prédominance horizontale nette (1.4x), en moins de 600ms
-  if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY) * 1.4 && elapsed < 600) {
+  const threshold = wasBacklog ? 30 : 50;
+  if (Math.abs(diffX) > threshold && Math.abs(diffX) > Math.abs(diffY) * 1.2 && elapsed < 650) {
     lastTouchNavTime = now;
     if (wasBacklog) {
-      // Swipe vers la gauche (diffX < 0) -> Catégorie suivante (+1)
-      // Swipe vers la droite (diffX > 0) -> Catégorie précédente (-1)
       cycleBacklogCategory(diffX < 0 ? 1 : -1);
     } else {
       if (diffX < 0) {
@@ -2109,22 +2215,20 @@ window.addEventListener('touchend', (e) => {
   }
 }, { passive: true });
 
-// SWIPE / DÉFILEMENT AU TRACKPAD (Mac & PC avec verrouillage d'inertie anti-double saut)
+// SWIPE / DÉFILEMENT AU TRACKPAD GLOBAL (Mac & PC avec verrouillage d'inertie)
 let lastWheelNavTime = 0;
 let accumulatedWheelX = 0;
 let wheelInertiaTimer = null;
 let isWheelNavLocked = false;
 
 window.addEventListener('wheel', (e) => {
-  // Ignorer absolument si drag en cours, dans une modale ou dans le mini-calendrier
   if (document.body.classList.contains('is-card-dragging')) return;
   if (e.target.closest('.modal-card') || isEventInMiniCal(e)) return;
 
   const isBacklog = isEventInBacklog(e);
 
-  // Ne capturer que les défilements horizontaux francs (deux doigts horizontalement sur trackpad)
-  if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.3 && Math.abs(e.deltaX) > 12) {
-    // Relancer le timer d'extinction de l'inertie du trackpad
+  // Défilement horizontal
+  if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.1 && Math.abs(e.deltaX) > 5) {
     clearTimeout(wheelInertiaTimer);
     wheelInertiaTimer = setTimeout(() => {
       isWheelNavLocked = false;
@@ -2132,14 +2236,15 @@ window.addEventListener('wheel', (e) => {
     }, 180);
 
     const now = Date.now();
-    // Si le geste en cours a déjà déclenché une action, ou si le cooldown minimum de 500ms n'est pas passé :
-    // Ignorer tous les micro-événements résiduels d'inertie !
-    if (isWheelNavLocked || now - lastWheelNavTime < 500) {
+    const minCooldown = isBacklog ? 380 : 500;
+    if (isWheelNavLocked || now - lastWheelNavTime < minCooldown) {
       return;
     }
 
     accumulatedWheelX += e.deltaX;
-    if (Math.abs(accumulatedWheelX) > 55) {
+    const triggerThreshold = isBacklog ? 30 : 50;
+
+    if (Math.abs(accumulatedWheelX) >= triggerThreshold) {
       isWheelNavLocked = true;
       lastWheelNavTime = now;
       const direction = accumulatedWheelX > 0 ? 1 : -1;
@@ -2152,8 +2257,7 @@ window.addEventListener('wheel', (e) => {
       }
     }
   } else {
-    // Mouvement vertical ou diagonal neutre : décharger l'accumulation horizontale si non verrouillé
-    if (!isWheelNavLocked) {
+    if (!isWheelNavLocked && Math.abs(e.deltaY) > Math.abs(e.deltaX) * 2) {
       accumulatedWheelX = 0;
     }
   }

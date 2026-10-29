@@ -1414,6 +1414,26 @@ body {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  touch-action: pan-y;
+  overscroll-behavior-x: none;
+}
+
+/* Amélioration du swipe & inertie sur le Backlog */
+.sidebar-backlog-section,
+.sidebar-task-list,
+.backlog-drawer,
+.drawer-list {
+  touch-action: pan-y;
+  overscroll-behavior-x: none;
+}
+
+@keyframes backlogFadeIn {
+  from { opacity: 0.65; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.sidebar-task-list.anim-fade,
+.drawer-list.anim-fade {
+  animation: backlogFadeIn 0.16s ease-out;
 }
 
 /* BACKLOG ACTION FILTER PILLS (CALLS / MAILS / PAIEMENTS) */
