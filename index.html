@@ -40,7 +40,7 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="style.css?v=7.68">
+  <link rel="stylesheet" href="style.css?v=7.69">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -742,9 +742,12 @@
 
           <!-- CARD 1: PAIRING & QR CODE -->
           <div class="settings-card-box">
-            <div class="card-box-header">
+            <div class="card-box-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
               <span class="card-box-title">Identifiant Anonyme & Jumelage iPhone</span>
-              <button class="btn-theme-toggle mini" type="button" onclick="copyCurrentSyncKey()">📋 Copier l'ID</button>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <button class="btn-theme-toggle mini" type="button" onclick="copyCurrentSyncKey()">📋 Copier</button>
+                <button class="btn-theme-toggle mini text-danger" type="button" onclick="unlinkAccountAndReset()" title="Délier ce compte et générer un compte privé isolé" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">✂️ Délier ce compte</button>
+              </div>
             </div>
             <div class="sync-key-display-pill">
               <strong id="displaySyncKey">...</strong>
@@ -772,6 +775,30 @@
               <input type="password" name="password" id="inputSyncSecret" autocomplete="current-password" style="display: none;">
               <button class="btn-primary-action" type="submit">Lier</button>
             </form>
+
+            <!-- OUTILS DE RETOUR EN ARRIÈRE & DÉMÊLAGE -->
+            <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-main);">Historique des Liens & Restauration (Rollback)</span>
+                <button type="button" class="btn-theme-toggle mini" onclick="createManualSyncSnapshot()" title="Créer un point de sauvegarde maintenant">📸 Sauvegarder maintenant</button>
+              </div>
+
+              <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                <button type="button" class="btn-rescue" onclick="openCleanImportedTasksModal()" style="width: 100%; font-size: 11.5px; padding: 7px 10px; background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; cursor: pointer;">
+                  🧹 Nettoyer les tâches importées par erreur
+                </button>
+              </div>
+
+              <!-- LISTE DES POINTS DE RESTAURATION (SNAPSHOTS) -->
+              <div id="syncSnapshotsContainer" style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+                <!-- Rendu dynamiquement -->
+              </div>
+
+              <!-- HISTORIQUE DES COMPTES CONNECTÉS -->
+              <div id="syncAccountsHistoryContainer" style="display: flex; flex-direction: column; gap: 6px; margin-top: 10px;">
+                <!-- Rendu dynamiquement -->
+              </div>
+            </div>
           </div>
 
           <!-- CARD 2: PIN PROTECTION -->
@@ -956,6 +983,14 @@
               🔄 Recover tasks to Today
             </button>
           </div>
+
+          <div class="settings-card-box">
+            <div class="card-box-title">Démêler & Nettoyer les tâches importées</div>
+            <div class="card-box-desc">Supprimer rapidement des tâches importées par erreur lors d'une synchronisation :</div>
+            <button class="btn-rescue" onclick="openCleanImportedTasksModal()" style="margin-top: 8px; background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);">
+              🧹 Nettoyer les tâches importées par erreur
+            </button>
+          </div>
         </div>
 
         <!-- PAGE 4: APPEARANCE -->
@@ -1017,6 +1052,44 @@
     <button type="button" class="multi-select-close-btn" onclick="clearSelection()" title="Fermer la sélection (Échap)">✕</button>
   </div>
 
+  <!-- MODAL: NETTOYAGE DES TÂCHES IMPORTÉES (DÉMÊLER LE CALENDRIER) -->
+  <div class="modal-overlay" id="cleanImportedModalOverlay" onclick="handleBackdropClick(event, 'cleanImportedModalOverlay')" style="display: none;">
+    <div class="modal-card" style="max-width: 520px; max-height: 85vh; display: flex; flex-direction: column;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 18px;">🧹</span>
+          <span class="modal-title" style="font-size: 15px; font-weight: 700;">Nettoyer les tâches importées</span>
+        </div>
+        <button class="modal-close" onclick="closeCleanImportedModal()">✕</button>
+      </div>
+      <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 14px 18px;">
+        <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5; margin: 0 0 12px 0;">
+          Cochez les tâches que vous souhaitez <strong>supprimer définitivement</strong> de votre calendrier et de votre Backlog. Vos autres événements ne seront pas touchés.
+        </p>
+
+        <div style="display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap;">
+          <button type="button" class="btn-theme-toggle mini" onclick="selectCleanFilter('all_mails')">✉️ Cocher tous les Mails</button>
+          <button type="button" class="btn-theme-toggle mini" onclick="selectCleanFilter('all_today')">📅 Cocher Tout Aujourd'hui</button>
+          <button type="button" class="btn-theme-toggle mini" onclick="selectCleanFilter('check_all')">Tout cocher</button>
+          <button type="button" class="btn-theme-toggle mini" onclick="selectCleanFilter('uncheck_all')">Tout décocher</button>
+        </div>
+
+        <div id="cleanTasksListContainer" style="display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow-y: auto; padding-right: 4px;">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; border-top: 1px solid var(--card-border);">
+        <span id="cleanSelectedCount" style="font-size: 12px; color: var(--text-muted); font-weight: 500;">0 tâche sélectionnée</span>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn-cancel" onclick="closeCleanImportedModal()">Annuler</button>
+          <button type="button" class="btn-primary-action" id="btnConfirmCleanTasks" onclick="executeCleanSelectedTasks()" style="background: #ef4444; color: #fff;">
+            Supprimer la sélection
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: VERROUILLAGE CODE PIN ZERO-KNOWLEDGE -->
   <div class="modal-overlay lock-modal-overlay" id="spanLockModal" style="display: none;">
     <div class="modal-card lock-modal-card">
@@ -1046,14 +1119,14 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/core.js?v=7.68"></script>
-  <script src="js/security.js?v=7.68"></script>
-  <script src="js/sync.js?v=7.68"></script>
-  <script src="js/gcal.js?v=7.68"></script>
-  <script src="js/plan.js?v=7.68"></script>
-  <script src="js/calendar-layout.js?v=7.68"></script>
-  <script src="js/calendar-drag.js?v=7.68"></script>
-  <script src="js/plan-modals.js?v=7.68"></script>
-  <script src="js/app.js?v=7.68"></script>
+  <script src="js/core.js?v=7.69"></script>
+  <script src="js/security.js?v=7.69"></script>
+  <script src="js/sync.js?v=7.69"></script>
+  <script src="js/gcal.js?v=7.69"></script>
+  <script src="js/plan.js?v=7.69"></script>
+  <script src="js/calendar-layout.js?v=7.69"></script>
+  <script src="js/calendar-drag.js?v=7.69"></script>
+  <script src="js/plan-modals.js?v=7.69"></script>
+  <script src="js/app.js?v=7.69"></script>
 </body>
 </html>

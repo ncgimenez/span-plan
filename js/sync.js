@@ -72,11 +72,18 @@ async function handleLinkClick() {
     return;
   }
 
+  // 1. Sauvegarder automatiquement un point de restauration complet avant la liaison
+  createSyncSnapshot(`Avant liaison avec ${key.slice(0, 12)}...`, SYNC_USER_ID);
+  recordAccountInHistory(SYNC_USER_ID, 'Compte précédent');
+
   SYNC_USER_ID = key;
   localStorage.setItem('span_sync_user', key);
   localStorage.setItem('span_account_id', key);
   localStorage.setItem('span_sync_key_manually_set', 'true');
   sessionStorage.removeItem('span_session_unlocked');
+
+  // Enregistrer le nouveau compte dans l'historique
+  recordAccountInHistory(key, 'Compte actif');
   
   syncKeychainInputs(key);
   updateSyncKeyDisplay();
@@ -86,6 +93,7 @@ async function handleLinkClick() {
   if (typeof SpanSecurity !== 'undefined' && SpanSecurity.updateSecurityUI) {
     SpanSecurity.updateSecurityUI();
   }
+  renderSyncHistoryAndSnapshotsUI();
   if (typeof showToast === 'function') showToast("Span Plan synchronisé avec succès !", 'success');
   else alert("Span Plan linked successfully!");
 }
@@ -96,7 +104,435 @@ function updateSyncKeyDisplay() {
   const accEl = document.getElementById('displayAccountId');
   if (accEl) accEl.textContent = SYNC_USER_ID;
   syncKeychainInputs(SYNC_USER_ID);
+  renderSyncHistoryAndSnapshotsUI();
 }
+
+// ==============================================================
+// GESTIONNAIRE D'HISTORIQUE, DE POINTS DE RESTAURATION & DÉLIAISON
+// ==============================================================
+
+function getAccountsHistory() {
+  try {
+    return JSON.parse(localStorage.getItem('span_sync_accounts_history')) || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function recordAccountInHistory(key, label = '') {
+  if (!key) return;
+  const accounts = getAccountsHistory();
+  const existingIdx = accounts.findIndex(a => a.id === key);
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+  if (existingIdx !== -1) {
+    accounts[existingIdx].lastUsedAt = dateStr;
+    if (label) accounts[existingIdx].label = label;
+  } else {
+    accounts.unshift({
+      id: key,
+      label: label || `Compte ${key.slice(0, 10)}...`,
+      lastUsedAt: dateStr
+    });
+  }
+  if (accounts.length > 8) accounts.pop();
+  localStorage.setItem('span_sync_accounts_history', JSON.stringify(accounts));
+}
+
+function getSyncSnapshots() {
+  try {
+    return JSON.parse(localStorage.getItem('span_sync_snapshots')) || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function createSyncSnapshot(label = 'Sauvegarde manuelle', key = null) {
+  try {
+    const snapshots = getSyncSnapshots();
+    const tasksCopy = JSON.parse(JSON.stringify((window.SpanPlanState && window.SpanPlanState.tasks) || []));
+    let focusCopy = [];
+    try {
+      focusCopy = JSON.parse(localStorage.getItem('span_tasks') || '[]');
+    } catch (_) {}
+
+    const now = new Date();
+    const snap = {
+      id: 'snap_' + Date.now(),
+      label: label || 'Sauvegarde manuelle',
+      key: key || SYNC_USER_ID,
+      createdAt: now.toISOString(),
+      displayDate: now.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
+      taskCount: tasksCopy.length,
+      tasks: tasksCopy,
+      focusTasks: focusCopy
+    };
+
+    snapshots.unshift(snap);
+    if (snapshots.length > 8) snapshots.pop();
+    localStorage.setItem('span_sync_snapshots', JSON.stringify(snapshots));
+    return snap;
+  } catch (e) {
+    console.warn('Error creating snapshot:', e);
+    return null;
+  }
+}
+
+function createManualSyncSnapshot() {
+  const snap = createSyncSnapshot('Sauvegarde manuelle');
+  renderSyncHistoryAndSnapshotsUI();
+  if (typeof showToast === 'function') {
+    showToast(`Point de restauration créé (${snap ? snap.taskCount : 0} tâches)`, 'success');
+  }
+}
+window.createManualSyncSnapshot = createManualSyncSnapshot;
+
+function restoreSyncSnapshot(snapId) {
+  const snapshots = getSyncSnapshots();
+  const snap = snapshots.find(s => s.id === snapId);
+  if (!snap) return;
+
+  if (!confirm(`Restaurer le point de sauvegarde du ${snap.displayDate} (${snap.taskCount} tâches) ?\n\nVotre calendrier actuel sera remplacé par cet état sauvegardé.`)) {
+    return;
+  }
+
+  // Sauvegarde de sécurité juste avant la restauration
+  createSyncSnapshot('Avant restauration de sauvegarde');
+
+  window.SpanPlanState.tasks = snap.tasks || [];
+  localStorage.setItem('span_plan_tasks', JSON.stringify(window.SpanPlanState.tasks));
+
+  if (Array.isArray(snap.focusTasks)) {
+    try {
+      localStorage.setItem('span_tasks', JSON.stringify(snap.focusTasks));
+    } catch (_) {}
+  }
+
+  if (snap.key && snap.key !== SYNC_USER_ID) {
+    SYNC_USER_ID = snap.key;
+    localStorage.setItem('span_sync_user', snap.key);
+    localStorage.setItem('span_account_id', snap.key);
+    updateSyncKeyDisplay();
+    setupRealtimeSubscription();
+  }
+
+  if (typeof renderPlanGrid === 'function') renderPlanGrid(true);
+  if (typeof renderBacklogDrawer === 'function') renderBacklogDrawer();
+  if (typeof updateCounters === 'function') updateCounters();
+  if (typeof renderDateStrip === 'function') renderDateStrip();
+  if (typeof syncPlanToCloud === 'function') syncPlanToCloud();
+
+  renderSyncHistoryAndSnapshotsUI();
+  if (typeof showToast === 'function') {
+    showToast(`Calendrier restauré avec succès (${snap.taskCount} tâches) !`, 'success');
+  }
+}
+window.restoreSyncSnapshot = restoreSyncSnapshot;
+
+function deleteSyncSnapshot(snapId) {
+  let snapshots = getSyncSnapshots();
+  snapshots = snapshots.filter(s => s.id !== snapId);
+  localStorage.setItem('span_sync_snapshots', JSON.stringify(snapshots));
+  renderSyncHistoryAndSnapshotsUI();
+}
+window.deleteSyncSnapshot = deleteSyncSnapshot;
+
+async function switchAccountFromHistory(targetKey) {
+  if (!targetKey) return;
+  if (!confirm(`Basculer vers le compte ${targetKey} ?`)) return;
+
+  createSyncSnapshot(`Avant bascule vers ${targetKey.slice(0, 10)}...`, SYNC_USER_ID);
+  recordAccountInHistory(SYNC_USER_ID, 'Compte précédent');
+
+  SYNC_USER_ID = targetKey;
+  localStorage.setItem('span_sync_user', targetKey);
+  localStorage.setItem('span_account_id', targetKey);
+  sessionStorage.removeItem('span_session_unlocked');
+
+  recordAccountInHistory(targetKey, 'Compte actif');
+  syncKeychainInputs(targetKey);
+  updateSyncKeyDisplay();
+
+  setupRealtimeSubscription();
+  await loadPlanFromCloud();
+  if (typeof SpanSecurity !== 'undefined' && SpanSecurity.updateSecurityUI) {
+    SpanSecurity.updateSecurityUI();
+  }
+  renderSyncHistoryAndSnapshotsUI();
+  if (typeof showToast === 'function') {
+    showToast(`Basculé sur le compte ${targetKey}`, 'success');
+  }
+}
+window.switchAccountFromHistory = switchAccountFromHistory;
+
+function removeAccountFromHistory(targetKey) {
+  let accounts = getAccountsHistory();
+  accounts = accounts.filter(a => a.id !== targetKey);
+  localStorage.setItem('span_sync_accounts_history', JSON.stringify(accounts));
+  renderSyncHistoryAndSnapshotsUI();
+}
+window.removeAccountFromHistory = removeAccountFromHistory;
+
+function unlinkAccountAndReset() {
+  const currentKey = SYNC_USER_ID;
+  if (!confirm(`Voulez-vous délier ce compte (${currentKey}) ?\n\nUn nouvel identifiant privé et indépendant va être généré pour votre appareil afin d'isoler complètement vos données.`)) {
+    return;
+  }
+
+  // 1. Sauvegarder un snapshot de secours de l'état actuel avant de délier
+  createSyncSnapshot(`Avant déliaison du compte ${currentKey.slice(0, 10)}...`, currentKey);
+
+  // 2. Archiver le compte dans l'historique des comptes
+  recordAccountInHistory(currentKey, 'Compte délié');
+
+  // 3. Générer un nouvel ID unique et privé
+  const newPart = Math.random().toString(36).substring(2, 8);
+  const newTime = Date.now().toString(36);
+  const newId = `span_${newPart}_${newTime}`;
+
+  SYNC_USER_ID = newId;
+  localStorage.setItem('span_sync_user', newId);
+  localStorage.setItem('span_account_id', newId);
+  localStorage.setItem('span_sync_key_manually_set', 'true');
+  sessionStorage.removeItem('span_session_unlocked');
+
+  // Enregistrer le nouveau compte dans l'historique
+  recordAccountInHistory(newId, 'Mon compte privé');
+
+  // 4. Mettre à jour l'UI et la souscription Realtime
+  syncKeychainInputs(newId);
+  updateSyncKeyDisplay();
+  setupRealtimeSubscription();
+
+  // 5. Sauvegarder le nouvel état cloud vierge/indépendant
+  syncPlanToCloud();
+
+  if (typeof SpanSecurity !== 'undefined' && SpanSecurity.updateSecurityUI) {
+    SpanSecurity.updateSecurityUI();
+  }
+
+  renderSyncHistoryAndSnapshotsUI();
+
+  if (typeof showToast === 'function') {
+    showToast(`Compte délié ! Nouvel identifiant privé généré : ${newId}`, 'success', 3500);
+  }
+}
+window.unlinkAccountAndReset = unlinkAccountAndReset;
+
+function renderSyncHistoryAndSnapshotsUI() {
+  // 1. Rendu des snapshots (Points de restauration)
+  const snapContainer = document.getElementById('syncSnapshotsContainer');
+  if (snapContainer) {
+    const snapshots = getSyncSnapshots();
+    if (snapshots.length === 0) {
+      snapContainer.innerHTML = `
+        <div style="font-size: 11px; color: var(--text-muted); font-style: italic; padding: 4px 0;">
+          Aucun point de restauration antérieur.
+        </div>
+      `;
+    } else {
+      let snapHtml = `<div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Points de restauration récents :</div>`;
+      snapshots.forEach(s => {
+        snapHtml += `
+          <div class="sync-item-row">
+            <div class="sync-item-meta">
+              <span class="sync-item-title">${escapeHtml(s.label)}</span>
+              <span class="sync-item-sub">📅 ${s.displayDate || s.createdAt.slice(0, 16)} • ${s.taskCount || 0} tâches</span>
+            </div>
+            <div style="display: flex; gap: 4px;">
+              <button type="button" class="btn-theme-toggle mini" onclick="restoreSyncSnapshot('${s.id}')" title="Restaurer cet état complet">↺ Restaurer</button>
+              <button type="button" class="btn-theme-toggle mini text-danger" onclick="deleteSyncSnapshot('${s.id}')" title="Supprimer ce point de restauration">✕</button>
+            </div>
+          </div>
+        `;
+      });
+      snapContainer.innerHTML = snapHtml;
+    }
+  }
+
+  // 2. Rendu de l'historique des comptes connectés
+  const accContainer = document.getElementById('syncAccountsHistoryContainer');
+  if (accContainer) {
+    const accounts = getAccountsHistory();
+    const otherAccounts = accounts.filter(a => a.id !== SYNC_USER_ID);
+    if (otherAccounts.length === 0) {
+      accContainer.innerHTML = '';
+    } else {
+      let accHtml = `<div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px; margin-top: 6px;">Autres comptes précédemment liés :</div>`;
+      otherAccounts.forEach(a => {
+        accHtml += `
+          <div class="sync-item-row">
+            <div class="sync-item-meta">
+              <span class="sync-item-title">${escapeHtml(a.label || a.id)}</span>
+              <span class="sync-item-sub">ID: ${escapeHtml(a.id.slice(0, 18))}... • ${a.lastUsedAt || ''}</span>
+            </div>
+            <div style="display: flex; gap: 4px;">
+              <button type="button" class="btn-theme-toggle mini" onclick="switchAccountFromHistory('${a.id}')" title="Basculer vers cet identifiant">Basculer</button>
+              <button type="button" class="btn-theme-toggle mini text-danger" onclick="removeAccountFromHistory('${a.id}')" title="Oublier ce compte de la liste">✕</button>
+            </div>
+          </div>
+        `;
+      });
+      accContainer.innerHTML = accHtml;
+    }
+  }
+}
+window.renderSyncHistoryAndSnapshotsUI = renderSyncHistoryAndSnapshotsUI;
+
+// ==============================================================
+// MODAL DE NETTOYAGE DES TÂCHES IMPORTÉES
+// ==============================================================
+
+function openCleanImportedTasksModal() {
+  const modal = document.getElementById('cleanImportedModalOverlay');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  renderCleanTasksList('all_mails');
+}
+window.openCleanImportedTasksModal = openCleanImportedTasksModal;
+
+function closeCleanImportedModal() {
+  const modal = document.getElementById('cleanImportedModalOverlay');
+  if (modal) modal.style.display = 'none';
+}
+window.closeCleanImportedModal = closeCleanImportedModal;
+
+function renderCleanTasksList(filterMode = 'all_mails') {
+  const container = document.getElementById('cleanTasksListContainer');
+  if (!container) return;
+
+  const allTasks = (window.SpanPlanState && window.SpanPlanState.tasks) || [];
+  if (allTasks.length === 0) {
+    container.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 18px 0;">Aucune tâche dans votre calendrier.</div>`;
+    updateCleanSelectedCount();
+    return;
+  }
+
+  let html = '';
+  allTasks.forEach(task => {
+    const isMail = (typeof getTaskActionType === 'function' ? getTaskActionType(task) === 'mail' : false) || 
+                   /#mail\b/i.test(task.title || '') || 
+                   /^mail\b/i.test((task.title || '').trim());
+    const isToday = task.date === TODAY_STR;
+    
+    let shouldCheck = false;
+    if (filterMode === 'all_mails' && isMail) shouldCheck = true;
+    else if (filterMode === 'all_today' && isToday) shouldCheck = true;
+    else if (filterMode === 'check_all') shouldCheck = true;
+    else if (filterMode === 'uncheck_all') shouldCheck = false;
+
+    const actionType = (typeof getTaskActionType === 'function') ? getTaskActionType(task) : null;
+    let badgeText = '';
+    if (actionType === 'mail') badgeText = '✉️ Mail';
+    else if (actionType === 'call') badgeText = '📞 Call';
+    else if (actionType === 'pay') badgeText = '💳 Pay';
+    else if (actionType === 'content') badgeText = '🎬 Contenu';
+
+    const dateLabel = task.date ? (task.date === TODAY_STR ? "Aujourd'hui" : task.date) : "Backlog / Sans date";
+
+    html += `
+      <label class="clean-task-row ${shouldCheck ? 'is-selected' : ''}" onclick="event.stopPropagation()">
+        <input type="checkbox" data-task-id="${task.id}" class="clean-task-checkbox" ${shouldCheck ? 'checked' : ''} onchange="handleCleanTaskCheckboxChange(this)">
+        <div class="sync-item-meta">
+          <div class="sync-item-title">${escapeHtml(task.title || 'Sans titre')}</div>
+          <div class="sync-item-sub">
+            <span>📅 ${dateLabel}</span>
+            ${badgeText ? `<span style="margin-left: 6px; font-weight: 600;">${badgeText}</span>` : ''}
+            ${task.time ? `<span style="margin-left: 6px;">⏰ ${task.time}</span>` : ''}
+          </div>
+        </div>
+      </label>
+    `;
+  });
+
+  container.innerHTML = html;
+  updateCleanSelectedCount();
+}
+window.renderCleanTasksList = renderCleanTasksList;
+
+function handleCleanTaskCheckboxChange(input) {
+  const row = input.closest('.clean-task-row');
+  if (row) {
+    row.classList.toggle('is-selected', input.checked);
+  }
+  updateCleanSelectedCount();
+}
+window.handleCleanTaskCheckboxChange = handleCleanTaskCheckboxChange;
+
+function selectCleanFilter(mode) {
+  renderCleanTasksList(mode);
+}
+window.selectCleanFilter = selectCleanFilter;
+
+function updateCleanSelectedCount() {
+  const checkboxes = document.querySelectorAll('#cleanTasksListContainer input[type="checkbox"]:checked');
+  const countEl = document.getElementById('cleanSelectedCount');
+  const btn = document.getElementById('btnConfirmCleanTasks');
+  const count = checkboxes.length;
+  if (countEl) {
+    countEl.textContent = `${count} tâche${count > 1 ? 's' : ''} sélectionnée${count > 1 ? 's' : ''}`;
+  }
+  if (btn) {
+    btn.disabled = count === 0;
+    btn.style.opacity = count === 0 ? '0.5' : '1';
+    btn.textContent = `Supprimer la sélection (${count})`;
+  }
+}
+window.updateCleanSelectedCount = updateCleanSelectedCount;
+
+function executeCleanSelectedTasks() {
+  const checkboxes = document.querySelectorAll('#cleanTasksListContainer input[type="checkbox"]:checked');
+  const idsToDelete = new Set(Array.from(checkboxes).map(cb => cb.dataset.taskId).filter(Boolean));
+
+  if (idsToDelete.size === 0) {
+    if (typeof showToast === 'function') showToast("Aucune tâche sélectionnée.", 'info');
+    return;
+  }
+
+  if (!confirm(`Supprimer définitivement ${idsToDelete.size} tâche(s) sélectionnée(s) de votre calendrier et de votre Backlog ?`)) {
+    return;
+  }
+
+  // 1. Snapshot de sécurité avant suppression
+  createSyncSnapshot(`Avant nettoyage (${idsToDelete.size} tâches supprimées)`);
+
+  // 2. Retirer de SpanPlanState.tasks
+  window.SpanPlanState.tasks = (window.SpanPlanState.tasks || []).filter(t => !idsToDelete.has(t.id) && !idsToDelete.has(t.focusId));
+  localStorage.setItem('span_plan_tasks', JSON.stringify(window.SpanPlanState.tasks));
+
+  // 3. Retirer de span_tasks (Span Focus)
+  try {
+    let focusTasks = JSON.parse(localStorage.getItem('span_tasks') || '[]');
+    focusTasks = focusTasks.filter(ft => !idsToDelete.has(String(ft.id)) && !idsToDelete.has(String(ft.planId)));
+    localStorage.setItem('span_tasks', JSON.stringify(focusTasks));
+  } catch (e) {}
+
+  // 4. Ajouter aux IDs ignorés pour éviter toute réimportation
+  try {
+    let dismissed = JSON.parse(localStorage.getItem('span_plan_dismissed_focus_ids') || '[]');
+    idsToDelete.forEach(id => dismissed.push(String(id)));
+    localStorage.setItem('span_plan_dismissed_focus_ids', JSON.stringify(Array.from(new Set(dismissed))));
+  } catch (e) {}
+
+  // 5. Sauvegarder dans le cloud
+  if (typeof syncPlanToCloud === 'function') {
+    syncPlanToCloud();
+  }
+
+  // 6. Rafraîchir l'affichage
+  closeCleanImportedModal();
+  if (typeof renderPlanGrid === 'function') renderPlanGrid(true);
+  if (typeof renderBacklogDrawer === 'function') renderBacklogDrawer();
+  if (typeof updateCounters === 'function') updateCounters();
+  if (typeof renderDateStrip === 'function') renderDateStrip();
+
+  renderSyncHistoryAndSnapshotsUI();
+  if (typeof showToast === 'function') {
+    showToast(`${idsToDelete.size} tâche(s) supprimée(s). Votre calendrier est nettoyé !`, 'success', 3000);
+  }
+}
+window.executeCleanSelectedTasks = executeCleanSelectedTasks;
 
 let lastPlanCloudWriteTime = 0;
 

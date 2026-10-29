@@ -8375,3 +8375,71 @@ body.is-dragging-subtask .cal-allday-drop-cell.drag-over {
   border-color: #fde047;
 }
 
+/* HISTORIQUE DE SYNCHRONISATION & POINTS DE RESTAURATION */
+.sync-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 11.5px;
+}
+[data-theme="light"] .sync-item-row {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.sync-item-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.sync-item-title {
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sync-item-sub {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.clean-task-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.clean-task-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.clean-task-row.is-selected {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+[data-theme="light"] .clean-task-row {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .clean-task-row:hover {
+  background: #f8fafc;
+}
+[data-theme="light"] .clean-task-row.is-selected {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
