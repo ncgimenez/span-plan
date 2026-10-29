@@ -128,12 +128,12 @@ function calculateVisibleDates() {
 
 function renderTimeRulerHtml(visibleDates = []) {
   let html = '';
-  for (let h = START_HOUR; h <= END_HOUR; h++) {
+  for (let h = START_HOUR; h <= END_HOUR + 1; h++) {
     const top = (h - START_HOUR) * HOUR_HEIGHT;
-    const label = `${String(h).padStart(2, '0')}:00`;
-    const isNight = (h < 7);
+    const label = (h === 24 || h === END_HOUR + 1) ? '00:00' : `${String(h).padStart(2, '0')}:00`;
+    const isNight = (h < 7 || h >= 24);
     html += `
-      <div class="cal-time-label-row ${isNight ? 'is-night' : ''}" style="top: ${top}px;">
+      <div class="cal-time-label-row ${isNight ? 'is-night' : ''} ${h >= 24 ? 'is-day-end' : ''}" style="top: ${top}px;">
         <span>${label}</span>
       </div>
     `;
@@ -162,11 +162,11 @@ function renderTimeRulerHtml(visibleDates = []) {
 
 function renderColumnHourLines() {
   let html = '';
-  for (let h = START_HOUR; h <= END_HOUR; h++) {
+  for (let h = START_HOUR; h <= END_HOUR + 1; h++) {
     const top = (h - START_HOUR) * HOUR_HEIGHT;
-    const isNight = (h < 7);
+    const isNight = (h < 7 || h >= 24);
     html += `
-      <div class="cal-hour-line ${isNight ? 'is-night' : ''}" style="top: ${top}px;"></div>
+      <div class="cal-hour-line ${isNight ? 'is-night' : ''} ${h >= 24 ? 'is-day-end' : ''}" style="top: ${top}px;"></div>
     `;
   }
   return html;
@@ -987,8 +987,7 @@ function renderTimedBlocks(tasks, dateStr) {
           ${locationHtml}
           ${notesHtml}
           ${isLiveNow ? `
-            <span class="live-status-pill mini"><span class="live-status-dot"></span>LIVE</span>
-            <span class="live-meta-remaining">${remainingMinutes}m</span>
+            <span class="live-status-pill mini"><span class="live-status-dot"></span>LIVE <span class="live-meta-remaining">${remainingMinutes}m</span></span>
           ` : ''}
           <div class="schedule-block-top-actions">
             ${progressPillHtml}
@@ -1023,9 +1022,7 @@ function renderTimedBlocks(tasks, dateStr) {
           <span class="schedule-block-time">${displayTimeStr}</span>
           ${isNarrowCol ? progressPillHtml : ''}
           ${isLiveNow ? `
-            <span class="live-meta-divider">•</span>
-            <span class="live-status-pill mini"><span class="live-status-dot"></span>LIVE</span>
-            <span class="live-meta-remaining">${remainingMinutes}m</span>
+            <span class="live-status-pill mini"><span class="live-status-dot"></span>LIVE <span class="live-meta-remaining">${remainingMinutes}m</span></span>
           ` : ''}
           ${locationHtml}
           ${notesHtml}

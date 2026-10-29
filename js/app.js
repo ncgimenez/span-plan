@@ -1,17 +1,33 @@
 // Thème & Préférences globales
+function updateThemeUI(theme) {
+  const isLight = (theme === 'light');
+  const toggleBtn = document.getElementById('themeToggleBtn');
+  if (toggleBtn) toggleBtn.textContent = isLight ? 'Light' : 'Dark';
+  
+  const headerBtn = document.getElementById('headerThemeToggleBtn');
+  if (headerBtn) {
+    headerBtn.innerHTML = isLight ? '🌙' : '☀️';
+    headerBtn.title = isLight ? 'Passer en mode sombre' : 'Passer en mode clair (style portfolio)';
+  }
+
+  const sidebarBtn = document.getElementById('sidebarThemeToggleBtn');
+  if (sidebarBtn) {
+    sidebarBtn.innerHTML = `<span>${isLight ? '🌙' : '☀️'}</span>`;
+    sidebarBtn.title = isLight ? 'Passer en mode sombre' : 'Passer en mode clair (style portfolio)';
+  }
+
+  const meta = document.getElementById('themeMetaColor');
+  if (meta) meta.setAttribute('content', isLight ? '#f7f5f0' : '#0d0d0f');
+}
+
 function toggleTheme() {
   const current = document.documentElement.getAttribute('data-theme') || 'dark';
   const next = current === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
   localStorage.setItem('span_theme', next);
   
-  const toggleBtn = document.getElementById('themeToggleBtn');
-  if (toggleBtn) toggleBtn.textContent = next.charAt(0).toUpperCase() + next.slice(1);
-  
-  const meta = document.getElementById('themeMetaColor');
-  if (meta) meta.setAttribute('content', next === 'dark' ? '#0d0d0f' : '#f8f8fa');
-
-  showToast(`Theme switched to ${next} mode`);
+  updateThemeUI(next);
+  showToast(next === 'light' ? 'Mode clair activé (papier crème)' : 'Mode sombre activé');
 }
 
 function switchSettingsTab(tabName) {
@@ -394,9 +410,7 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('DOMContentLoaded', () => {
   const savedTheme = localStorage.getItem('span_theme') || 'dark';
   document.documentElement.setAttribute('data-theme', savedTheme);
-  
-  const toggleBtn = document.getElementById('themeToggleBtn');
-  if (toggleBtn) toggleBtn.textContent = savedTheme.charAt(0).toUpperCase() + savedTheme.slice(1);
+  updateThemeUI(savedTheme);
 });
 
 // Unobtrusive Event Delegation for [data-action] attributes
