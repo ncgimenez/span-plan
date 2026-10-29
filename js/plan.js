@@ -2095,7 +2095,7 @@ function setupBacklogSwipe() {
     if (container._backlogSwipeReady) return;
     container._backlogSwipeReady = true;
 
-    // Trackpad Wheel direct
+    // Trackpad Wheel direct (Mac & PC)
     let accumulatedX = 0;
     let wheelTimer = null;
     let isLocked = false;
@@ -2104,20 +2104,22 @@ function setupBacklogSwipe() {
     container.addEventListener('wheel', (e) => {
       if (document.body.classList.contains('is-card-dragging')) return;
 
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.1 && Math.abs(e.deltaX) > 5) {
+      // Détecter défilement horizontal (intention horizontale, tolérance diagonale)
+      if (Math.abs(e.deltaX) >= Math.abs(e.deltaY) * 0.85 && Math.abs(e.deltaX) > 2) {
         e.stopPropagation();
 
         clearTimeout(wheelTimer);
         wheelTimer = setTimeout(() => {
           isLocked = false;
           accumulatedX = 0;
-        }, 180);
+        }, 160);
 
         const now = Date.now();
-        if (isLocked || now - lastTime < 380) return;
+        if (isLocked || now - lastTime < 220) return;
 
         accumulatedX += e.deltaX;
-        if (Math.abs(accumulatedX) >= 30) {
+        // Seuil ultra-souple : 16px (attrape les flicks rapides et les gestes courts)
+        if (Math.abs(accumulatedX) >= 16) {
           isLocked = true;
           lastTime = now;
           const dir = accumulatedX > 0 ? 1 : -1;
@@ -2125,13 +2127,13 @@ function setupBacklogSwipe() {
           cycleBacklogCategory(dir);
         }
       } else {
-        if (!isLocked && Math.abs(e.deltaY) > Math.abs(e.deltaX) * 2) {
+        if (!isLocked && Math.abs(e.deltaY) > Math.abs(e.deltaX) * 2.2) {
           accumulatedX = 0;
         }
       }
     }, { passive: true });
 
-    // Touch direct
+    // Touch direct (Mobile, Tablette, Trackpad tactile)
     let startX = 0;
     let startY = 0;
     let startTime = 0;
@@ -2150,14 +2152,20 @@ function setupBacklogSwipe() {
       const t = e.changedTouches[0];
       const diffX = t.clientX - startX;
       const diffY = t.clientY - startY;
-      const elapsed = Date.now() - startTime;
+      const elapsed = Math.max(Date.now() - startTime, 1);
       startX = 0;
       startY = 0;
 
       const now = Date.now();
-      if (now - lastTouchTime < 320) return;
+      if (now - lastTouchTime < 220) return;
 
-      if (Math.abs(diffX) > 30 && Math.abs(diffX) > Math.abs(diffY) * 1.15 && elapsed < 650) {
+      // Vitesse (px/ms) : permet de capturer les gestes ultra-rapides (flicks) même courts
+      const velocity = Math.abs(diffX) / elapsed;
+      const isFastFlick = (velocity > 0.20 && Math.abs(diffX) >= 13);
+      const isDistanceSwipe = (Math.abs(diffX) >= 16);
+      const isHorizontalIntent = Math.abs(diffX) >= Math.abs(diffY) * 0.85;
+
+      if ((isFastFlick || isDistanceSwipe) && isHorizontalIntent && elapsed < 700) {
         e.stopPropagation();
         lastTouchTime = now;
         cycleBacklogCategory(diffX < 0 ? 1 : -1);
@@ -2190,7 +2198,7 @@ window.addEventListener('touchend', (e) => {
   const touch = e.changedTouches[0];
   const diffX = touch.clientX - touchStartX;
   const diffY = touch.clientY - touchStartY;
-  const elapsed = Date.now() - touchStartTime;
+  const elapsed = Math.max(Date.now() - touchStartTime, 1);
   const wasBacklog = touchTargetIsBacklog;
 
   touchStartX = 0;
@@ -2198,10 +2206,16 @@ window.addEventListener('touchend', (e) => {
   touchTargetIsBacklog = false;
 
   const now = Date.now();
-  if (now - lastTouchNavTime < 350) return; // Anti-rebond
+  const minCooldown = wasBacklog ? 220 : 350;
+  if (now - lastTouchNavTime < minCooldown) return; // Anti-rebond
 
-  const threshold = wasBacklog ? 30 : 50;
-  if (Math.abs(diffX) > threshold && Math.abs(diffX) > Math.abs(diffY) * 1.2 && elapsed < 650) {
+  const velocity = Math.abs(diffX) / elapsed;
+  const isFastFlick = (velocity > 0.20 && Math.abs(diffX) >= (wasBacklog ? 13 : 25));
+  const isDistanceSwipe = (Math.abs(diffX) >= (wasBacklog ? 16 : 48));
+  const angleRatio = wasBacklog ? 0.85 : 1.2;
+  const isHorizontalIntent = Math.abs(diffX) >= Math.abs(diffY) * angleRatio;
+
+  if ((isFastFlick || isDistanceSwipe) && isHorizontalIntent && elapsed < 700) {
     lastTouchNavTime = now;
     if (wasBacklog) {
       cycleBacklogCategory(diffX < 0 ? 1 : -1);
@@ -2226,23 +2240,24 @@ window.addEventListener('wheel', (e) => {
   if (e.target.closest('.modal-card') || isEventInMiniCal(e)) return;
 
   const isBacklog = isEventInBacklog(e);
+  const angleRatio = isBacklog ? 0.85 : 1.1;
 
   // Défilement horizontal
-  if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.1 && Math.abs(e.deltaX) > 5) {
+  if (Math.abs(e.deltaX) >= Math.abs(e.deltaY) * angleRatio && Math.abs(e.deltaX) > 2) {
     clearTimeout(wheelInertiaTimer);
     wheelInertiaTimer = setTimeout(() => {
       isWheelNavLocked = false;
       accumulatedWheelX = 0;
-    }, 180);
+    }, 160);
 
     const now = Date.now();
-    const minCooldown = isBacklog ? 380 : 500;
+    const minCooldown = isBacklog ? 220 : 450;
     if (isWheelNavLocked || now - lastWheelNavTime < minCooldown) {
       return;
     }
 
     accumulatedWheelX += e.deltaX;
-    const triggerThreshold = isBacklog ? 30 : 50;
+    const triggerThreshold = isBacklog ? 16 : 48;
 
     if (Math.abs(accumulatedWheelX) >= triggerThreshold) {
       isWheelNavLocked = true;
@@ -2258,6 +2273,10 @@ window.addEventListener('wheel', (e) => {
     }
   } else {
     if (!isWheelNavLocked && Math.abs(e.deltaY) > Math.abs(e.deltaX) * 2) {
+      accumulatedWheelX = 0;
+    }
+  }
+}, { passive: true });
       accumulatedWheelX = 0;
     }
   }
