@@ -1177,7 +1177,13 @@ window.cyclePlanTaskAction = cyclePlanTaskAction;
 function setPlanBacklogActionFilter(filter) {
   planBacklogActionFilter = filter;
   document.querySelectorAll('.plan-filter-pill').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.filter === filter);
+    const isActive = btn.dataset.filter === filter;
+    btn.classList.toggle('active', isActive);
+    if (isActive && btn.scrollIntoView) {
+      try {
+        btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      } catch (_) {}
+    }
   });
   if (['call', 'mail', 'pay', 'content'].includes(filter)) {
     setSidebarBacklogAction(filter);
@@ -2005,17 +2011,70 @@ function setMobileDayView(mode) {
   }
 }
 
-// SWIPE TACTILE & GESTUEL UNIVERSEL SUR LE CALENDRIER (Mobile, Tablette, Trackpad)
+// GESTION UNIVERSELLE DU SWIPE (CALENDRIER, BACKLOG & TRACKPAD)
+const BACKLOG_FILTER_CATEGORIES = ['all', 'call', 'mail', 'pay', 'content'];
+
+function isEventInBacklog(e) {
+  const path = e.composedPath ? e.composedPath() : [];
+  if (path.some(el => el.id === 'backlogDrawer' || el.id === 'sidebarBacklogSection' || (el.classList && (el.classList.contains('sidebar-backlog-section') || el.classList.contains('backlog-drawer') || el.classList.contains('sidebar-backlog-scroll'))))) {
+    return true;
+  }
+  if (e.target && e.target.closest) {
+    return !!(e.target.closest('#backlogDrawer') || e.target.closest('.sidebar-backlog-section') || e.target.closest('.sidebar-backlog-scroll'));
+  }
+  return false;
+}
+
+function isEventInMiniCal(e) {
+  const path = e.composedPath ? e.composedPath() : [];
+  if (path.some(el => el.id === 'miniCalendarWidget' || (el.classList && el.classList.contains('mini-calendar-widget')))) {
+    return true;
+  }
+  if (e.target && e.target.closest) {
+    return !!e.target.closest('#miniCalendarWidget');
+  }
+  return false;
+}
+
+function cycleBacklogCategory(direction) {
+  const curIdx = BACKLOG_FILTER_CATEGORIES.indexOf(planBacklogActionFilter);
+  const safeIdx = curIdx === -1 ? 0 : curIdx;
+  let nextIdx = safeIdx + direction;
+  if (nextIdx < 0) nextIdx = BACKLOG_FILTER_CATEGORIES.length - 1;
+  if (nextIdx >= BACKLOG_FILTER_CATEGORIES.length) nextIdx = 0;
+
+  const nextCat = BACKLOG_FILTER_CATEGORIES[nextIdx];
+  setPlanBacklogActionFilter(nextCat);
+
+  const labels = {
+    all: 'Tous',
+    call: '📞 Calls',
+    mail: '✉️ Mails',
+    pay: '💳 Paiements',
+    content: '🎬 Contenu'
+  };
+  if (typeof showToast === 'function') {
+    showToast(`Backlog : ${labels[nextCat] || nextCat}`, 'info', 1100);
+  }
+}
+window.cycleBacklogCategory = cycleBacklogCategory;
+
+// SWIPE TACTILE UNIVERSEL (Écran tactile / Mobile / Tablette)
 let touchStartX = 0;
 let touchStartY = 0;
 let touchStartTime = 0;
+let touchTargetIsBacklog = false;
+let lastTouchNavTime = 0;
 
 window.addEventListener('touchstart', (e) => {
-  if (e.target.closest('#backlogDrawer') || e.target.closest('.modal-card') || e.target.closest('#miniCalendarWidget')) return;
+  if (document.body.classList.contains('is-card-dragging')) return;
+  if (e.target.closest('.modal-card') || isEventInMiniCal(e)) return;
+
   const touch = e.touches[0];
   touchStartX = touch.clientX;
   touchStartY = touch.clientY;
   touchStartTime = Date.now();
+  touchTargetIsBacklog = isEventInBacklog(e);
 }, { passive: true });
 
 window.addEventListener('touchend', (e) => {
@@ -2024,42 +2083,79 @@ window.addEventListener('touchend', (e) => {
   const diffX = touch.clientX - touchStartX;
   const diffY = touch.clientY - touchStartY;
   const elapsed = Date.now() - touchStartTime;
+  const wasBacklog = touchTargetIsBacklog;
 
-  // Seuil horizontal : au moins 45px et swipe dominant horizontalement, en moins de 650ms
-  if (Math.abs(diffX) > 45 && Math.abs(diffX) > Math.abs(diffY) * 1.3 && elapsed < 650) {
-    if (diffX < 0) {
-      navigateTimeline(1); // Swipe vers la gauche -> Période / jours suivants
-    } else {
-      navigateTimeline(-1); // Swipe vers la droite -> Période / jours précédents
-    }
-  }
   touchStartX = 0;
   touchStartY = 0;
+  touchTargetIsBacklog = false;
+
+  const now = Date.now();
+  if (now - lastTouchNavTime < 450) return; // Anti double-jump debounce
+
+  // Seuil horizontal franc : au moins 50px et prédominance horizontale nette (1.4x), en moins de 600ms
+  if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY) * 1.4 && elapsed < 600) {
+    lastTouchNavTime = now;
+    if (wasBacklog) {
+      // Swipe vers la gauche (diffX < 0) -> Catégorie suivante (+1)
+      // Swipe vers la droite (diffX > 0) -> Catégorie précédente (-1)
+      cycleBacklogCategory(diffX < 0 ? 1 : -1);
+    } else {
+      if (diffX < 0) {
+        navigateTimeline(1); // Swipe gauche -> période suivante
+      } else {
+        navigateTimeline(-1); // Swipe droite -> période précédente
+      }
+    }
+  }
 }, { passive: true });
 
-// DÉFILEMENT / SWIPE HORIZONTAL AU TRACKPAD (Mac & PC)
+// SWIPE / DÉFILEMENT AU TRACKPAD (Mac & PC avec verrouillage d'inertie anti-double saut)
 let lastWheelNavTime = 0;
 let accumulatedWheelX = 0;
+let wheelInertiaTimer = null;
+let isWheelNavLocked = false;
 
 window.addEventListener('wheel', (e) => {
-  // Ignorer si dans une modal, le mini calendrier ou le backlog drawer
-  if (e.target.closest('.modal-card') || e.target.closest('#miniCalendarWidget') || e.target.closest('#backlogDrawer')) return;
-  
-  // Ne capturer que les défilements horizontaux prédominants (deux doigts horizontalement sur trackpad)
-  if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.4 && Math.abs(e.deltaX) > 18) {
-    accumulatedWheelX += e.deltaX;
-    const now = Date.now();
-    if (now - lastWheelNavTime > 380 && Math.abs(accumulatedWheelX) > 45) {
-      if (accumulatedWheelX > 0) {
-        navigateTimeline(1);
-      } else {
-        navigateTimeline(-1);
-      }
-      lastWheelNavTime = now;
+  // Ignorer absolument si drag en cours, dans une modale ou dans le mini-calendrier
+  if (document.body.classList.contains('is-card-dragging')) return;
+  if (e.target.closest('.modal-card') || isEventInMiniCal(e)) return;
+
+  const isBacklog = isEventInBacklog(e);
+
+  // Ne capturer que les défilements horizontaux francs (deux doigts horizontalement sur trackpad)
+  if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.3 && Math.abs(e.deltaX) > 12) {
+    // Relancer le timer d'extinction de l'inertie du trackpad
+    clearTimeout(wheelInertiaTimer);
+    wheelInertiaTimer = setTimeout(() => {
+      isWheelNavLocked = false;
       accumulatedWheelX = 0;
+    }, 180);
+
+    const now = Date.now();
+    // Si le geste en cours a déjà déclenché une action, ou si le cooldown minimum de 500ms n'est pas passé :
+    // Ignorer tous les micro-événements résiduels d'inertie !
+    if (isWheelNavLocked || now - lastWheelNavTime < 500) {
+      return;
+    }
+
+    accumulatedWheelX += e.deltaX;
+    if (Math.abs(accumulatedWheelX) > 55) {
+      isWheelNavLocked = true;
+      lastWheelNavTime = now;
+      const direction = accumulatedWheelX > 0 ? 1 : -1;
+      accumulatedWheelX = 0;
+
+      if (isBacklog) {
+        cycleBacklogCategory(direction);
+      } else {
+        navigateTimeline(direction);
+      }
     }
   } else {
-    accumulatedWheelX = 0;
+    // Mouvement vertical ou diagonal neutre : décharger l'accumulation horizontale si non verrouillé
+    if (!isWheelNavLocked) {
+      accumulatedWheelX = 0;
+    }
   }
 }, { passive: true });
 

@@ -511,8 +511,10 @@ function setupMiniCalSwipe() {
   let miniTouchStartX = 0;
   let miniTouchStartY = 0;
   let miniTouchStartTime = 0;
+  let lastMiniTouchNavTime = 0;
 
   widget.addEventListener('touchstart', (e) => {
+    e.stopPropagation();
     const t = e.touches[0];
     miniTouchStartX = t.clientX;
     miniTouchStartY = t.clientY;
@@ -520,38 +522,61 @@ function setupMiniCalSwipe() {
   }, { passive: true });
 
   widget.addEventListener('touchend', (e) => {
+    e.stopPropagation();
     if (!miniTouchStartX) return;
     const t = e.changedTouches[0];
     const diffX = t.clientX - miniTouchStartX;
     const diffY = t.clientY - miniTouchStartY;
     const elapsed = Date.now() - miniTouchStartTime;
 
+    miniTouchStartX = 0;
+    miniTouchStartY = 0;
+
+    const now = Date.now();
+    if (now - lastMiniTouchNavTime < 450) return;
+
     if (Math.abs(diffX) > 28 && Math.abs(diffX) > Math.abs(diffY) * 1.2 && elapsed < 600) {
+      lastMiniTouchNavTime = now;
       if (diffX < 0) {
         navigateMiniCal(1); // Swipe vers la gauche -> mois suivant
       } else {
         navigateMiniCal(-1); // Swipe vers la droite -> mois précédent
       }
     }
-    miniTouchStartX = 0;
-    miniTouchStartY = 0;
   }, { passive: true });
 
-  // Geste trackpad horizontal sur le mini calendrier
+  // Geste trackpad horizontal sur le mini calendrier (avec isolation stricte et verrouillage d'inertie)
   let lastMiniWheelTime = 0;
+  let accumulatedMiniWheelX = 0;
+  let miniWheelInertiaTimer = null;
+  let isMiniWheelLocked = false;
+
   widget.addEventListener('wheel', (e) => {
-    if (Math.abs(e.deltaX) > 22 && Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.3) {
+    e.stopPropagation();
+
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.2 && Math.abs(e.deltaX) > 10) {
+      clearTimeout(miniWheelInertiaTimer);
+      miniWheelInertiaTimer = setTimeout(() => {
+        isMiniWheelLocked = false;
+        accumulatedMiniWheelX = 0;
+      }, 180);
+
       const now = Date.now();
-      if (now - lastMiniWheelTime > 360) {
-        if (e.deltaX > 0) {
+      if (isMiniWheelLocked || now - lastMiniWheelTime < 450) return;
+
+      accumulatedMiniWheelX += e.deltaX;
+      if (Math.abs(accumulatedMiniWheelX) > 35) {
+        isMiniWheelLocked = true;
+        lastMiniWheelTime = now;
+        if (accumulatedMiniWheelX > 0) {
           navigateMiniCal(1);
         } else {
           navigateMiniCal(-1);
         }
-        lastMiniWheelTime = now;
+        accumulatedMiniWheelX = 0;
       }
     }
-  }, { passive: true });
+  }, { passive: false });
 }
 
 function selectDateFromMiniCal(dateStr) {
