@@ -457,10 +457,24 @@ window.renderSyncHistoryAndSnapshotsUI = renderSyncHistoryAndSnapshotsUI;
 function openCleanImportedTasksModal() {
   const modal = document.getElementById('cleanImportedModalOverlay');
   if (!modal) return;
+  const searchInput = document.getElementById('cleanTasksSearchInput');
+  if (searchInput) searchInput.value = '';
   modal.style.display = 'flex';
   renderCleanTasksList('all_mails');
 }
 window.openCleanImportedTasksModal = openCleanImportedTasksModal;
+
+function filterCleanTasksList(query) {
+  const q = (query || '').trim().toLowerCase();
+  const rows = document.querySelectorAll('#cleanTasksListContainer .clean-task-row');
+  rows.forEach(row => {
+    const title = row.querySelector('.sync-item-title')?.textContent?.toLowerCase() || '';
+    const sub = row.querySelector('.sync-item-sub')?.textContent?.toLowerCase() || '';
+    const matches = !q || title.includes(q) || sub.includes(q);
+    row.style.display = matches ? 'flex' : 'none';
+  });
+}
+window.filterCleanTasksList = filterCleanTasksList;
 
 function closeCleanImportedModal() {
   const modal = document.getElementById('cleanImportedModalOverlay');
