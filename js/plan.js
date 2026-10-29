@@ -1083,7 +1083,7 @@ function savePlanState() {
 
 var planBacklogActionFilter = 'all';
 
-// Helper de détection intelligente du type d'action (Calls / Mails / Paiements)
+// Helper de détection intelligente du type d'action (Calls / Mails / Paiements / Contenu)
 function getTaskActionType(task) {
   if (!task) return 'other';
   if (task.actionType && task.actionType !== 'auto') return task.actionType;
@@ -1093,6 +1093,7 @@ function getTaskActionType(task) {
   if (/#(call|calls|appel|appels|phone)\b/i.test(title)) return 'call';
   if (/#(mail|mails|email|emails|courriel)\b/i.test(title)) return 'mail';
   if (/#(pay|paiement|paiements|facture|factures|virement|virements)\b/i.test(title)) return 'pay';
+  if (/#(content|contenu|media|video|film|movie)\b/i.test(title)) return 'content';
 
   // 2. Mots-clés naturels
   if (/\b(call|calls|appel|appels|appeler|téléphone|téléphoner|coup de fil|rdv|rendez-vous)\b/i.test(title)) {
@@ -1104,6 +1105,9 @@ function getTaskActionType(task) {
   if (/\b(payer|paiement|paiements|pay|virement|facture|factures|mutuelle|solidaris|poubelle|poubelles|banque|bank)\b/i.test(title)) {
     return 'pay';
   }
+  if (/\b(film|films|movie|movies|série|series|séries|vidéo|videos|vidéos|video|watch|regarder|voir|tiktok|tiktoks|youtube|yt|article|articles|livre|livres|book|books|lire|read|podcast|podcasts|écouter|stream)\b/i.test(title)) {
+    return 'content';
+  }
   return 'other';
 }
 
@@ -1113,12 +1117,12 @@ function setSidebarBacklogAction(action) {
   sidebarBacklogAction = action || 'auto';
   const iconEl = document.getElementById('sidebarActionTypeIcon');
   const btnEl = document.getElementById('btnSidebarActionTypeSelect');
-  const icons = { auto: '⚡', call: '📞', mail: '✉️', pay: '💳', other: '📦' };
-  const labels = { auto: 'Auto', call: 'Call', mail: 'Mail', pay: 'Paiement', other: 'Standard' };
+  const icons = { auto: '⚡', call: '📞', mail: '✉️', pay: '💳', content: '🎬', other: '📦' };
+  const labels = { auto: 'Auto', call: 'Call', mail: 'Mail', pay: 'Paiement', content: 'Contenu', other: 'Standard' };
   if (iconEl) iconEl.textContent = icons[sidebarBacklogAction] || '⚡';
   if (btnEl) {
     btnEl.className = `btn-sidebar-action-select action-${sidebarBacklogAction}`;
-    btnEl.title = `Type d'action : ${labels[sidebarBacklogAction] || sidebarBacklogAction} (Cliquer pour changer : Call, Mail, Pay)`;
+    btnEl.title = `Type d'action : ${labels[sidebarBacklogAction] || sidebarBacklogAction} (Cliquer pour changer : Call, Mail, Pay, Contenu)`;
   }
   document.querySelectorAll('#sidebarBacklogActionChips .quick-action-chip').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.action === sidebarBacklogAction);
@@ -1127,11 +1131,11 @@ function setSidebarBacklogAction(action) {
 window.setSidebarBacklogAction = setSidebarBacklogAction;
 
 function cycleSidebarBacklogAction() {
-  const order = ['auto', 'call', 'mail', 'pay'];
+  const order = ['auto', 'call', 'mail', 'pay', 'content'];
   const nextIdx = (order.indexOf(sidebarBacklogAction) + 1) % order.length;
   setSidebarBacklogAction(order[nextIdx]);
   if (typeof showToast === 'function') {
-    const labels = { auto: '⚡ Action: Détection auto', call: '📞 Action: Call', mail: '✉️ Action: Mail', pay: '💳 Action: Paiement' };
+    const labels = { auto: '⚡ Action: Détection auto', call: '📞 Action: Call', mail: '✉️ Action: Mail', pay: '💳 Action: Paiement', content: '🎬 Action: Contenu' };
     showToast(labels[order[nextIdx]] || 'Type d\'action modifié', 'info');
   }
 }
@@ -1151,6 +1155,7 @@ function setPlanTaskAction(taskId, action) {
       call: '📞 Action: Call',
       mail: '✉️ Action: Mail',
       pay: '💳 Action: Paiement',
+      content: '🎬 Action: Contenu',
       other: '📦 Action: Standard'
     };
     showToast(labels[action] || 'Action modifiée', 'info');
@@ -1162,7 +1167,7 @@ function cyclePlanTaskAction(taskId) {
   const task = (window.SpanPlanState.tasks || []).find(t => t.id === taskId);
   if (!task) return;
   const current = task.actionType || 'auto';
-  const order = ['auto', 'call', 'mail', 'pay', 'other'];
+  const order = ['auto', 'call', 'mail', 'pay', 'content', 'other'];
   const nextIdx = (order.indexOf(current) + 1) % order.length;
   const nextType = order[nextIdx];
   setPlanTaskAction(taskId, nextType);
@@ -1174,7 +1179,7 @@ function setPlanBacklogActionFilter(filter) {
   document.querySelectorAll('.plan-filter-pill').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.filter === filter);
   });
-  if (['call', 'mail', 'pay'].includes(filter)) {
+  if (['call', 'mail', 'pay', 'content'].includes(filter)) {
     setSidebarBacklogAction(filter);
   } else if (filter === 'all') {
     setSidebarBacklogAction('auto');
@@ -1235,12 +1240,13 @@ function renderBacklogDrawer() {
   });
 
   // Action counts
-  let countCall = 0, countMail = 0, countPay = 0, countOther = 0;
+  let countCall = 0, countMail = 0, countPay = 0, countContent = 0, countOther = 0;
   allBacklogTasks.forEach(t => {
     const at = getTaskActionType(t);
     if (at === 'call') countCall++;
     else if (at === 'mail') countMail++;
     else if (at === 'pay') countPay++;
+    else if (at === 'content') countContent++;
     else countOther++;
   });
 
@@ -1255,6 +1261,10 @@ function renderBacklogDrawer() {
   ['planCountPay', 'drawerCountPay'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = countPay;
+  });
+  ['planCountContent', 'drawerCountContent'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = countContent;
   });
 
   const elPlanAll = document.querySelector('#sidebarActionFilterPills [data-filter="all"]');
@@ -1282,7 +1292,7 @@ function renderBacklogDrawer() {
 
     if (backlogTasks.length === 0) {
       if (planBacklogActionFilter === 'all') {
-        const totalCategorized = countCall + countMail + countPay;
+        const totalCategorized = countCall + countMail + countPay + countContent;
         if (planHideActionsInAll && totalCategorized > 0) {
           list.innerHTML = `
             <div style="padding: 14px 6px; text-align: center;">
@@ -1292,6 +1302,7 @@ function renderBacklogDrawer() {
                 ${countCall > 0 ? `<button type="button" class="plan-filter-pill" onclick="setPlanBacklogActionFilter('call')" style="font-size:10px; padding:2px 6px;">📞 ${countCall} Calls</button>` : ''}
                 ${countMail > 0 ? `<button type="button" class="plan-filter-pill" onclick="setPlanBacklogActionFilter('mail')" style="font-size:10px; padding:2px 6px;">✉️ ${countMail} Mails</button>` : ''}
                 ${countPay > 0 ? `<button type="button" class="plan-filter-pill" onclick="setPlanBacklogActionFilter('pay')" style="font-size:10px; padding:2px 6px;">💳 ${countPay} Pay</button>` : ''}
+                ${countContent > 0 ? `<button type="button" class="plan-filter-pill" onclick="setPlanBacklogActionFilter('content')" style="font-size:10px; padding:2px 6px;">🎬 ${countContent} Contenu</button>` : ''}
               </div>
             </div>
           `;
@@ -1324,8 +1335,10 @@ function renderBacklogDrawer() {
         actionTagHtml = `<span class="plan-action-tag-badge action-mail" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Action: Mail (cliquer pour changer)">✉️ Mail</span>`;
       } else if (actionType === 'pay') {
         actionTagHtml = `<span class="plan-action-tag-badge action-pay" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Action: Paiement (cliquer pour changer)">💳 Pay</span>`;
+      } else if (actionType === 'content') {
+        actionTagHtml = `<span class="plan-action-tag-badge action-content" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Action: Contenu (cliquer pour changer)">🎬 Contenu</span>`;
       } else {
-        actionTagHtml = `<span class="plan-action-tag-badge action-none" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Définir une action (Call, Mail, Pay)">+ Action</span>`;
+        actionTagHtml = `<span class="plan-action-tag-badge action-none" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Définir une action (Call, Mail, Pay, Contenu)">+ Action</span>`;
       }
 
       const li = document.createElement('li');

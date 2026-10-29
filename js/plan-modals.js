@@ -673,6 +673,7 @@ function renderSubtasksModalList() {
     if (subAction === 'call') { subActionIcon = '📞'; subActionLabel = 'Call'; }
     else if (subAction === 'mail') { subActionIcon = '✉️'; subActionLabel = 'Mail'; }
     else if (subAction === 'pay') { subActionIcon = '💳'; subActionLabel = 'Paiement'; }
+    else if (subAction === 'content') { subActionIcon = '🎬'; subActionLabel = 'Contenu'; }
     else if (sub.actionType === 'other') { subActionIcon = '📦'; subActionLabel = 'Standard'; }
 
     return `
@@ -884,9 +885,9 @@ function cycleSubtaskActionType(subtaskId) {
   const sub = parent.subtasks.find(s => String(s.id) === String(subtaskId));
   if (!sub) return;
 
-  // Cycle: auto (null) -> call -> mail -> pay -> other (standard) -> auto
+  // Cycle: auto (null) -> call -> mail -> pay -> content -> other (standard) -> auto
   const currentAction = sub.actionType || 'auto';
-  const order = ['auto', 'call', 'mail', 'pay', 'other'];
+  const order = ['auto', 'call', 'mail', 'pay', 'content', 'other'];
   const nextIdx = (order.indexOf(currentAction) + 1) % order.length;
   const nextAction = order[nextIdx];
 
@@ -903,6 +904,7 @@ function cycleSubtaskActionType(subtaskId) {
       call: '📞 Action: Call',
       mail: '✉️ Action: Mail',
       pay: '💳 Action: Paiement',
+      content: '🎬 Action: Contenu',
       other: '📦 Action: Standard'
     };
     showToast(labels[nextAction] || 'Action modifiée', 'info');

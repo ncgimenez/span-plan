@@ -1372,6 +1372,11 @@ body {
   border-color: #eab308;
   color: #facc15;
 }
+.btn-sidebar-action-select.action-content {
+  background: rgba(244, 63, 94, 0.2);
+  border-color: #f43f5e;
+  color: #fb7185;
+}
 
 .sidebar-backlog-input-wrap input {
   flex: 1;
@@ -1511,6 +1516,11 @@ body {
   color: #facc15;
   border: 1px solid rgba(234, 179, 8, 0.35);
 }
+.plan-action-tag-badge.action-content {
+  background: rgba(244, 63, 94, 0.18);
+  color: #fb7185;
+  border: 1px solid rgba(244, 63, 94, 0.35);
+}
 [data-theme="light"] .plan-action-tag-badge.action-call {
   background: #eff6ff;
   color: #2563eb;
@@ -1525,6 +1535,11 @@ body {
   background: #fefce8;
   color: #ca8a04;
   border-color: #fef08a;
+}
+[data-theme="light"] .plan-action-tag-badge.action-content {
+  background: #fff1f2;
+  color: #e11d48;
+  border-color: #fecdd3;
 }
 
 .plan-action-tag-badge {
@@ -1611,6 +1626,11 @@ body {
   border-color: #eab308;
   color: #facc15;
 }
+.quick-action-chip.active.action-content {
+  background: rgba(244, 63, 94, 0.2);
+  border-color: #f43f5e;
+  color: #fb7185;
+}
 [data-theme="light"] .quick-action-chip {
   background: rgba(0, 0, 0, 0.03);
   border-color: rgba(0, 0, 0, 0.1);
@@ -1639,6 +1659,11 @@ body {
   background: #fefce8;
   border-color: #eab308;
   color: #b45309;
+}
+[data-theme="light"] .quick-action-chip.active.action-content {
+  background: #fff1f2;
+  border-color: #f43f5e;
+  color: #e11d48;
 }
 
 .sidebar-task-list {
@@ -5854,6 +5879,11 @@ body.is-card-dragging * {
   border-color: rgba(234, 179, 8, 0.45);
   color: #facc15;
 }
+.action-pill.active.action-content {
+  background: rgba(244, 63, 94, 0.2);
+  border-color: rgba(244, 63, 94, 0.45);
+  color: #fb7185;
+}
 .action-pill.active.action-other {
   background: rgba(100, 116, 139, 0.2);
   border-color: rgba(100, 116, 139, 0.45);
@@ -5888,6 +5918,11 @@ body.is-card-dragging * {
   background: #fefce8;
   border-color: #eab308;
   color: #b45309;
+}
+[data-theme="light"] .action-pill.active.action-content {
+  background: #fff1f2;
+  border-color: #f43f5e;
+  color: #e11d48;
 }
 [data-theme="light"] .action-pill.active.action-other {
   background: #f1f5f9;
@@ -7083,6 +7118,10 @@ body.is-card-dragging * {
   background: rgba(234, 179, 8, 0.2);
   border-color: rgba(234, 179, 8, 0.4);
 }
+.subtask-action-btn.action-content {
+  background: rgba(244, 63, 94, 0.2);
+  border-color: rgba(244, 63, 94, 0.4);
+}
 .subtask-action-btn.action-other {
   background: rgba(100, 116, 139, 0.18);
   border-color: rgba(100, 116, 139, 0.35);
@@ -7102,6 +7141,10 @@ body.is-card-dragging * {
 [data-theme="light"] .subtask-action-btn.action-pay {
   background: #fefce8;
   border-color: #fef08a;
+}
+[data-theme="light"] .subtask-action-btn.action-content {
+  background: #fff1f2;
+  border-color: #fecdd3;
 }
 
 .subtask-action-mini-badge {

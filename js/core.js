@@ -169,7 +169,7 @@
     // Explicit override
     if (task.actionType) {
       const val = String(task.actionType).toLowerCase().trim();
-      if (val === 'call' || val === 'mail' || val === 'pay' || val === 'other') return val;
+      if (val === 'call' || val === 'mail' || val === 'pay' || val === 'content' || val === 'other') return val;
       if (val === 'none' || val === 'standard') return 'other';
     }
     // Title auto-detection
@@ -177,6 +177,7 @@
     if (/\b(call|appel|appeler|phone|tél|tel|ring)\b/i.test(title)) return 'call';
     if (/\b(mail|email|e-mail|écrire|courriel|send mail)\b/i.test(title)) return 'mail';
     if (/\b(pay|payer|paiement|facture|invoice|bill|virement|regler|règlement)\b/i.test(title)) return 'pay';
+    if (/\b(film|films|movie|movies|série|series|séries|video|vidéo|videos|vidéos|watch|regarder|voir|tiktok|tiktoks|youtube|yt|article|articles|livre|livres|book|books|lire|read|podcast|podcasts|écouter|stream)\b/i.test(title)) return 'content';
     return null;
   }
 

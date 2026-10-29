@@ -33,6 +33,8 @@ test('SpanCore Utilities (span-plan)', async (t) => {
     assert.strictEqual(SpanCore.getTaskActionType({ title: 'Appeler client pour devis' }), 'call');
     assert.strictEqual(SpanCore.getTaskActionType({ title: 'Envoyer mail récapitulatif' }), 'mail');
     assert.strictEqual(SpanCore.getTaskActionType({ title: 'Régler la facture Stripe' }), 'pay');
+    assert.strictEqual(SpanCore.getTaskActionType({ title: 'Regarder film Interstellar' }), 'content');
+    assert.strictEqual(SpanCore.getTaskActionType({ title: 'Vidéo tiktok recettes pasta' }), 'content');
     assert.strictEqual(SpanCore.getTaskActionType({ title: 'Rédiger le rapport Q3' }), null);
   });
 

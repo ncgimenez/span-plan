@@ -40,7 +40,7 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="style.css?v=7.63">
+  <link rel="stylesheet" href="style.css?v=7.64">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -136,6 +136,7 @@
           <button type="button" class="plan-filter-pill" data-filter="call" onclick="setPlanBacklogActionFilter('call')">📞 <span class="pill-count" id="planCountCall">0</span></button>
           <button type="button" class="plan-filter-pill" data-filter="mail" onclick="setPlanBacklogActionFilter('mail')">✉️ <span class="pill-count" id="planCountMail">0</span></button>
           <button type="button" class="plan-filter-pill" data-filter="pay" onclick="setPlanBacklogActionFilter('pay')">💳 <span class="pill-count" id="planCountPay">0</span></button>
+          <button type="button" class="plan-filter-pill" data-filter="content" onclick="setPlanBacklogActionFilter('content')">🎬 <span class="pill-count" id="planCountContent">0</span></button>
         </div>
 
         <div class="sidebar-backlog-scroll" ondragover="allowDrop(event)" ondragleave="handleBacklogDragLeave(event)" ondrop="handleDropToBacklog(event)">
@@ -254,6 +255,7 @@
             <option value="call">📞 Call</option>
             <option value="mail">✉️ Mail</option>
             <option value="pay">💳 Pay</option>
+            <option value="content">🎬 Contenu</option>
             <option value="other">📦 Standard</option>
           </select>
 
@@ -303,6 +305,7 @@
             <button type="button" class="plan-filter-pill" data-filter="call" onclick="setPlanBacklogActionFilter('call')">📞 Calls <span class="pill-count" id="drawerCountCall">0</span></button>
             <button type="button" class="plan-filter-pill" data-filter="mail" onclick="setPlanBacklogActionFilter('mail')">✉️ Mails <span class="pill-count" id="drawerCountMail">0</span></button>
             <button type="button" class="plan-filter-pill" data-filter="pay" onclick="setPlanBacklogActionFilter('pay')">💳 Paiements <span class="pill-count" id="drawerCountPay">0</span></button>
+            <button type="button" class="plan-filter-pill" data-filter="content" onclick="setPlanBacklogActionFilter('content')">🎬 Contenu <span class="pill-count" id="drawerCountContent">0</span></button>
           </div>
           <ul class="task-list drawer-list" id="backlogTaskList" ondragover="allowDrop(event)" ondragleave="handleBacklogDragLeave(event)" ondrop="handleDropToBacklog(event)">
           </ul>
@@ -350,6 +353,7 @@
         <button type="button" class="popover-action-btn chip-call" onclick="popoverSetActionType('call')">📞 Call</button>
         <button type="button" class="popover-action-btn chip-mail" onclick="popoverSetActionType('mail')">✉️ Mail</button>
         <button type="button" class="popover-action-btn chip-pay" onclick="popoverSetActionType('pay')">💳 Pay</button>
+        <button type="button" class="popover-action-btn chip-content" onclick="popoverSetActionType('content')">🎬 Contenu</button>
         <button type="button" class="popover-action-btn chip-other" onclick="popoverSetActionType('other')">📦 Standard</button>
         <button type="button" class="popover-action-btn chip-auto" onclick="popoverSetActionType('auto')">⚡ Auto</button>
       </div>
@@ -495,6 +499,7 @@
           <button type="button" class="action-pill action-call" data-action="call" onclick="selectEditPlanAction('call')">📞 Call</button>
           <button type="button" class="action-pill action-mail" data-action="mail" onclick="selectEditPlanAction('mail')">✉️ Mail</button>
           <button type="button" class="action-pill action-pay" data-action="pay" onclick="selectEditPlanAction('pay')">💳 Pay</button>
+          <button type="button" class="action-pill action-content" data-action="content" onclick="selectEditPlanAction('content')">🎬 Contenu</button>
           <button type="button" class="action-pill action-other" data-action="other" onclick="selectEditPlanAction('other')">📦 Standard</button>
         </div>
 
@@ -1040,14 +1045,14 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/core.js?v=7.63"></script>
-  <script src="js/security.js?v=7.63"></script>
-  <script src="js/sync.js?v=7.63"></script>
-  <script src="js/gcal.js?v=7.63"></script>
-  <script src="js/plan.js?v=7.63"></script>
-  <script src="js/calendar-layout.js?v=7.63"></script>
-  <script src="js/calendar-drag.js?v=7.63"></script>
-  <script src="js/plan-modals.js?v=7.63"></script>
-  <script src="js/app.js?v=7.63"></script>
+  <script src="js/core.js?v=7.64"></script>
+  <script src="js/security.js?v=7.64"></script>
+  <script src="js/sync.js?v=7.64"></script>
+  <script src="js/gcal.js?v=7.64"></script>
+  <script src="js/plan.js?v=7.64"></script>
+  <script src="js/calendar-layout.js?v=7.64"></script>
+  <script src="js/calendar-drag.js?v=7.64"></script>
+  <script src="js/plan-modals.js?v=7.64"></script>
+  <script src="js/app.js?v=7.64"></script>
 </body>
 </html>

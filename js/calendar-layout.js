@@ -931,6 +931,7 @@ function renderTimedBlocks(tasks, dateStr) {
             if (subAction === 'call') subActionBadge = '<span class="subtask-action-mini-badge" title="Call">📞</span>';
             else if (subAction === 'mail') subActionBadge = '<span class="subtask-action-mini-badge" title="Mail">✉️</span>';
             else if (subAction === 'pay') subActionBadge = '<span class="subtask-action-mini-badge" title="Paiement">💳</span>';
+            else if (subAction === 'content') subActionBadge = '<span class="subtask-action-mini-badge" title="Contenu">🎬</span>';
 
             return `
             <div class="block-subtask-row subtask-cat-${sub.context || 'work'} ${sub.completed ? 'completed' : ''} ${idx >= baseVisibleLimit ? 'subtask-overflow-item' : ''}" 
