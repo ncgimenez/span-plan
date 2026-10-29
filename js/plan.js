@@ -1992,35 +1992,62 @@ function setMobileDayView(mode) {
   }
 }
 
-// SWIPE TACTILE FLUIDE ENTRE LES JOURS SUR MOBILE
+// SWIPE TACTILE & GESTUEL UNIVERSEL SUR LE CALENDRIER (Mobile, Tablette, Trackpad)
 let touchStartX = 0;
 let touchStartY = 0;
+let touchStartTime = 0;
 
 window.addEventListener('touchstart', (e) => {
-  if (window.innerWidth > 768) return;
-  if (e.target.closest('#backlogDrawer') || e.target.closest('.modal-card')) return;
+  if (e.target.closest('#backlogDrawer') || e.target.closest('.modal-card') || e.target.closest('#miniCalendarWidget')) return;
   const touch = e.touches[0];
   touchStartX = touch.clientX;
   touchStartY = touch.clientY;
+  touchStartTime = Date.now();
 }, { passive: true });
 
 window.addEventListener('touchend', (e) => {
-  if (window.innerWidth > 768) return;
   if (!touchStartX) return;
   const touch = e.changedTouches[0];
   const diffX = touch.clientX - touchStartX;
   const diffY = touch.clientY - touchStartY;
+  const elapsed = Date.now() - touchStartTime;
 
-  // Seuil horizontal de 50px
-  if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY) * 1.4) {
+  // Seuil horizontal : au moins 45px et swipe dominant horizontalement, en moins de 650ms
+  if (Math.abs(diffX) > 45 && Math.abs(diffX) > Math.abs(diffY) * 1.3 && elapsed < 650) {
     if (diffX < 0) {
-      navigateTimeline(1);
+      navigateTimeline(1); // Swipe vers la gauche -> Période / jours suivants
     } else {
-      navigateTimeline(-1);
+      navigateTimeline(-1); // Swipe vers la droite -> Période / jours précédents
     }
   }
   touchStartX = 0;
   touchStartY = 0;
+}, { passive: true });
+
+// DÉFILEMENT / SWIPE HORIZONTAL AU TRACKPAD (Mac & PC)
+let lastWheelNavTime = 0;
+let accumulatedWheelX = 0;
+
+window.addEventListener('wheel', (e) => {
+  // Ignorer si dans une modal, le mini calendrier ou le backlog drawer
+  if (e.target.closest('.modal-card') || e.target.closest('#miniCalendarWidget') || e.target.closest('#backlogDrawer')) return;
+  
+  // Ne capturer que les défilements horizontaux prédominants (deux doigts horizontalement sur trackpad)
+  if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.4 && Math.abs(e.deltaX) > 18) {
+    accumulatedWheelX += e.deltaX;
+    const now = Date.now();
+    if (now - lastWheelNavTime > 380 && Math.abs(accumulatedWheelX) > 45) {
+      if (accumulatedWheelX > 0) {
+        navigateTimeline(1);
+      } else {
+        navigateTimeline(-1);
+      }
+      lastWheelNavTime = now;
+      accumulatedWheelX = 0;
+    }
+  } else {
+    accumulatedWheelX = 0;
+  }
 }, { passive: true });
 
 let lastIsMobile = isMobileScreen();

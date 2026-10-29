@@ -499,7 +499,59 @@ function navigateMiniCal(deltaMonth) {
     miniCalMonth = 0;
     miniCalYear++;
   }
-  renderMiniMonthCalendar();
+  renderMiniMonthCalendar(deltaMonth > 0 ? 'slide-left' : 'slide-right');
+}
+
+// SWIPE TACTILE & TRACKPAD SUR LE MINI CALENDRIER (Changement de mois fluide)
+function setupMiniCalSwipe() {
+  const widget = document.getElementById('miniCalendarWidget');
+  if (!widget || widget._swipeSetupDone) return;
+  widget._swipeSetupDone = true;
+
+  let miniTouchStartX = 0;
+  let miniTouchStartY = 0;
+  let miniTouchStartTime = 0;
+
+  widget.addEventListener('touchstart', (e) => {
+    const t = e.touches[0];
+    miniTouchStartX = t.clientX;
+    miniTouchStartY = t.clientY;
+    miniTouchStartTime = Date.now();
+  }, { passive: true });
+
+  widget.addEventListener('touchend', (e) => {
+    if (!miniTouchStartX) return;
+    const t = e.changedTouches[0];
+    const diffX = t.clientX - miniTouchStartX;
+    const diffY = t.clientY - miniTouchStartY;
+    const elapsed = Date.now() - miniTouchStartTime;
+
+    if (Math.abs(diffX) > 28 && Math.abs(diffX) > Math.abs(diffY) * 1.2 && elapsed < 600) {
+      if (diffX < 0) {
+        navigateMiniCal(1); // Swipe vers la gauche -> mois suivant
+      } else {
+        navigateMiniCal(-1); // Swipe vers la droite -> mois précédent
+      }
+    }
+    miniTouchStartX = 0;
+    miniTouchStartY = 0;
+  }, { passive: true });
+
+  // Geste trackpad horizontal sur le mini calendrier
+  let lastMiniWheelTime = 0;
+  widget.addEventListener('wheel', (e) => {
+    if (Math.abs(e.deltaX) > 22 && Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.3) {
+      const now = Date.now();
+      if (now - lastMiniWheelTime > 360) {
+        if (e.deltaX > 0) {
+          navigateMiniCal(1);
+        } else {
+          navigateMiniCal(-1);
+        }
+        lastMiniWheelTime = now;
+      }
+    }
+  }, { passive: true });
 }
 
 function selectDateFromMiniCal(dateStr) {
@@ -525,8 +577,9 @@ function selectDateFromMiniCal(dateStr) {
   applyDynamicScroll();
 }
 
-function renderMiniMonthCalendar() {
+function renderMiniMonthCalendar(animClass = null) {
   updateMiniCalCollapseUI();
+  setupMiniCalSwipe();
   const widget = document.getElementById('miniCalendarWidget');
   if (!widget) return;
 
@@ -647,6 +700,11 @@ function renderMiniMonthCalendar() {
   }
 
   gridEl.innerHTML = cellsHtml;
+  if (animClass) {
+    gridEl.classList.remove('slide-left', 'slide-right');
+    void gridEl.offsetWidth; // retrigger reflow
+    gridEl.classList.add(animClass);
+  }
 }
 
 // TOGGLE SIDEBAR (⌘B / [)
@@ -837,15 +895,19 @@ function renderTimedBlocks(tasks, dateStr) {
     const isViewNarrow = (typeof visibleDaysCount !== 'undefined' && visibleDaysCount >= 5);
     const isNarrowCol = isViewNarrow || totalCols >= 2;
     const isUltraNarrow = (isViewNarrow && totalCols >= 2) || totalCols >= 3;
-    const isCompact = height < 26 || (!isUltraNarrow && height < 38);
+    const isCompact = height < 46;
 
-    // Gestion propre des colonnes de chevauchement pleine largeur
+    // Gestion propre, aérée et élégante des colonnes de chevauchement (avec gouttière nette et élévation)
+    const isOverlapping = totalCols > 1;
     let positionStyle = `top: ${top}px; height: ${isExpanded ? 'auto' : `${height}px`};`;
-    if (totalCols > 1) {
+    if (isOverlapping) {
       const marginEdge = isNarrowCol ? 2 : 4;
-      positionStyle += ` left: calc(${marginEdge}px + (100% - ${marginEdge * 2}px) * ${colIndex} / ${totalCols}); width: calc((100% - ${marginEdge * 2}px) / ${totalCols} - 2px);`;
+      const colGap = isUltraNarrow ? 3 : 5;
+      const totalGaps = (totalCols - 1) * colGap;
+      positionStyle += ` left: calc(${marginEdge}px + (100% - ${marginEdge * 2 + totalGaps}px) * ${colIndex} / ${totalCols} + ${colIndex * colGap}px); width: calc((100% - ${marginEdge * 2 + totalGaps}px) / ${totalCols}); z-index: ${6 + colIndex};`;
     }
     const narrowColClass = isUltraNarrow ? 'is-ultra-narrow-col is-narrow-col' : (isNarrowCol ? 'is-narrow-col' : '');
+    const overlappingClass = isOverlapping ? 'is-overlapping' : '';
     const progressPillHtml = childSubtasks.length > 0 
       ? `<span class="event-progress-pill clickable-pill" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); toggleBlockAccordion(event, '${task.id}')" title="Sous-tâches (${doneSubCount}/${childSubtasks.length}) - Cliquer pour ${isExpanded ? 'replier' : 'déplier'}"><span class="progress-pill-icon">☑</span> <span class="progress-pill-count">${doneSubCount}/${childSubtasks.length}</span><span class="progress-pill-arrow">${isExpanded ? '▴' : '▾'}</span></span>` 
       : '';
@@ -982,8 +1044,8 @@ function renderTimedBlocks(tasks, dateStr) {
               ${task.completed ? '✓' : ''}
             </div>
           ` : ''}
-          <span class="compact-time">${isContinuation ? `00:00 – ${endH}:${endM}` : task.time}</span>
           <span class="schedule-block-title">${continuationPrefix}${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
+          <span class="compact-time">${isContinuation ? `00:00 – ${endH}:${endM}` : `${task.time}–${endH}:${endM}`}</span>
           ${locationHtml}
           ${notesHtml}
           ${isLiveNow ? `
@@ -998,9 +1060,9 @@ function renderTimedBlocks(tasks, dateStr) {
         ${subtasksHtml}
       `;
     } else {
-      const displayTimeStr = isUltraNarrow 
-        ? task.time 
-        : (isNarrowCol && !isOvernight && !isContinuation ? `${task.time}–${endH}:${endM}` : timeRangeStr);
+      const displayTimeStr = (isNarrowCol && !isOvernight && !isContinuation) 
+        ? `${task.time}–${endH}:${endM}` 
+        : timeRangeStr;
 
       innerContentHtml = `
         <div class="schedule-block-top">
@@ -1040,7 +1102,7 @@ function renderTimedBlocks(tasks, dateStr) {
     const importantClass = task.important ? 'is-important' : '';
 
     return `
-      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass} ${completedClass} ${isCompact ? 'is-compact' : ''} ${hasSubtasksClass} ${shortBlockClass} ${expandedClass} ${narrowColClass} ${overnightClass} ${importantClass} ${zeroVisibleClass} ${taskUrl ? 'has-corner-link' : ''}" 
+      <div class="schedule-block-item cat-${task.context || 'work'} ${rolloverClass} ${eventClass} ${selectedClass} ${liveClass} ${completedClass} ${isCompact ? 'is-compact' : ''} ${hasSubtasksClass} ${shortBlockClass} ${expandedClass} ${narrowColClass} ${overlappingClass} ${overnightClass} ${importantClass} ${zeroVisibleClass} ${taskUrl ? 'has-corner-link' : ''}" 
            id="block_${task.id}${isContinuation ? '_cont' : ''}"
            data-task-id="${task.id}"
            data-date="${dateStr}"
