@@ -1850,7 +1850,7 @@ function jumpToToday() {
 
 function setVisibleDays(num) {
   num = parseInt(num, 10) || 7;
-  if (![1, 3, 7].includes(num)) {
+  if (![1, 3, 5, 7].includes(num)) {
     num = 7;
   }
   visibleDaysCount = num;

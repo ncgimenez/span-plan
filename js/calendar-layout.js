@@ -427,7 +427,7 @@ function renderPlanGrid(forceRebuild = false) {
   }).join('');
 
   grid.innerHTML = `
-    <div class="cal-unified-container">
+    <div class="cal-unified-container is-view-${visibleDates.length}d">
       <div class="cal-sticky-header">
         <div class="cal-header-top-row">
           <div class="cal-gutter-header">

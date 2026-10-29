@@ -526,6 +526,329 @@
   color: #0f172a;
 }
 
+/* ==============================================================
+   MODE CLAIR : SIDEBAR, MINI CALENDRIER, TIROIR & COMPOSANTS
+   Élimine tout texte invisible blanc-sur-blanc et unifie l'interface
+   ============================================================== */
+
+/* 1. Bouton Créer & Mini Calendrier dans la Sidebar */
+[data-theme="light"] .sidebar-btn-create {
+  background: #141416;
+  border-color: #141416;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+[data-theme="light"] .sidebar-btn-create:hover {
+  background: #27272a;
+  border-color: #27272a;
+}
+[data-theme="light"] .mini-calendar-widget {
+  border-bottom-color: rgba(20, 20, 22, 0.08);
+}
+[data-theme="light"] .mini-cal-title-wrap:hover {
+  background: rgba(20, 20, 22, 0.05);
+}
+[data-theme="light"] .mini-cal-arrow:hover,
+[data-theme="light"] .mini-nav-btn:hover {
+  background: rgba(20, 20, 22, 0.06);
+  color: #141416;
+}
+[data-theme="light"] .mini-cal-weekdays {
+  color: #94a3b8;
+}
+[data-theme="light"] .mini-cal-day {
+  color: #1e293b;
+}
+[data-theme="light"] .mini-cal-day:hover {
+  background: rgba(20, 20, 22, 0.06);
+}
+[data-theme="light"] .mini-cal-day.other-month {
+  color: #cbd5e1;
+}
+[data-theme="light"] .mini-cal-day.is-today {
+  color: #6366f1;
+}
+[data-theme="light"] .mini-cal-day.is-in-range {
+  background: rgba(99, 102, 241, 0.12);
+  color: #4338ca;
+  font-weight: 600;
+}
+[data-theme="light"] .mini-cal-day.is-range-start {
+  background: #6366f1 !important;
+  color: #ffffff !important;
+}
+
+/* 2. Catégories & Backlog de la Sidebar */
+[data-theme="light"] .sidebar-section-title {
+  color: #64748b;
+}
+[data-theme="light"] .sidebar-context-item {
+  color: #64748b;
+}
+[data-theme="light"] .sidebar-context-item:hover {
+  background: rgba(20, 20, 22, 0.04);
+  color: #141416;
+}
+[data-theme="light"] .sidebar-context-item.active {
+  background: rgba(20, 20, 22, 0.07);
+  color: #141416;
+  font-weight: 600;
+}
+[data-theme="light"] .sidebar-backlog-input-wrap input {
+  background: #ffffff;
+  border-color: rgba(20, 20, 22, 0.14);
+  color: #141416;
+}
+[data-theme="light"] .sidebar-backlog-input-wrap input::placeholder {
+  color: #94a3b8;
+}
+[data-theme="light"] .sidebar-backlog-input-wrap input:focus {
+  border-color: #6366f1;
+  background: #ffffff;
+}
+[data-theme="light"] .sidebar-backlog-input-wrap .btn-sidebar-add {
+  background: rgba(20, 20, 22, 0.06);
+  border-color: rgba(20, 20, 22, 0.1);
+  color: #141416;
+}
+[data-theme="light"] .sidebar-backlog-input-wrap .btn-sidebar-add:hover {
+  background: rgba(20, 20, 22, 0.12);
+}
+[data-theme="light"] .btn-sidebar-action-select {
+  background: #ffffff;
+  border-color: rgba(20, 20, 22, 0.12);
+  color: #141416;
+}
+[data-theme="light"] .btn-sidebar-action-select:hover {
+  background: rgba(20, 20, 22, 0.05);
+}
+
+/* 3. Barre d'ajout rapide (Quick Add) & Popover */
+[data-theme="light"] .quick-add-container {
+  background: #ffffff;
+  border-color: rgba(20, 20, 22, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .quick-input {
+  color: #141416;
+}
+[data-theme="light"] .quick-input::placeholder {
+  color: #94a3b8;
+}
+[data-theme="light"] .quick-select {
+  background: #f8fafc;
+  border-color: rgba(20, 20, 22, 0.12);
+  color: #141416;
+}
+[data-theme="light"] .quick-select option {
+  background: #ffffff;
+  color: #141416;
+}
+[data-theme="light"] .btn-quick-add {
+  background: #141416;
+  color: #ffffff;
+}
+[data-theme="light"] .quick-add-popover {
+  background: #ffffff;
+  border: 1px solid rgba(20, 20, 22, 0.12);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
+}
+[data-theme="light"] .quick-add-time-preview {
+  color: #64748b;
+}
+[data-theme="light"] .quick-add-close {
+  color: #94a3b8;
+}
+[data-theme="light"] .quick-add-close:hover {
+  color: #141416;
+}
+[data-theme="light"] .quick-add-title-input {
+  background: #f8fafc;
+  border-color: rgba(20, 20, 22, 0.12);
+  color: #141416;
+}
+[data-theme="light"] .quick-add-title-input:focus {
+  background: #ffffff;
+  border-color: #6366f1;
+}
+[data-theme="light"] .quick-add-type-toggle {
+  background: #f1f5f9;
+}
+[data-theme="light"] .quick-type-btn {
+  color: #64748b;
+}
+[data-theme="light"] .quick-type-btn.active {
+  background: #ffffff;
+  color: #141416;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .quick-cat-chip {
+  border-color: rgba(20, 20, 22, 0.12);
+  color: #64748b;
+}
+[data-theme="light"] .quick-add-actions .btn-cancel {
+  border-color: rgba(20, 20, 22, 0.12);
+  color: #64748b;
+}
+[data-theme="light"] .quick-add-actions .btn-cancel:hover {
+  background: rgba(20, 20, 22, 0.05);
+  color: #141416;
+}
+
+/* 4. Tiroir Backlog (Later) */
+[data-theme="light"] .backlog-drawer {
+  background: #ffffff;
+  border-left: 1px solid rgba(20, 20, 22, 0.1);
+  box-shadow: -8px 0 25px rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .drawer-header {
+  border-bottom-color: rgba(20, 20, 22, 0.08);
+}
+[data-theme="light"] .drawer-title {
+  color: #64748b;
+}
+[data-theme="light"] .drawer-quick-add input {
+  background: #ffffff;
+  border-color: rgba(20, 20, 22, 0.14);
+  color: #141416;
+}
+
+/* 5. Modale des Paramètres (Settings) */
+[data-theme="light"] .settings-modal-card {
+  background: #ffffff;
+  border-color: rgba(20, 20, 22, 0.1);
+  color: #141416;
+}
+[data-theme="light"] .settings-tabs-header {
+  border-bottom-color: rgba(20, 20, 22, 0.08);
+}
+[data-theme="light"] .settings-tab-btn {
+  color: #64748b;
+}
+[data-theme="light"] .settings-tab-btn:hover {
+  background: rgba(20, 20, 22, 0.05);
+  color: #141416;
+}
+[data-theme="light"] .settings-tab-btn.active {
+  background: #f1f5f9;
+  border-color: rgba(20, 20, 22, 0.12);
+  color: #141416;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+[data-theme="light"] .settings-card-box {
+  background: #f8fafc;
+  border-color: rgba(20, 20, 22, 0.08);
+}
+[data-theme="light"] .settings-pane-title {
+  color: #141416;
+}
+[data-theme="light"] .settings-pane-desc {
+  color: #64748b;
+}
+[data-theme="light"] .card-box-title {
+  color: #141416;
+}
+[data-theme="light"] .card-box-desc {
+  color: #64748b;
+}
+
+/* 6. Formulaires & Sélecteurs de la Modale d'Édition */
+[data-theme="light"] .modal-select {
+  background: #f8fafc;
+  border-color: rgba(20, 20, 22, 0.12);
+  color: #141416;
+}
+[data-theme="light"] .modal-select:focus {
+  background: #ffffff;
+  border-color: #6366f1;
+}
+[data-theme="light"] .modal-select option {
+  background: #ffffff;
+  color: #141416;
+}
+[data-theme="light"] .type-pill {
+  background: #f8fafc;
+  border-color: rgba(20, 20, 22, 0.1);
+  color: #64748b;
+}
+[data-theme="light"] .type-pill:hover {
+  background: #f1f5f9;
+  color: #141416;
+}
+[data-theme="light"] .type-pill.active {
+  background: #ffffff;
+  border-color: rgba(20, 20, 22, 0.2);
+  color: #141416;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .btn-toggle-collapsible {
+  color: #64748b;
+}
+[data-theme="light"] .btn-toggle-collapsible:hover {
+  color: #141416;
+}
+
+/* 7. Modale des Raccourcis Clavier */
+[data-theme="light"] .shortcuts-card {
+  background: #ffffff;
+  border-color: rgba(20, 20, 22, 0.1);
+  color: #141416;
+}
+[data-theme="light"] .shortcut-row kbd {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+[data-theme="light"] .shortcut-row span {
+  color: #475569;
+}
+
+/* 8. Menu Popover (3 petits points) */
+[data-theme="light"] .task-popover-menu {
+  background: #ffffff;
+  border-color: rgba(20, 20, 22, 0.12);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+[data-theme="light"] .popover-item {
+  color: #141416;
+}
+[data-theme="light"] .popover-item:hover {
+  background: rgba(20, 20, 22, 0.05);
+}
+[data-theme="light"] .popover-action-picker {
+  border-bottom-color: rgba(20, 20, 22, 0.08);
+}
+[data-theme="light"] .popover-section-label {
+  color: #64748b;
+}
+
+/* 9. Modale Checklist des Sous-Tâches */
+[data-theme="light"] .subtasks-type-badge {
+  background: rgba(20, 20, 22, 0.06);
+  color: #64748b;
+}
+[data-theme="light"] .subtasks-title-text {
+  color: #141416;
+}
+[data-theme="light"] .btn-subtasks-edit-header {
+  border-color: rgba(20, 20, 22, 0.12);
+  color: #64748b;
+}
+[data-theme="light"] .btn-subtasks-edit-header:hover {
+  background: rgba(20, 20, 22, 0.05);
+  color: #141416;
+}
+[data-theme="light"] .subtasks-progress-banner {
+  background: #f8fafc;
+  border-color: rgba(20, 20, 22, 0.08);
+}
+[data-theme="light"] .subtasks-progress-labels {
+  color: #64748b;
+}
+[data-theme="light"] .subtasks-progress-track {
+  background: rgba(20, 20, 22, 0.08);
+}
+
 
 * {
   box-sizing: border-box;
@@ -2344,6 +2667,28 @@ body {
 .cap-bar-seg.seg-life { background: var(--color-life, #34d399); }
 .cap-bar-seg.seg-fun  { background: var(--color-fun, #f59e0b); }
 
+/* Adaptation compacte en vue 7 jours (évite tout chevauchement des en-têtes) */
+.is-view-7d .cal-day-header-cell {
+  padding: 4px 4px;
+}
+.is-view-7d .cal-day-left-badge {
+  gap: 4px;
+}
+.is-view-7d .cal-day-name {
+  font-size: 10px;
+}
+.is-view-7d .cal-day-disc {
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
+}
+.is-view-7d .capacity-mini-bar {
+  width: 26px;
+}
+.is-view-7d .capacity-total-txt {
+  font-size: 9.5px;
+}
+
 /* ALL-DAY CONTINUOUS RIBBON SECTION */
 .cal-allday-section {
   display: flex;
@@ -3875,11 +4220,12 @@ body.is-card-dragging * {
 
 .schedule-block-item.is-narrow-col .schedule-block-title {
   font-size: 11px;
-  line-height: 1.18;
-  letter-spacing: -0.02em;
-  word-break: break-word;
-  hyphens: auto;
-  -webkit-hyphens: auto;
+  line-height: 1.22;
+  letter-spacing: -0.015em;
+  word-break: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .schedule-block-item.is-narrow-col .schedule-block-meta {
@@ -3892,6 +4238,7 @@ body.is-card-dragging * {
   font-size: 9.5px;
   letter-spacing: -0.02em;
   color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
 }
 
 .schedule-block-item.is-narrow-col .event-progress-pill {
@@ -3917,30 +4264,33 @@ body.is-card-dragging * {
 .schedule-block-item.is-ultra-narrow-col {
   left: 1px;
   right: 1px;
-  padding: 1.5px 3px;
+  padding: 2px 4px;
   border-radius: 5px;
   gap: 0;
   justify-content: flex-start;
 }
 
 .schedule-block-item.is-ultra-narrow-col .schedule-block-top {
-  gap: 2px;
-  min-height: 12px;
-  line-height: 1.1;
+  gap: 3px;
+  min-height: 14px;
+  line-height: 1.15;
 }
 
 .schedule-block-item.is-ultra-narrow-col .schedule-block-top .checkbox {
-  width: 9.5px;
-  height: 9.5px;
-  font-size: 6px;
+  width: 10.5px;
+  height: 10.5px;
+  font-size: 7px;
   margin-top: 1px;
 }
 
 .schedule-block-item.is-ultra-narrow-col .schedule-block-title {
-  font-size: 9px;
-  line-height: 1.1;
-  letter-spacing: -0.025em;
+  font-size: 10.5px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .schedule-block-item.is-ultra-narrow-col .schedule-block-meta {
@@ -3950,9 +4300,11 @@ body.is-card-dragging * {
 }
 
 .schedule-block-item.is-ultra-narrow-col .schedule-block-time {
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1;
   letter-spacing: -0.02em;
+  white-space: nowrap;
+}
 }
 
 .schedule-block-item.is-ultra-narrow-col .event-progress-pill {

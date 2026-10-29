@@ -391,7 +391,7 @@ window.addEventListener('keydown', (e) => {
     } else if (typeof openCreateModalWithDefaults === 'function') {
       openCreateModalWithDefaults();
     }
-  } else if (['1', '3', '7'].includes(e.key)) {
+  } else if (['1', '3', '5', '7'].includes(e.key)) {
     if (typeof setVisibleDays === 'function') {
       setVisibleDays(parseInt(e.key, 10));
     }

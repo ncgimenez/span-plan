@@ -397,6 +397,9 @@ window.addEventListener('keydown', (e) => {
     } else if (e.key === '3') {
       e.preventDefault();
       setVisibleDays(3);
+    } else if (e.key === '5') {
+      e.preventDefault();
+      setVisibleDays(5);
     } else if (e.key === '7' || e.key === 'w' || e.key === 'W') {
       e.preventDefault();
       setVisibleDays(7);
