@@ -186,8 +186,15 @@ function renderAllDayContinuousRibbonHtml(visibleDates) {
   const items = [];
 
   allTasks.forEach(task => {
-    const isMultiDay = !!(task.date && task.endDate && task.endDate > task.date);
-    const isAllDay = !!task.allDay || (!task.time && !!task.date) || isMultiDay;
+    // 1. RÈGLE ABSOLUE : Une tâche sans date valide (YYYY-MM-DD) n'apparaît JAMAIS sur le calendrier (elle reste au Backlog)
+    if (!task || !task.date || typeof task.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(task.date.trim())) {
+      return;
+    }
+
+    const taskDate = task.date.trim();
+    const cleanEndDate = (task.endDate && typeof task.endDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(task.endDate.trim())) ? task.endDate.trim() : null;
+    const isMultiDay = !!(cleanEndDate && cleanEndDate > taskDate);
+    const isAllDay = !!task.allDay || (!task.time && !!taskDate) || isMultiDay;
     if (!isAllDay) return;
 
     const contextMatch = isTaskCategoryVisible(task);
@@ -197,17 +204,22 @@ function renderAllDayContinuousRibbonHtml(visibleDates) {
     const rec = task.recurrence || 'none';
 
     if (rec === 'none') {
-      const tStart = task.date || visStartStr;
-      const tEnd = (task.endDate && task.endDate >= tStart) ? task.endDate : tStart;
+      const tStart = taskDate;
+      const tEnd = (cleanEndDate && cleanEndDate >= tStart) ? cleanEndDate : tStart;
+      
+      // Si l'élément se termine avant le début de la semaine, ou commence après la fin de la semaine affichée -> Ne pas afficher
       if (tEnd < visStartStr || tStart > visEndStr) return;
 
       let colStart = visibleDateStrs.indexOf(tStart);
-      const startsBefore = (colStart === -1);
+      const startsBefore = (colStart === -1 && tStart < visStartStr);
       if (startsBefore) colStart = 0;
 
       let colEnd = visibleDateStrs.indexOf(tEnd);
-      const endsAfter = (colEnd === -1);
+      const endsAfter = (colEnd === -1 && tEnd > visEndStr);
       if (endsAfter) colEnd = visibleDateStrs.length - 1;
+
+      // Si les colonnes sont invalides ou inversées, ne pas afficher
+      if (colStart === -1 || colEnd === -1 || colEnd < colStart) return;
 
       items.push({
         task,

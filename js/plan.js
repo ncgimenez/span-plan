@@ -232,7 +232,7 @@ if (window.SpanPlanStore) {
 // ==============================================================
 function isTaskOccurringOnDate(task, targetDateStr) {
   if (!task || !targetDateStr) return false;
-  if (!task.date) return false; // Les tâches non planifiées du backlog ne récurrent pas
+  if (!task.date || typeof task.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(task.date.trim())) return false;
 
   // Vérifier les exceptions (occurrences supprimées spécifiquement)
   if (Array.isArray(task.recurrenceExceptions) && task.recurrenceExceptions.includes(targetDateStr)) {
@@ -732,7 +732,7 @@ function autoRecoverTodayTasks() {
   let modified = false;
   window.SpanPlanState.tasks.forEach(t => {
     if (t.date === '' || t.date === 'undefined' || t.date === 'null') {
-      t.date = TODAY_STR;
+      t.date = null; // Tâches non planifiées : normaliser en null pour rester sagement dans le Backlog
       modified = true;
     }
   });
