@@ -7613,53 +7613,31 @@ body.is-dragging-subtask .cal-allday-drop-cell.drag-over {
 }
 
 /* ==============================================================
-   TÂCHES & ÉVÉNEMENTS IMPORTANTS (BADGE PRIORITÉ "!" ÉLÉGANT & TYPO SOBRE)
+   TÂCHES & ÉVÉNEMENTS IMPORTANTS (TITRE ÉCRIT EN ROUGE NET)
+   Zéro emoji ni badge superflu - Lisibilité immédiate
    ============================================================== */
-.important-priority-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 13px;
-  height: 13px;
-  border-radius: 3px;
-  background: rgba(239, 68, 68, 0.18);
-  color: #f87171;
-  font-size: 8.5px;
-  font-weight: 800;
-  line-height: 1;
-  margin-right: 4px;
-  vertical-align: middle;
-  flex-shrink: 0;
-  box-sizing: border-box;
-}
-
-[data-theme="light"] .important-priority-badge {
-  background: rgba(185, 28, 28, 0.12);
-  color: #b91c1c;
-}
-
 .schedule-block-item.is-important .schedule-block-title,
 .cal-allday-ribbon.is-important .ribbon-title,
 .task-item.is-important .task-text {
-  color: #fda4af !important;
+  color: #f87171 !important;
   font-weight: 650;
 }
 
 [data-theme="light"] .schedule-block-item.is-important .schedule-block-title,
 [data-theme="light"] .cal-allday-ribbon.is-important .ribbon-title,
 [data-theme="light"] .task-item.is-important .task-text {
-  color: #b91c1c !important;
+  color: #dc2626 !important;
   font-weight: 650;
 }
 
 .schedule-block-item.is-important.is-completed .schedule-block-title,
 .task-item.is-important.completed .task-text {
-  color: rgba(253, 164, 175, 0.5) !important;
+  color: rgba(248, 113, 113, 0.5) !important;
   text-decoration: line-through;
 }
 
 [data-theme="light"] .schedule-block-item.is-important.is-completed .schedule-block-title,
 [data-theme="light"] .task-item.is-important.completed .task-text {
-  color: rgba(185, 28, 28, 0.5) !important;
+  color: rgba(220, 38, 38, 0.5) !important;
   text-decoration: line-through;
 }

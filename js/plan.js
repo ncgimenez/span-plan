@@ -1330,7 +1330,6 @@ function renderBacklogDrawer() {
 
       const li = document.createElement('li');
       const importantClass = task.important ? 'is-important' : '';
-      const importantBadgeHtml = task.important ? '<span class="important-priority-badge" title="Tâche prioritaire">!</span>' : '';
       const backlogUrl = extractTaskUrl(task);
       const backlogLinkHtml = backlogUrl ? `
         <a href="${backlogUrl}" target="_blank" rel="noopener noreferrer" 
@@ -1358,7 +1357,7 @@ function renderBacklogDrawer() {
               ${task.completed ? '✓' : ''}
             </div>
           `}
-          <span class="task-text ${completedClass}">${importantBadgeHtml}${renderTitleWithTagsHtml(task.title)}${actionTagHtml}</span>
+          <span class="task-text ${completedClass}">${renderTitleWithTagsHtml(task.title)}${actionTagHtml}</span>
           ${backlogLinkHtml}
           <div class="schedule-block-top-actions">
             ${progressPillHtml}

@@ -321,7 +321,7 @@ function renderAllDayContinuousRibbonHtml(visibleDates) {
               ${task.completed ? '✓' : ''}
             </div>
           ` : '<span style="font-size:10.5px; flex-shrink:0;">📅</span>'}
-          <span class="ribbon-title">${task.important ? '<span class="important-priority-badge" title="Tâche prioritaire">!</span>' : ''}${recIcon}${renderTitleWithTagsHtml(task.title)}</span>
+          <span class="ribbon-title">${recIcon}${renderTitleWithTagsHtml(task.title)}</span>
           ${dateRangeLabel}
           ${alldayLocHtml}
           ${progressPillHtml}
@@ -971,8 +971,6 @@ function renderTimedBlocks(tasks, dateStr) {
       `;
     }
 
-    const importantBadgeHtml = task.important ? '<span class="important-priority-badge" title="Tâche prioritaire">!</span>' : '';
-
     let innerContentHtml = '';
     if (isCompact) {
       innerContentHtml = `
@@ -985,7 +983,7 @@ function renderTimedBlocks(tasks, dateStr) {
             </div>
           ` : ''}
           <span class="compact-time">${isContinuation ? `00:00 – ${endH}:${endM}` : task.time}</span>
-          <span class="schedule-block-title">${importantBadgeHtml}${continuationPrefix}${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
+          <span class="schedule-block-title">${continuationPrefix}${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
           ${locationHtml}
           ${notesHtml}
           ${isLiveNow ? `
@@ -1013,7 +1011,7 @@ function renderTimedBlocks(tasks, dateStr) {
               ${task.completed ? '✓' : ''}
             </div>
           ` : ''}
-          <span class="schedule-block-title">${importantBadgeHtml}${continuationPrefix}${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
+          <span class="schedule-block-title">${continuationPrefix}${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
           <div class="schedule-block-top-actions">
             ${isNarrowCol ? '' : progressPillHtml}
             ${!isEvent ? `<button type="button" class="btn-block-quick-add-subtask" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); quickAddSubtaskFromBlock('${task.id}')" title="Ajouter une sous-tâche">➕</button>` : ''}
@@ -1149,7 +1147,6 @@ function renderUnscheduledList(tasks) {
       : '';
 
     const importantClass = task.important ? 'is-important' : '';
-    const importantBadgeHtml = task.important ? '<span class="important-priority-badge" title="Tâche prioritaire">!</span>' : '';
     const backlogUrl = extractTaskUrl(task);
     const backlogLinkHtml = backlogUrl ? `
       <a href="${backlogUrl}" target="_blank" rel="noopener noreferrer" 
@@ -1178,7 +1175,7 @@ function renderUnscheduledList(tasks) {
             </div>
           `}
           <span class="task-text">
-            ${importantBadgeHtml}${rolloverPrefix}${renderTitleWithTagsHtml(task.title)}
+            ${rolloverPrefix}${renderTitleWithTagsHtml(task.title)}
           </span>
           ${backlogLinkHtml}
           <div class="schedule-block-top-actions">
