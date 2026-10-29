@@ -79,15 +79,64 @@ window.goToFocusApp = goToFocusApp;
 
 function exportData() {
   const tasks = (window.SpanPlanState && window.SpanPlanState.tasks) || [];
-  const exportBlob = new Blob([JSON.stringify(tasks, null, 2)], { type: 'application/json' });
+  let focusTasks = [];
+  try {
+    focusTasks = JSON.parse(localStorage.getItem('span_tasks') || '[]');
+  } catch (_) {}
+
+  const settings = {
+    theme: localStorage.getItem('span_theme') || 'dark',
+    activeCategories: localStorage.getItem('span_plan_active_categories') || null,
+    visibleDays: localStorage.getItem('span_plan_visible_days') || null,
+    hideActionsInAll: localStorage.getItem('span_plan_hide_actions_in_all') || null
+  };
+
+  const archive = (typeof SpanCore !== 'undefined' && SpanCore.createBackupArchive)
+    ? SpanCore.createBackupArchive(tasks, focusTasks, settings)
+    : { app: 'span-plan', version: 2, tasks: tasks, focusTasks: focusTasks };
+
+  const exportBlob = new Blob([JSON.stringify(archive, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(exportBlob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `span-plan-${new Date().toISOString().slice(0, 10)}.json`;
+  const dateStr = (typeof getLocalDateString === 'function') ? getLocalDateString() : new Date().toISOString().slice(0, 10);
+  a.download = `span-plan-backup-${dateStr}.json`;
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  showToast('Backup exported successfully (JSON)');
+  if (typeof showToast === 'function') {
+    showToast(`Sauvegarde intégrale exportée (${tasks.length} tâches) !`, 'success');
+  }
 }
+window.exportData = exportData;
+
+function exportCsvFile() {
+  const tasks = (window.SpanPlanState && window.SpanPlanState.tasks) || [];
+  if (tasks.length === 0) {
+    if (typeof showToast === 'function') showToast("Aucune tâche à exporter.", 'info');
+    return;
+  }
+
+  const csvContent = (typeof SpanCore !== 'undefined' && SpanCore.tasksToCsv)
+    ? SpanCore.tasksToCsv(tasks)
+    : '';
+
+  const exportBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(exportBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  const dateStr = (typeof getLocalDateString === 'function') ? getLocalDateString() : new Date().toISOString().slice(0, 10);
+  a.download = `span-plan-tableur-${dateStr}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  if (typeof showToast === 'function') {
+    showToast(`Fichier tableur CSV exporté (${tasks.length} tâches) !`, 'success');
+  }
+}
+window.exportCsvFile = exportCsvFile;
 
 function exportIcsFile(category = 'all') {
   const allTasks = (window.SpanPlanState && window.SpanPlanState.tasks) || [];
@@ -264,24 +313,150 @@ function exportIcsFile(category = 'all') {
   showToast(`${scheduledTasks.length} ${category === 'all' ? '' : category + ' '}event(s) exported to ${filename}`, 'success');
 }
 
-function importData(event) {
-  const file = event.target.files[0];
+let pendingImportData = null;
+
+function handleImportFile(file) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
-      const data = JSON.parse(e.target.result);
-      if (Array.isArray(data)) {
-        window.SpanPlanState.tasks = data;
-        if (typeof savePlanState === 'function') savePlanState();
-        showToast(`${data.length} tasks imported successfully!`, 'success');
+      const rawText = e.target.result;
+      const parseResult = (typeof SpanCore !== 'undefined' && SpanCore.parseImportFile)
+        ? SpanCore.parseImportFile(rawText, file.name)
+        : null;
+
+      if (!parseResult || !parseResult.success) {
+        if (typeof showToast === 'function') {
+          showToast(parseResult ? parseResult.error : "Format de fichier non reconnu.", 'danger');
+        }
+        return;
       }
-    } catch {
-      showToast('Invalid JSON file format.', 'danger');
+
+      pendingImportData = parseResult;
+      openImportModal(parseResult);
+    } catch (err) {
+      if (typeof showToast === 'function') {
+        showToast("Erreur lors de la lecture du fichier : " + err.message, 'danger');
+      }
     }
   };
   reader.readAsText(file);
 }
+window.handleImportFile = handleImportFile;
+
+function importData(event) {
+  const file = event.target && event.target.files && event.target.files[0];
+  if (file) handleImportFile(file);
+  if (event.target) event.target.value = '';
+}
+window.importData = importData;
+
+function openImportModal(data) {
+  const modal = document.getElementById('importModalOverlay');
+  if (!modal) return;
+
+  const fileNameEl = document.getElementById('importFileName');
+  const fileTypeEl = document.getElementById('importFileType');
+  const countTotalEl = document.getElementById('importCountTotal');
+  const countEventsEl = document.getElementById('importCountEvents');
+  const countBacklogEl = document.getElementById('importCountBacklog');
+  const countSubtasksEl = document.getElementById('importCountSubtasks');
+  const btnSubmit = document.getElementById('btnConfirmImport');
+
+  if (fileNameEl) fileNameEl.textContent = data.fileName || 'Fichier sélectionné';
+  if (fileTypeEl) fileTypeEl.textContent = data.label || 'Format détecté';
+  if (countTotalEl) countTotalEl.textContent = data.summary.total;
+  if (countEventsEl) countEventsEl.textContent = data.summary.events;
+  if (countBacklogEl) countBacklogEl.textContent = data.summary.backlog;
+  if (countSubtasksEl) countSubtasksEl.textContent = data.summary.subtasks;
+
+  if (btnSubmit) {
+    btnSubmit.textContent = `🚀 Intégrer les données (${data.summary.total} tâches)`;
+  }
+
+  modal.style.display = 'flex';
+}
+window.openImportModal = openImportModal;
+
+function closeImportModal() {
+  const modal = document.getElementById('importModalOverlay');
+  if (modal) modal.style.display = 'none';
+  pendingImportData = null;
+}
+window.closeImportModal = closeImportModal;
+
+function executePendingImport() {
+  if (!pendingImportData || !Array.isArray(pendingImportData.tasks)) {
+    if (typeof showToast === 'function') showToast("Aucune donnée à importer.", 'danger');
+    return;
+  }
+
+  const mode = document.querySelector('input[name="importMode"]:checked')?.value || 'replace';
+  const shouldSnapshot = document.getElementById('chkImportSafetySnapshot')?.checked ?? true;
+
+  if (shouldSnapshot && typeof createSyncSnapshot === 'function') {
+    createSyncSnapshot(`Avant import de ${pendingImportData.fileName}`);
+  }
+
+  const incomingTasks = pendingImportData.tasks;
+
+  if (mode === 'replace') {
+    // 1. Remplacement complet (Nouveau compte / Nouvel utilisateur)
+    window.SpanPlanState.tasks = incomingTasks;
+    localStorage.setItem('span_plan_tasks', JSON.stringify(incomingTasks));
+
+    if (Array.isArray(pendingImportData.focusTasks) && pendingImportData.focusTasks.length > 0) {
+      localStorage.setItem('span_tasks', JSON.stringify(pendingImportData.focusTasks));
+    } else {
+      if (typeof syncPlanTasksToFocusStorage === 'function') {
+        syncPlanTasksToFocusStorage();
+      }
+    }
+  } else {
+    // 2. Fusion intelligente avec l'existant
+    const existingTasks = (window.SpanPlanState && window.SpanPlanState.tasks) || [];
+    const existingIds = new Set(existingTasks.map(t => String(t.id)));
+
+    const distinctIncoming = incomingTasks.map(t => {
+      if (existingIds.has(String(t.id))) {
+        return {
+          ...t,
+          id: 't_' + Math.random().toString(36).slice(2, 9)
+        };
+      }
+      return t;
+    });
+
+    window.SpanPlanState.tasks = [...distinctIncoming, ...existingTasks];
+    localStorage.setItem('span_plan_tasks', JSON.stringify(window.SpanPlanState.tasks));
+    if (typeof syncPlanTasksToFocusStorage === 'function') {
+      syncPlanTasksToFocusStorage();
+    }
+  }
+
+  if (window.SpanPlanStore) {
+    window.SpanPlanStore.tasks = window.SpanPlanState.tasks;
+    window.SpanPlanStore.save();
+  }
+
+  // Synchroniser immédiatement dans le cloud du compte actif
+  if (typeof syncPlanToCloud === 'function') {
+    syncPlanToCloud();
+  }
+
+  // Rafraîchir l'interface
+  if (typeof renderPlanGrid === 'function') renderPlanGrid(true);
+  if (typeof renderBacklogDrawer === 'function') renderBacklogDrawer();
+  if (typeof updateCounters === 'function') updateCounters();
+  if (typeof renderDateStrip === 'function') renderDateStrip();
+  if (typeof renderSyncHistoryAndSnapshotsUI === 'function') renderSyncHistoryAndSnapshotsUI();
+
+  closeImportModal();
+  if (typeof showToast === 'function') {
+    showToast(`Intégration réussie : ${incomingTasks.length} tâches chargées !`, 'success', 3500);
+  }
+}
+window.executePendingImport = executePendingImport;
 
 // Système de notifications Toast non bloquantes (remplace alert())
 function showToast(message, type = 'info', duration = 3000) {

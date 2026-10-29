@@ -511,6 +511,378 @@
     }
   }
 
+  // ==============================================================
+  // EXPORT & IMPORT: FORMAT TABLEUR CSV ET ARCHIVE JSON
+  // ==============================================================
+
+  function escapeCsvCell(val) {
+    if (val === null || val === undefined) return '';
+    const str = String(val);
+    if (/[",\n\r;]/.test(str)) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  }
+
+  function tasksToCsv(tasks) {
+    const list = Array.isArray(tasks) ? tasks : [];
+    const headers = [
+      'ID',
+      'Titre',
+      'Date',
+      'Heure',
+      'Duree_min',
+      'Categorie',
+      'Type',
+      'Toute_la_journee',
+      'Action',
+      'Statut',
+      'Important',
+      'Sous_taches',
+      'Notes',
+      'Lien',
+      'Cree_le'
+    ];
+
+    const lines = [headers.join(',')];
+
+    list.forEach(t => {
+      if (!t) return;
+      const id = t.id || '';
+      const title = t.title || '';
+      const date = t.date || t.scheduledDate || '';
+      const time = t.time || t.scheduledTime || '';
+      const duration = t.duration || 30;
+      const category = t.context || t.category || 'work';
+      const type = t.type || (t.isEvent ? 'event' : 'task');
+      const allDay = t.allDay ? 'Oui' : 'Non';
+      const action = t.actionType || getTaskActionType(t) || '';
+      const statut = t.completed ? 'Terminé' : 'À faire';
+      const important = (t.important || t.isFavorite) ? 'Oui' : 'Non';
+
+      let subtasksStr = '';
+      if (Array.isArray(t.subtasks) && t.subtasks.length > 0) {
+        subtasksStr = t.subtasks
+          .map(st => `${st.completed ? '[✓]' : '[ ]'} ${st.title || ''}`)
+          .join(' | ');
+      }
+
+      const notes = t.notes || '';
+      const url = t.url || extractTaskUrl(t) || '';
+      const createdAt = t.created_at || '';
+
+      const row = [
+        escapeCsvCell(id),
+        escapeCsvCell(title),
+        escapeCsvCell(date),
+        escapeCsvCell(time),
+        escapeCsvCell(duration),
+        escapeCsvCell(category),
+        escapeCsvCell(type),
+        escapeCsvCell(allDay),
+        escapeCsvCell(action),
+        escapeCsvCell(statut),
+        escapeCsvCell(important),
+        escapeCsvCell(subtasksStr),
+        escapeCsvCell(notes),
+        escapeCsvCell(url),
+        escapeCsvCell(createdAt)
+      ];
+
+      lines.push(row.join(','));
+    });
+
+    // UTF-8 BOM pour une ouverture parfaite sans artefacts sous Excel
+    return '\uFEFF' + lines.join('\r\n');
+  }
+
+  function parseCsvRows(text) {
+    if (!text || typeof text !== 'string') return [];
+    let cleanText = text;
+    if (cleanText.charCodeAt(0) === 0xFEFF) {
+      cleanText = cleanText.slice(1);
+    }
+
+    const firstLine = cleanText.split(/\r?\n/).find(l => l.trim().length > 0) || '';
+    const delimiter = (firstLine.includes(';') && !firstLine.includes(','))
+      ? ';'
+      : (firstLine.split(';').length > firstLine.split(',').length ? ';' : ',');
+
+    const rows = [];
+    let currentRow = [];
+    let currentCell = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < cleanText.length; i++) {
+      const char = cleanText[i];
+      const nextChar = cleanText[i + 1];
+
+      if (inQuotes) {
+        if (char === '"') {
+          if (nextChar === '"') {
+            currentCell += '"';
+            i++;
+          } else {
+            inQuotes = false;
+          }
+        } else {
+          currentCell += char;
+        }
+      } else {
+        if (char === '"') {
+          inQuotes = true;
+        } else if (char === delimiter) {
+          currentRow.push(currentCell.trim());
+          currentCell = '';
+        } else if (char === '\r') {
+          if (nextChar === '\n') i++;
+          currentRow.push(currentCell.trim());
+          if (currentRow.some(c => c !== '')) rows.push(currentRow);
+          currentRow = [];
+          currentCell = '';
+        } else if (char === '\n') {
+          currentRow.push(currentCell.trim());
+          if (currentRow.some(c => c !== '')) rows.push(currentRow);
+          currentRow = [];
+          currentCell = '';
+        } else {
+          currentCell += char;
+        }
+      }
+    }
+    if (currentCell.length > 0 || currentRow.length > 0) {
+      currentRow.push(currentCell.trim());
+      if (currentRow.some(c => c !== '')) rows.push(currentRow);
+    }
+    return rows;
+  }
+
+  function csvToTasks(csvText) {
+    const rows = parseCsvRows(csvText);
+    if (rows.length === 0) return [];
+
+    const header = rows[0].map(h => String(h || '').trim().toLowerCase());
+    const findCol = (regex) => header.findIndex(h => regex.test(h));
+
+    const idIdx = findCol(/^id/i);
+    const titleIdx = findCol(/^(titre|title|nom|task|t[aâ]ches?|description)/i);
+    const dateIdx = findCol(/^(date|jour|scheduleddate)/i);
+    const timeIdx = findCol(/^(time|heure|horaire|scheduledtime)/i);
+    const durationIdx = findCol(/^(dur[eé]e|duration)/i);
+    const catIdx = findCol(/^(cat[eé]gor|context|contexte)/i);
+    const typeIdx = findCol(/^type/i);
+    const allDayIdx = findCol(/^(all[-_ ]?day|toute[-_ ]?la[-_ ]?journ[eé]e)/i);
+    const actionIdx = findCol(/^action/i);
+    const statusIdx = findCol(/^(statut|status|compl[eé]t|termin[eé]|done)/i);
+    const importantIdx = findCol(/^(important|priorit[eé]|fav)/i);
+    const subtasksIdx = findCol(/^(sous[-_ ]?t[aâ]ches?|subtasks?)/i);
+    const notesIdx = findCol(/^(note|notes|remarque)/i);
+    const urlIdx = findCol(/^(url|lien|link)/i);
+
+    const hasHeader = titleIdx !== -1;
+    const dataRows = hasHeader ? rows.slice(1) : rows;
+
+    const actualTitleIdx = hasHeader ? titleIdx : 1;
+    const finalTitleIdx = (actualTitleIdx >= 0 && actualTitleIdx < (rows[0] ? rows[0].length : 0)) ? actualTitleIdx : 0;
+
+    const tasks = [];
+
+    dataRows.forEach(row => {
+      const rawTitle = row[finalTitleIdx];
+      if (!rawTitle || !rawTitle.trim()) return;
+
+      const rawId = (idIdx !== -1 && row[idIdx]) ? row[idIdx].trim() : ('t_' + Math.random().toString(36).slice(2, 9));
+      const rawDate = (dateIdx !== -1 && row[dateIdx]) ? row[dateIdx].trim() : null;
+      const rawTime = (timeIdx !== -1 && row[timeIdx]) ? row[timeIdx].trim() : '';
+      const rawDuration = (durationIdx !== -1 && row[durationIdx]) ? parseInt(row[durationIdx], 10) : 30;
+      const rawCat = (catIdx !== -1 && row[catIdx]) ? row[catIdx].trim() : 'work';
+      const rawType = (typeIdx !== -1 && row[typeIdx]) ? row[typeIdx].trim().toLowerCase() : (rawTime ? 'event' : 'task');
+
+      let isCompleted = false;
+      if (statusIdx !== -1 && row[statusIdx]) {
+        const s = row[statusIdx].toLowerCase();
+        isCompleted = Boolean(s.includes('termin') || s.includes('fait') || s.includes('oui') || s.includes('yes') || s.includes('true') || s.includes('done') || s === '1');
+      }
+
+      let isImportant = false;
+      if (importantIdx !== -1 && row[importantIdx]) {
+        const imp = row[importantIdx].toLowerCase();
+        isImportant = Boolean(imp.includes('oui') || imp.includes('yes') || imp.includes('true') || imp === '1' || imp === '!');
+      }
+
+      let isAllDay = false;
+      if (allDayIdx !== -1 && row[allDayIdx]) {
+        const ad = row[allDayIdx].toLowerCase();
+        isAllDay = Boolean(ad.includes('oui') || ad.includes('yes') || ad.includes('true') || ad === '1');
+      } else if (!rawTime && rawDate) {
+        isAllDay = true;
+      }
+
+      const rawAction = (actionIdx !== -1 && row[actionIdx]) ? row[actionIdx].trim().toLowerCase() : null;
+      const notes = (notesIdx !== -1 && row[notesIdx]) ? row[notesIdx] : '';
+      const url = (urlIdx !== -1 && row[urlIdx]) ? row[urlIdx].trim() : '';
+
+      // Parsing des sous-tâches
+      const subtasks = [];
+      if (subtasksIdx !== -1 && row[subtasksIdx]) {
+        const subStr = row[subtasksIdx].trim();
+        if (subStr) {
+          const parts = subStr.split(/\s*\|\s*|\r?\n/);
+          parts.forEach((p, idx) => {
+            const cleanP = p.trim();
+            if (!cleanP) return;
+            const subDone = cleanP.startsWith('[✓]') || cleanP.startsWith('[x]') || cleanP.startsWith('[X]');
+            const subTitle = cleanP.replace(/^(\[\s*[✓xX]?\s*\]|\d+[\.\)]\s*)/, '').trim();
+            if (subTitle) {
+              subtasks.push({
+                id: `sub_${rawId}_${idx + 1}`,
+                title: subTitle,
+                completed: subDone
+              });
+            }
+          });
+        }
+      }
+
+      const task = normalizeTask({
+        id: rawId,
+        title: rawTitle.trim(),
+        date: (rawDate && /^\d{4}-\d{2}-\d{2}/.test(rawDate)) ? rawDate.slice(0, 10) : null,
+        time: (rawTime && /^\d{1,2}:\d{2}/.test(rawTime)) ? rawTime.slice(0, 5) : '',
+        duration: isNaN(rawDuration) || rawDuration <= 0 ? 30 : rawDuration,
+        context: rawCat,
+        type: rawType === 'event' ? 'event' : 'task',
+        allDay: isAllDay,
+        actionType: ['call', 'mail', 'pay', 'content'].includes(rawAction) ? rawAction : null,
+        completed: isCompleted,
+        important: isImportant,
+        notes: notes,
+        url: url,
+        subtasks: subtasks
+      });
+
+      tasks.push(task);
+    });
+
+    return tasks;
+  }
+
+  function createBackupArchive(tasks, focusTasks = [], settings = {}) {
+    const planTasks = (Array.isArray(tasks) ? tasks : []).map(t => normalizeTask(t));
+    const focusList = Array.isArray(focusTasks) ? focusTasks : [];
+    const now = new Date();
+
+    return {
+      app: 'span-plan',
+      version: 2,
+      format: 'span-plan-archive',
+      exportedAt: now.toISOString(),
+      displayDate: now.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
+      stats: {
+        totalTasks: planTasks.length,
+        events: planTasks.filter(t => t.type === 'event' || t.isEvent).length,
+        backlog: planTasks.filter(t => !t.date).length,
+        completed: planTasks.filter(t => t.completed).length,
+        focusCount: focusList.length
+      },
+      tasks: planTasks,
+      focusTasks: focusList,
+      settings: settings || {}
+    };
+  }
+
+  function parseImportFile(rawText, fileName = '') {
+    if (!rawText || typeof rawText !== 'string') {
+      return { success: false, error: 'Fichier vide ou illisible' };
+    }
+
+    const trimmed = rawText.trim();
+    const isCsvName = fileName.toLowerCase().endsWith('.csv');
+
+    // 1. Essai JSON
+    if (!isCsvName && (trimmed.startsWith('{') || trimmed.startsWith('['))) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (parsed && typeof parsed === 'object') {
+          if (parsed.app === 'span-plan' || Array.isArray(parsed.tasks)) {
+            const tasks = (parsed.tasks || []).map(t => normalizeTask(t));
+            const focusTasks = Array.isArray(parsed.focusTasks) ? parsed.focusTasks : [];
+            const settings = parsed.settings || {};
+            return {
+              success: true,
+              format: 'json_archive',
+              label: 'Archive complète Span Plan (JSON)',
+              fileName: fileName || 'archive.json',
+              exportedAt: parsed.exportedAt || null,
+              tasks: tasks,
+              focusTasks: focusTasks,
+              settings: settings,
+              summary: {
+                total: tasks.length,
+                events: tasks.filter(t => t.type === 'event' || t.isEvent).length,
+                backlog: tasks.filter(t => !t.date).length,
+                completed: tasks.filter(t => t.completed).length,
+                subtasks: tasks.reduce((acc, t) => acc + (Array.isArray(t.subtasks) ? t.subtasks.length : 0), 0),
+                focusCount: focusTasks.length
+              }
+            };
+          } else if (Array.isArray(parsed)) {
+            const tasks = parsed.map(t => normalizeTask(t));
+            return {
+              success: true,
+              format: 'json_tasks',
+              label: 'Sauvegarde JSON simple de tâches',
+              fileName: fileName || 'tasks.json',
+              exportedAt: null,
+              tasks: tasks,
+              focusTasks: [],
+              settings: {},
+              summary: {
+                total: tasks.length,
+                events: tasks.filter(t => t.type === 'event' || t.isEvent).length,
+                backlog: tasks.filter(t => !t.date).length,
+                completed: tasks.filter(t => t.completed).length,
+                subtasks: tasks.reduce((acc, t) => acc + (Array.isArray(t.subtasks) ? t.subtasks.length : 0), 0),
+                focusCount: 0
+              }
+            };
+          }
+        }
+      } catch (jsonErr) {
+        // Pas du JSON valide, on tente en CSV ci-dessous
+      }
+    }
+
+    // 2. Essai CSV
+    try {
+      const csvTasks = csvToTasks(trimmed);
+      if (csvTasks.length > 0) {
+        return {
+          success: true,
+          format: 'csv',
+          label: 'Fichier Tableur CSV (Excel / Sheets)',
+          fileName: fileName || 'export.csv',
+          exportedAt: null,
+          tasks: csvTasks,
+          focusTasks: [],
+          settings: {},
+          summary: {
+            total: csvTasks.length,
+            events: csvTasks.filter(t => t.type === 'event' || t.isEvent).length,
+            backlog: csvTasks.filter(t => !t.date).length,
+            completed: csvTasks.filter(t => t.completed).length,
+            subtasks: csvTasks.reduce((acc, t) => acc + (Array.isArray(t.subtasks) ? t.subtasks.length : 0), 0),
+            focusCount: 0
+          }
+        };
+      }
+    } catch (csvErr) {
+      return { success: false, error: 'Impossible de lire le fichier en JSON ou en CSV : ' + csvErr.message };
+    }
+
+    return { success: false, error: 'Format de fichier non reconnu. Veuillez importer un fichier .json ou .csv valide.' };
+  }
+
   /**
    * Helper factory to create a store.
    * @param {string} storageKey 
@@ -534,7 +906,11 @@
     normalizeTask,
     isMobileScreen,
     SpanReactiveStore,
-    createStore
+    createStore,
+    tasksToCsv,
+    csvToTasks,
+    createBackupArchive,
+    parseImportFile
   };
 
   function isMobileScreen() {
@@ -554,6 +930,10 @@
     if (!window.extractTaskUrl) window.extractTaskUrl = extractTaskUrl;
     if (!window.getTaskActionType) window.getTaskActionType = getTaskActionType;
     if (!window.normalizeTask) window.normalizeTask = normalizeTask;
+    if (!window.tasksToCsv) window.tasksToCsv = tasksToCsv;
+    if (!window.csvToTasks) window.csvToTasks = csvToTasks;
+    if (!window.createBackupArchive) window.createBackupArchive = createBackupArchive;
+    if (!window.parseImportFile) window.parseImportFile = parseImportFile;
   }
 
   // Node.js module export for native unit testing

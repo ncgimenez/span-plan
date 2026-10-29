@@ -72,6 +72,10 @@ async function handleLinkClick() {
     return;
   }
 
+  // Vérifier si l'utilisateur souhaite remplacer les données locales par le compte (par défaut true)
+  const chkReplace = document.getElementById('chkReplaceLocalOnLink');
+  const shouldReplace = chkReplace ? chkReplace.checked : ((window.SpanPlanState?.tasks || []).length === 0);
+
   // 1. Sauvegarder automatiquement un point de restauration complet avant la liaison
   createSyncSnapshot(`Avant liaison avec ${key.slice(0, 12)}...`, SYNC_USER_ID);
   recordAccountInHistory(SYNC_USER_ID, 'Compte précédent');
@@ -89,7 +93,7 @@ async function handleLinkClick() {
   updateSyncKeyDisplay();
 
   setupRealtimeSubscription();
-  await loadPlanFromCloud();
+  await loadPlanFromCloud(shouldReplace);
   if (typeof SpanSecurity !== 'undefined' && SpanSecurity.updateSecurityUI) {
     SpanSecurity.updateSecurityUI();
   }
@@ -319,6 +323,72 @@ function unlinkAccountAndReset() {
   }
 }
 window.unlinkAccountAndReset = unlinkAccountAndReset;
+
+function logoutAccount() {
+  const currentKey = SYNC_USER_ID;
+  const taskCount = (window.SpanPlanState && window.SpanPlanState.tasks) ? window.SpanPlanState.tasks.length : 0;
+
+  const msg = `Se déconnecter de ce compte (${currentKey}) ?\n\n` +
+    `• Vos données restent en sécurité sur le cloud pour cet identifiant.\n` +
+    `• Vos ${taskCount} tâches actuelles seront effacées de cet appareil pour repartir sur un écran vierge.\n` +
+    `• Vous pourrez ensuite saisir votre propre nom d'utilisateur ou importer une sauvegarde, sans aucun mélange.`;
+
+  if (!confirm(msg)) {
+    return;
+  }
+
+  // 1. Sauvegarder automatiquement un point de restauration complet avant la déconnexion
+  createSyncSnapshot(`Avant déconnexion du compte ${currentKey.slice(0, 10)}...`, currentKey);
+  recordAccountInHistory(currentKey, 'Compte déconnecté');
+
+  // 2. Couper la souscription Realtime Supabase
+  if (realtimeSubscription && supabaseClient) {
+    try {
+      supabaseClient.removeChannel(realtimeSubscription);
+      realtimeSubscription = null;
+    } catch (_) {}
+  }
+
+  // 3. Vider l'état en mémoire
+  window.SpanPlanState.tasks = [];
+  if (window.SpanPlanStore) {
+    window.SpanPlanStore.tasks = [];
+  }
+
+  // 4. Vider les clés de stockage locales de ce compte
+  localStorage.removeItem('span_plan_tasks');
+  localStorage.removeItem('span_tasks');
+  localStorage.removeItem('span_sync_user');
+  localStorage.removeItem('span_account_id');
+  localStorage.removeItem('span_sync_key_manually_set');
+  localStorage.removeItem('span_plan_dismissed_focus_ids');
+  localStorage.removeItem('span_deleted_task_ids');
+  sessionStorage.removeItem('span_session_unlocked');
+
+  // 5. Générer un identifiant privé tout neuf pour ce navigateur
+  const part = Math.random().toString(36).substring(2, 8);
+  const time = Date.now().toString(36);
+  const newId = `span_${part}_${time}`;
+  SYNC_USER_ID = newId;
+  localStorage.setItem('span_sync_user', newId);
+  localStorage.setItem('span_account_id', newId);
+
+  // 6. Mettre à jour l'UI
+  syncKeychainInputs('');
+  updateSyncKeyDisplay();
+  setupRealtimeSubscription();
+
+  if (typeof renderPlanGrid === 'function') renderPlanGrid(true);
+  if (typeof renderBacklogDrawer === 'function') renderBacklogDrawer();
+  if (typeof updateCounters === 'function') updateCounters();
+  if (typeof renderDateStrip === 'function') renderDateStrip();
+  renderSyncHistoryAndSnapshotsUI();
+
+  if (typeof showToast === 'function') {
+    showToast("Déconnecté avec succès ! Votre calendrier local est maintenant vierge.", 'info', 4000);
+  }
+}
+window.logoutAccount = logoutAccount;
 
 function renderSyncHistoryAndSnapshotsUI() {
   // 1. Rendu des snapshots (Points de restauration)
@@ -728,7 +798,7 @@ async function syncPlanToCloud() {
 }
 
 // FUSION INTELLIGENTE ET APPLICATION DIRECTE
-async function loadPlanFromCloud() {
+async function loadPlanFromCloud(forceReplace = false) {
   if (!supabaseClient) return;
   try {
     // 0. Synchronisation des paramètres de sécurité depuis user_sync
@@ -867,14 +937,18 @@ async function loadPlanFromCloud() {
           }
         });
 
-        // 2. Fusionner les tâches créées localement qui ne sont pas encore sur le cloud
-        localTasks.forEach(task => {
-          if (task && task.id && !mergedMap.has(task.id)) {
-            mergedMap.set(task.id, task);
-          }
-        });
-
-        const mergedList = Array.from(mergedMap.values());
+        let mergedList = [];
+        if (forceReplace || localTasks.length === 0) {
+          mergedList = cleanRemoteTasks;
+        } else {
+          // 2. Fusionner les tâches créées localement qui ne sont pas encore sur le cloud
+          localTasks.forEach(task => {
+            if (task && task.id && !mergedMap.has(task.id)) {
+              mergedMap.set(task.id, task);
+            }
+          });
+          mergedList = Array.from(mergedMap.values());
+        }
         window.SpanPlanState.tasks = mergedList;
         localStorage.setItem('span_plan_tasks', JSON.stringify(mergedList));
       }
@@ -886,7 +960,7 @@ async function loadPlanFromCloud() {
           localStorage.setItem('span_tasks', JSON.stringify(cleanFocusTasks));
         } catch (e) {}
 
-        if (typeof syncFocusTasksToPlanBacklog === 'function') {
+        if (!forceReplace && typeof syncFocusTasksToPlanBacklog === 'function') {
           syncFocusTasksToPlanBacklog(false, cleanFocusTasks);
         }
       }
