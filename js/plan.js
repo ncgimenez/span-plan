@@ -8,6 +8,7 @@ function getLocalDateString(dateObj = new Date()) {
 }
 
 var TODAY_STR = getLocalDateString();
+if (typeof window !== 'undefined') window.TODAY_STR = TODAY_STR;
 const yesterday = new Date();
 yesterday.setDate(yesterday.getDate() - 1);
 const YESTERDAY_STR = getLocalDateString(yesterday);
@@ -2277,18 +2278,14 @@ window.addEventListener('wheel', (e) => {
     }
   }
 }, { passive: true });
-      accumulatedWheelX = 0;
-    }
-  }
-}, { passive: true });
 
-let lastIsMobile = isMobileScreen();
+let lastIsMobile = (typeof isMobileScreen === 'function') ? isMobileScreen() : (typeof window !== 'undefined' && window.innerWidth <= 768);
 window.addEventListener('resize', () => {
-  const nowMobile = isMobileScreen();
+  const nowMobile = (typeof isMobileScreen === 'function') ? isMobileScreen() : (typeof window !== 'undefined' && window.innerWidth <= 768);
   if (nowMobile !== lastIsMobile) {
     lastIsMobile = nowMobile;
-    renderPlanGrid(true);
-    renderDateStrip();
+    if (typeof renderPlanGrid === 'function') renderPlanGrid(true);
+    if (typeof renderDateStrip === 'function') renderDateStrip();
   }
 });
 

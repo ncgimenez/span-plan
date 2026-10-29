@@ -532,14 +532,20 @@
     extractTaskUrl,
     getTaskActionType,
     normalizeTask,
+    isMobileScreen,
     SpanReactiveStore,
     createStore
   };
+
+  function isMobileScreen() {
+    return typeof window !== 'undefined' && window.innerWidth <= 768;
+  }
 
   // Browser global export
   if (typeof window !== 'undefined') {
     window.SpanCore = SpanCore;
     window.SpanReactiveStore = SpanReactiveStore;
+    if (!window.isMobileScreen) window.isMobileScreen = isMobileScreen;
     if (!window.getLocalDateString) window.getLocalDateString = getLocalDateString;
     if (!window.timeToMinutes) window.timeToMinutes = timeToMinutes;
     if (!window.minutesToTime) window.minutesToTime = minutesToTime;
