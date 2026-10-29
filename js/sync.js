@@ -7,15 +7,19 @@ const supabaseClient = (typeof supabase !== 'undefined')
   : null;
 
 function getOrCreateSyncId() {
+  if (typeof SpanSecurity !== 'undefined' && SpanSecurity.getOrCreateAccountId) {
+    return SpanSecurity.getOrCreateAccountId();
+  }
   const urlParams = new URLSearchParams(window.location.search);
   const syncParam = urlParams.get('sync');
   if (syncParam && syncParam.trim()) {
     const cleanSync = syncParam.trim();
     localStorage.setItem('span_sync_user', cleanSync);
+    localStorage.setItem('span_account_id', cleanSync);
     localStorage.setItem('span_sync_key_manually_set', 'true');
     return cleanSync;
   }
-  let id = localStorage.getItem('span_sync_user');
+  let id = localStorage.getItem('span_account_id') || localStorage.getItem('span_sync_user');
   const isLocalhost = Boolean(
     window.location.hostname === 'localhost' ||
     window.location.hostname === '127.0.0.1' ||
@@ -25,6 +29,7 @@ function getOrCreateSyncId() {
   if (!id || (isLocalhost && !manuallySet)) {
     id = isLocalhost ? 'span_local_user' : ('span_' + Math.random().toString(36).substring(2, 8) + '_' + Date.now().toString(36));
     localStorage.setItem('span_sync_user', id);
+    localStorage.setItem('span_account_id', id);
   }
   return id;
 }
@@ -56,15 +61,31 @@ async function handleLinkClick() {
   const key = input.value.trim();
   if (!key) return;
 
+  if (key.startsWith('REC-')) {
+    localStorage.setItem('span_recovery_key', key.toUpperCase());
+    if (typeof SpanSecurity !== 'undefined' && SpanSecurity.updateSecurityUI) {
+      SpanSecurity.updateSecurityUI();
+    }
+    if (typeof showToast === 'function') showToast("Clé de secours enregistrée !", 'success');
+    else alert("Clé de secours enregistrée !");
+    input.value = '';
+    return;
+  }
+
   SYNC_USER_ID = key;
   localStorage.setItem('span_sync_user', key);
+  localStorage.setItem('span_account_id', key);
   localStorage.setItem('span_sync_key_manually_set', 'true');
+  sessionStorage.removeItem('span_session_unlocked');
   
   syncKeychainInputs(key);
   updateSyncKeyDisplay();
 
   setupRealtimeSubscription();
   await loadPlanFromCloud();
+  if (typeof SpanSecurity !== 'undefined' && SpanSecurity.updateSecurityUI) {
+    SpanSecurity.updateSecurityUI();
+  }
   if (typeof showToast === 'function') showToast("Span Plan synchronisé avec succès !", 'success');
   else alert("Span Plan linked successfully!");
 }
@@ -72,6 +93,8 @@ async function handleLinkClick() {
 function updateSyncKeyDisplay() {
   const el = document.getElementById('displaySyncKey');
   if (el) el.textContent = SYNC_USER_ID;
+  const accEl = document.getElementById('displayAccountId');
+  if (accEl) accEl.textContent = SYNC_USER_ID;
   syncKeychainInputs(SYNC_USER_ID);
 }
 
@@ -237,6 +260,28 @@ async function syncPlanToCloud() {
       updated_at: new Date().toISOString()
     };
     await supabaseClient.from('user_state').upsert(payload);
+
+    // Synchronisation miroir vers user_sync (Architecture Zero-Knowledge / Stock Tracker)
+    try {
+      const pinHash = localStorage.getItem('span_pin_hash') || null;
+      let recHash = null;
+      if (typeof SpanSecurity !== 'undefined' && SpanSecurity.getOrCreateRecoveryKey && typeof sha256 === 'function') {
+        recHash = await sha256(SpanSecurity.getOrCreateRecoveryKey());
+      }
+      const syncDataPayload = {
+        tasks: (window.SpanPlanState && window.SpanPlanState.tasks) || [],
+        pin_hash: pinHash,
+        recovery_hash: recHash,
+        updated_at: new Date().toISOString()
+      };
+      await supabaseClient.from('user_sync').upsert({
+        id: SYNC_USER_ID,
+        data: syncDataPayload,
+        updated_at: new Date().toISOString()
+      });
+    } catch (syncErr) {
+      console.warn('user_sync table write warning:', syncErr.message);
+    }
   } catch (err) {
     console.warn('Cloud sync write warning:', err.message);
   } finally {
@@ -250,6 +295,33 @@ async function syncPlanToCloud() {
 async function loadPlanFromCloud() {
   if (!supabaseClient) return;
   try {
+    // 0. Synchronisation des paramètres de sécurité depuis user_sync
+    try {
+      const { data: syncRow } = await supabaseClient
+        .from('user_sync')
+        .select('data')
+        .eq('id', SYNC_USER_ID)
+        .maybeSingle();
+
+      if (syncRow && syncRow.data) {
+        const remoteData = syncRow.data;
+        if (remoteData.pin_hash && !localStorage.getItem('span_pin_hash')) {
+          localStorage.setItem('span_pin_hash', remoteData.pin_hash);
+          if (typeof SpanSecurity !== 'undefined' && SpanSecurity.isAppLocked()) {
+            SpanSecurity.showLockScreen();
+          }
+        }
+        if (remoteData.recovery_hash) {
+          sessionStorage.setItem('span_remote_recovery_hash', remoteData.recovery_hash);
+        }
+        if (typeof SpanSecurity !== 'undefined' && SpanSecurity.updateSecurityUI) {
+          SpanSecurity.updateSecurityUI();
+        }
+      }
+    } catch (secErr) {
+      console.warn('user_sync read check warning:', secErr.message);
+    }
+
     const { data, error } = await supabaseClient
       .from('user_state')
       .select('tasks')

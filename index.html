@@ -40,7 +40,7 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="style.css?v=7.61">
+  <link rel="stylesheet" href="style.css?v=7.62">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -704,8 +704,8 @@
       <!-- CATEGORY TABS BAR -->
       <div class="settings-nav-tabs" id="settingsNavTabs">
         <button class="settings-tab-btn active" data-tab="sync" onclick="switchSettingsTab('sync')">
-          <span class="tab-icon">🔄</span>
-          <span class="tab-label">Sync</span>
+          <span class="tab-icon">🛡️</span>
+          <span class="tab-label">Security & Sync</span>
         </button>
         <button class="settings-tab-btn" data-tab="calendars" onclick="switchSettingsTab('calendars')">
           <span class="tab-icon">📅</span>
@@ -727,36 +727,101 @@
 
       <div class="modal-body settings-modal-body">
         
-        <!-- PAGE 1: SYNC & CLOUD -->
+        <!-- PAGE 1: SYNC & SECURITY -->
         <div class="settings-page-pane active" id="pane_sync" data-tab="sync">
           <div class="settings-section-head">
-            <div class="settings-pane-title">Multi-Device Cloud Sync</div>
-            <div class="settings-pane-desc">Real-time bi-directional synchronization powered by Supabase across iPhone, Mac, and Span Focus.</div>
+            <div class="settings-pane-title">Sécurité Anonyme & Synchronisation Cloud</div>
+            <div class="settings-pane-desc">Architecture Zero-Knowledge avec code PIN local, QR Code de jumelage multi-appareils et synchronisation Supabase en direct.</div>
           </div>
 
+          <!-- CARD 1: PAIRING & QR CODE -->
           <div class="settings-card-box">
             <div class="card-box-header">
-              <span class="card-box-title">Your Sync Key</span>
-              <button class="btn-theme-toggle mini" type="button" onclick="copyCurrentSyncKey()">📋 Copy</button>
+              <span class="card-box-title">Identifiant Anonyme & Jumelage iPhone</span>
+              <button class="btn-theme-toggle mini" type="button" onclick="copyCurrentSyncKey()">📋 Copier l'ID</button>
             </div>
             <div class="sync-key-display-pill">
               <strong id="displaySyncKey">...</strong>
             </div>
-          </div>
 
-          <div class="settings-card-box">
-            <div class="card-box-title">Link Another Device</div>
-            <div class="card-box-desc">Paste your existing sync key from another device to connect them:</div>
-            <form id="keychainSyncForm" onsubmit="event.preventDefault(); handleLinkClick();" autocomplete="on" style="display: flex; gap: 8px; margin-top: 8px;">
-              <input type="text" name="username" id="inputSyncKey" autocomplete="username" placeholder="Paste sync key (e.g. span_...)" class="settings-text-input">
+            <!-- QR CODE -->
+            <div class="qr-container">
+              <img id="spanSyncQrCode" class="qr-image" alt="QR Code de jumelage iPhone" src="">
+            </div>
+
+            <div style="text-align: center; margin-bottom: 8px;">
+              <button type="button" class="btn-theme-toggle mini" onclick="copyDirectPairLink()" style="padding: 6px 14px; font-weight: 600;">
+                🔗 Copier le lien direct de jumelage
+              </button>
+            </div>
+            <p style="font-size: 11.5px; color: var(--text-muted); text-align: center; margin: 0 0 12px 0;">
+              Scannez simplement ce QR Code avec l'appareil photo de votre iPhone pour ouvrir Span Plan synchronisé en direct.
+            </p>
+
+            <div style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 4px;">
+              Vous avez déjà un compte ou une clé ? Collez votre identifiant :
+            </div>
+            <form id="keychainSyncForm" onsubmit="event.preventDefault(); handleLinkClick();" autocomplete="on" style="display: flex; gap: 8px;">
+              <input type="text" name="username" id="inputSyncKey" autocomplete="username" placeholder="Ex: span_... ou REC-..." class="settings-text-input">
               <input type="password" name="password" id="inputSyncSecret" autocomplete="current-password" style="display: none;">
-              <button class="btn-primary-action" type="submit">Link</button>
+              <button class="btn-primary-action" type="submit">Lier</button>
             </form>
           </div>
 
+          <!-- CARD 2: PIN PROTECTION -->
+          <div class="settings-card-box">
+            <div class="card-box-header-row" style="display: flex; justify-content: space-between; align-items: center;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 16px;">🔒</span>
+                <span class="card-box-title">Verrouillage par Code PIN (2FA Local)</span>
+              </div>
+              <span class="security-badge inactive" id="pinStatusBadge">🔓 Désactivé</span>
+            </div>
+            <div class="card-box-desc" id="pinStatusDesc" style="margin-top: 2px;">
+              Aucun code PIN configuré. Accès ouvert sur cet appareil.
+            </div>
+
+            <div style="margin-top: 10px;">
+              <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 6px;">
+                Définir un code PIN à 4 chiffres :
+              </label>
+              <div class="pin-input-group">
+                <input type="password" maxlength="1" class="pin-digit" id="newPin1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+                <input type="password" maxlength="1" class="pin-digit" id="newPin2" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+                <input type="password" maxlength="1" class="pin-digit" id="newPin3" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+                <input type="password" maxlength="1" class="pin-digit" id="newPin4" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+              </div>
+              <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px;">
+                <button type="button" class="btn-theme-toggle mini text-danger" id="btnRemovePin" onclick="removePin()" style="display: none;">
+                  Désactiver le PIN
+                </button>
+                <button type="button" class="btn-primary-action" onclick="saveNewPin()">
+                  Enregistrer le PIN
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- CARD 3: EMERGENCY RECOVERY KEY -->
+          <div class="settings-card-box recovery-box">
+            <div class="card-box-header-row" style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 16px;">⚠️</span>
+              <span class="card-box-title" style="color: #f59e0b;">Clé de Secours d'Urgence</span>
+            </div>
+            <div class="card-box-desc" style="margin-top: 4px;">
+              Si vous perdez votre appareil ou oubliez votre code PIN, cette clé est votre unique moyen de déverrouiller et réinitialiser votre compte. Conservez-la dans vos notes sécurisées.
+            </div>
+            <div class="recovery-key-text" id="displayRecoveryKey">••••-••••-••••-••••</div>
+            <div style="display: flex; gap: 8px; margin-top: 6px;">
+              <button type="button" class="btn-theme-toggle mini" id="revealRecoveryBtn" onclick="toggleRevealRecovery()">Afficher</button>
+              <button type="button" class="btn-theme-toggle mini" onclick="copyRecoveryKey()">📋 Copier la clé</button>
+            </div>
+          </div>
+
+          <!-- CARD 4: COMPANION ECOSYSTEM -->
           <div class="settings-bridge-row">
-            <span>Companion Ecosystem</span>
-            <button class="plan-bridge-btn" onclick="goToFocusApp()" title="Open Span Focus">Focus App ↗</button>
+            <span>Écosystème Span Companion</span>
+            <button class="plan-bridge-btn" onclick="goToFocusApp()" title="Ouvrir Span Focus">Focus App ↗</button>
           </div>
         </div>
 
@@ -946,14 +1011,43 @@
     <button type="button" class="multi-select-close-btn" onclick="clearSelection()" title="Fermer la sélection (Échap)">✕</button>
   </div>
 
+  <!-- MODAL: VERROUILLAGE CODE PIN ZERO-KNOWLEDGE -->
+  <div class="modal-overlay lock-modal-overlay" id="spanLockModal" style="display: none;">
+    <div class="modal-card lock-modal-card">
+      <div class="lock-icon-wrapper">
+        <span class="lock-brand-icon">🔒</span>
+      </div>
+      <h2 class="lock-modal-title">Span Plan Verrouillé</h2>
+      <p class="lock-modal-subtitle">Entrez votre code PIN à 4 chiffres pour déverrouiller votre planning.</p>
+
+      <div class="pin-input-group">
+        <input type="password" maxlength="1" class="pin-digit" id="unlockPin1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+        <input type="password" maxlength="1" class="pin-digit" id="unlockPin2" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+        <input type="password" maxlength="1" class="pin-digit" id="unlockPin3" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+        <input type="password" maxlength="1" class="pin-digit" id="unlockPin4" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+      </div>
+
+      <div id="unlockError" class="lock-error-msg" style="display: none;">
+        Code PIN incorrect
+      </div>
+
+      <div style="margin-top: 10px;">
+        <button type="button" class="btn-recovery-link" onclick="unlockWithRecoveryKey()">
+          Code PIN oublié ? Utiliser la clé de secours
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/core.js?v=7.61"></script>
-  <script src="js/sync.js?v=7.61"></script>
-  <script src="js/gcal.js?v=7.61"></script>
-  <script src="js/plan.js?v=7.61"></script>
-  <script src="js/calendar-layout.js?v=7.61"></script>
-  <script src="js/calendar-drag.js?v=7.61"></script>
-  <script src="js/plan-modals.js?v=7.61"></script>
-  <script src="js/app.js?v=7.61"></script>
+  <script src="js/core.js?v=7.62"></script>
+  <script src="js/security.js?v=7.62"></script>
+  <script src="js/sync.js?v=7.62"></script>
+  <script src="js/gcal.js?v=7.62"></script>
+  <script src="js/plan.js?v=7.62"></script>
+  <script src="js/calendar-layout.js?v=7.62"></script>
+  <script src="js/calendar-drag.js?v=7.62"></script>
+  <script src="js/plan-modals.js?v=7.62"></script>
+  <script src="js/app.js?v=7.62"></script>
 </body>
 </html>

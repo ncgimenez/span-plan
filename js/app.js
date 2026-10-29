@@ -51,6 +51,9 @@ function openSettingsModal(defaultTab = 'sync') {
     if (typeof updateSyncKeyDisplay === 'function') {
       updateSyncKeyDisplay();
     }
+    if (typeof SpanSecurity !== 'undefined' && SpanSecurity.updateSecurityUI) {
+      SpanSecurity.updateSecurityUI();
+    }
   }
 }
 
@@ -310,6 +313,9 @@ function showToast(message, type = 'info', duration = 3000) {
 
 // Raccourcis clavier universels et ergonomiques (Mac: ⌘, Win/Linux: Ctrl)
 window.addEventListener('keydown', (e) => {
+  if (typeof SpanSecurity !== 'undefined' && SpanSecurity.isAppLocked && SpanSecurity.isAppLocked()) {
+    return;
+  }
   const isEditing = ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName) || e.target.isContentEditable;
   const hasModifier = (e.metaKey || e.ctrlKey);
 
