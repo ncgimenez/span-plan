@@ -14,24 +14,17 @@ function getOrCreateSyncId() {
   const syncParam = urlParams.get('sync');
   if (syncParam && syncParam.trim()) {
     const cleanSync = syncParam.trim();
+    localStorage.removeItem('span_user_logged_out');
     localStorage.setItem('span_sync_user', cleanSync);
     localStorage.setItem('span_account_id', cleanSync);
     localStorage.setItem('span_sync_key_manually_set', 'true');
     return cleanSync;
   }
-  let id = localStorage.getItem('span_account_id') || localStorage.getItem('span_sync_user');
-  const isLocalhost = Boolean(
-    window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1' ||
-    window.location.hostname === '0.0.0.0'
-  );
-  const manuallySet = localStorage.getItem('span_sync_key_manually_set') === 'true';
-  if (!id || (isLocalhost && !manuallySet)) {
-    id = isLocalhost ? 'span_local_user' : ('span_' + Math.random().toString(36).substring(2, 8) + '_' + Date.now().toString(36));
-    localStorage.setItem('span_sync_user', id);
-    localStorage.setItem('span_account_id', id);
+  if (localStorage.getItem('span_user_logged_out') === 'true') {
+    return '';
   }
-  return id;
+  let id = localStorage.getItem('span_account_id') || localStorage.getItem('span_sync_user');
+  return id || '';
 }
 
 let SYNC_USER_ID = getOrCreateSyncId();
@@ -39,6 +32,10 @@ let isCloudSyncInProgress = false;
 let realtimeSubscription = null;
 
 function copyCurrentSyncKey() {
+  if (!SYNC_USER_ID) {
+    if (typeof showToast === 'function') showToast("Aucun compte actif à copier.", 'warning');
+    return;
+  }
   navigator.clipboard.writeText(SYNC_USER_ID).then(() => {
     if (typeof showToast === 'function') showToast("Clé de synchronisation copiée !", 'success');
     else alert("Sync key copied to clipboard!");
@@ -77,8 +74,11 @@ async function handleLinkClick() {
   const shouldReplace = chkReplace ? chkReplace.checked : ((window.SpanPlanState?.tasks || []).length === 0);
 
   // 1. Sauvegarder automatiquement un point de restauration complet avant la liaison
-  createSyncSnapshot(`Avant liaison avec ${key.slice(0, 12)}...`, SYNC_USER_ID);
-  recordAccountInHistory(SYNC_USER_ID, 'Compte précédent');
+  localStorage.removeItem('span_user_logged_out');
+  if (SYNC_USER_ID) {
+    createSyncSnapshot(`Avant liaison avec ${key.slice(0, 12)}...`, SYNC_USER_ID);
+    recordAccountInHistory(SYNC_USER_ID, 'Compte précédent');
+  }
 
   SYNC_USER_ID = key;
   localStorage.setItem('span_sync_user', key);
@@ -103,11 +103,23 @@ async function handleLinkClick() {
 }
 
 function updateSyncKeyDisplay() {
+  const isConnected = !!SYNC_USER_ID;
   const el = document.getElementById('displaySyncKey');
-  if (el) el.textContent = SYNC_USER_ID;
+  if (el) el.textContent = isConnected ? SYNC_USER_ID : 'Déconnecté (aucun compte lié)';
   const accEl = document.getElementById('displayAccountId');
-  if (accEl) accEl.textContent = SYNC_USER_ID;
-  syncKeychainInputs(SYNC_USER_ID);
+  if (accEl) accEl.textContent = isConnected ? SYNC_USER_ID : 'Non connecté';
+
+  const connectedView = document.getElementById('syncConnectedView');
+  const disconnectedView = document.getElementById('syncDisconnectedView');
+  const btnLogout = document.getElementById('btnLogoutSync');
+  const btnCopy = document.getElementById('btnCopySyncKey');
+
+  if (connectedView) connectedView.style.display = isConnected ? 'block' : 'none';
+  if (disconnectedView) disconnectedView.style.display = isConnected ? 'none' : 'block';
+  if (btnLogout) btnLogout.style.display = isConnected ? 'inline-flex' : 'none';
+  if (btnCopy) btnCopy.style.display = isConnected ? 'inline-flex' : 'none';
+
+  syncKeychainInputs(SYNC_USER_ID || '');
   renderSyncHistoryAndSnapshotsUI();
 }
 
@@ -278,70 +290,75 @@ function removeAccountFromHistory(targetKey) {
 }
 window.removeAccountFromHistory = removeAccountFromHistory;
 
-function unlinkAccountAndReset() {
-  const currentKey = SYNC_USER_ID;
-  if (!confirm(`Voulez-vous délier ce compte (${currentKey}) ?\n\nUn nouvel identifiant privé et indépendant va être généré pour votre appareil afin d'isoler complètement vos données.`)) {
-    return;
-  }
+function openCreateAccountPrompt() {
+  const customName = prompt(
+    "Créer un nouveau compte synchronisé :\n\n" +
+    "Entrez un pseudo ou un nom pour ce compte (optionnel, ex: nadia) :\n" +
+    "(Un code aléatoire sera ajouté en préfixe pour garantir l'unicité et la sécurité, ex: span_x7b2_nadia)."
+  );
+  if (customName === null) return; // Annulé
 
-  // 1. Sauvegarder un snapshot de secours de l'état actuel avant de délier
-  createSyncSnapshot(`Avant déliaison du compte ${currentKey.slice(0, 10)}...`, currentKey);
+  const sanitized = (customName || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 20);
+  const rand = Math.random().toString(36).substring(2, 6);
+  const time = Date.now().toString(36).slice(-4);
+  
+  // Format : span_random_pseudo ou span_random_time
+  const newId = sanitized ? `span_${rand}_${sanitized}` : `span_${rand}_${time}`;
 
-  // 2. Archiver le compte dans l'historique des comptes
-  recordAccountInHistory(currentKey, 'Compte délié');
-
-  // 3. Générer un nouvel ID unique et privé
-  const newPart = Math.random().toString(36).substring(2, 8);
-  const newTime = Date.now().toString(36);
-  const newId = `span_${newPart}_${newTime}`;
-
+  localStorage.removeItem('span_user_logged_out');
   SYNC_USER_ID = newId;
   localStorage.setItem('span_sync_user', newId);
   localStorage.setItem('span_account_id', newId);
   localStorage.setItem('span_sync_key_manually_set', 'true');
-  sessionStorage.removeItem('span_session_unlocked');
 
-  // Enregistrer le nouveau compte dans l'historique
-  recordAccountInHistory(newId, 'Mon compte privé');
+  recordAccountInHistory(newId, sanitized ? `Compte (${sanitized})` : 'Mon compte');
 
-  // 4. Mettre à jour l'UI et la souscription Realtime
   syncKeychainInputs(newId);
   updateSyncKeyDisplay();
   setupRealtimeSubscription();
-
-  // 5. Sauvegarder le nouvel état cloud vierge/indépendant
   syncPlanToCloud();
 
   if (typeof SpanSecurity !== 'undefined' && SpanSecurity.updateSecurityUI) {
     SpanSecurity.updateSecurityUI();
   }
 
-  renderSyncHistoryAndSnapshotsUI();
-
   if (typeof showToast === 'function') {
-    showToast(`Compte délié ! Nouvel identifiant privé généré : ${newId}`, 'success', 3500);
+    showToast(`Nouveau compte créé : ${newId}`, 'success', 4000);
   }
 }
-window.unlinkAccountAndReset = unlinkAccountAndReset;
+window.openCreateAccountPrompt = openCreateAccountPrompt;
+
+function clearAllSyncHistory() {
+  if (!confirm("Voulez-vous supprimer tout l'historique des anciens comptes déconnectés et des sauvegardes automatiques ?\n\n(Vos tâches actuelles et votre compte actif ne seront pas affectés).")) {
+    return;
+  }
+  localStorage.removeItem('span_sync_accounts_history');
+  localStorage.removeItem('span_sync_snapshots');
+  renderSyncHistoryAndSnapshotsUI();
+  if (typeof showToast === 'function') {
+    showToast("Historique entièrement nettoyé !", 'success');
+  }
+}
+window.clearAllSyncHistory = clearAllSyncHistory;
 
 function logoutAccount() {
   const currentKey = SYNC_USER_ID;
   const taskCount = (window.SpanPlanState && window.SpanPlanState.tasks) ? window.SpanPlanState.tasks.length : 0;
 
-  const msg = `Se déconnecter de ce compte (${currentKey}) ?\n\n` +
-    `• Vos données restent en sécurité sur le cloud pour cet identifiant.\n` +
-    `• Vos ${taskCount} tâches actuelles seront effacées de cet appareil pour repartir sur un écran vierge.\n` +
-    `• Vous pourrez ensuite saisir votre propre nom d'utilisateur ou importer une sauvegarde, sans aucun mélange.`;
+  if (currentKey) {
+    const msg = `Se déconnecter de ce compte (${currentKey}) ?\n\n` +
+      `• Vos données restent en sécurité sur le cloud pour cet identifiant.\n` +
+      `• Vos ${taskCount} tâches actuelles seront effacées de cet appareil pour repartir sur un écran vierge.\n` +
+      `• Aucun nouveau compte ne sera créé : vous resterez déconnecté jusqu'à ce que vous choisissiez de vous reconnecter.`;
 
-  if (!confirm(msg)) {
-    return;
+    if (!confirm(msg)) {
+      return;
+    }
+
+    createSyncSnapshot(`Avant déconnexion de ${currentKey.slice(0, 16)}...`, currentKey);
   }
 
-  // 1. Sauvegarder automatiquement un point de restauration complet avant la déconnexion
-  createSyncSnapshot(`Avant déconnexion du compte ${currentKey.slice(0, 10)}...`, currentKey);
-  recordAccountInHistory(currentKey, 'Compte déconnecté');
-
-  // 2. Couper la souscription Realtime Supabase
+  // 1. Couper la souscription Realtime Supabase
   if (realtimeSubscription && supabaseClient) {
     try {
       supabaseClient.removeChannel(realtimeSubscription);
@@ -349,13 +366,13 @@ function logoutAccount() {
     } catch (_) {}
   }
 
-  // 3. Vider l'état en mémoire
+  // 2. Vider l'état en mémoire
   window.SpanPlanState.tasks = [];
   if (window.SpanPlanStore) {
     window.SpanPlanStore.tasks = [];
   }
 
-  // 4. Vider les clés de stockage locales de ce compte
+  // 3. Vider les clés de stockage locales de ce compte
   localStorage.removeItem('span_plan_tasks');
   localStorage.removeItem('span_tasks');
   localStorage.removeItem('span_sync_user');
@@ -365,18 +382,16 @@ function logoutAccount() {
   localStorage.removeItem('span_deleted_task_ids');
   sessionStorage.removeItem('span_session_unlocked');
 
-  // 5. Générer un identifiant privé tout neuf pour ce navigateur
-  const part = Math.random().toString(36).substring(2, 8);
-  const time = Date.now().toString(36);
-  const newId = `span_${part}_${time}`;
-  SYNC_USER_ID = newId;
-  localStorage.setItem('span_sync_user', newId);
-  localStorage.setItem('span_account_id', newId);
+  // 4. Marquer l'appareil comme explicitement déconnecté : ZÉRO NOUVEAU COMPTE CRÉÉ !
+  localStorage.setItem('span_user_logged_out', 'true');
+  SYNC_USER_ID = '';
 
-  // 6. Mettre à jour l'UI
+  // 5. Mettre à jour l'UI
   syncKeychainInputs('');
   updateSyncKeyDisplay();
-  setupRealtimeSubscription();
+  if (typeof SpanSecurity !== 'undefined' && SpanSecurity.updateSecurityUI) {
+    SpanSecurity.updateSecurityUI();
+  }
 
   if (typeof renderPlanGrid === 'function') renderPlanGrid(true);
   if (typeof renderBacklogDrawer === 'function') renderBacklogDrawer();
@@ -385,7 +400,7 @@ function logoutAccount() {
   renderSyncHistoryAndSnapshotsUI();
 
   if (typeof showToast === 'function') {
-    showToast("Déconnecté avec succès ! Votre calendrier local est maintenant vierge.", 'info', 4000);
+    showToast("Déconnecté avec succès. Aucun compte actif.", 'info', 4000);
   }
 }
 window.logoutAccount = logoutAccount;
@@ -425,7 +440,7 @@ function renderSyncHistoryAndSnapshotsUI() {
   const accContainer = document.getElementById('syncAccountsHistoryContainer');
   if (accContainer) {
     const accounts = getAccountsHistory();
-    const otherAccounts = accounts.filter(a => a.id !== SYNC_USER_ID);
+    const otherAccounts = accounts.filter(a => a.id && a.id !== SYNC_USER_ID);
     if (otherAccounts.length === 0) {
       accContainer.innerHTML = '';
     } else {
@@ -622,7 +637,7 @@ let lastPlanCloudWriteTime = 0;
 
 // ENVOI VERS SUPABASE
 async function syncPlanToCloud() {
-  if (!supabaseClient) return;
+  if (!supabaseClient || !SYNC_USER_ID) return;
   try {
     lastPlanCloudWriteTime = Date.now();
     isCloudSyncInProgress = true;
@@ -813,7 +828,7 @@ async function syncPlanToCloud() {
 
 // FUSION INTELLIGENTE ET APPLICATION DIRECTE
 async function loadPlanFromCloud(forceReplace = false) {
-  if (!supabaseClient) return;
+  if (!supabaseClient || !SYNC_USER_ID) return;
   try {
     // 0. Synchronisation des paramètres de sécurité depuis user_sync
     try {
@@ -1001,7 +1016,10 @@ function setupRealtimeSubscription() {
 
   if (realtimeSubscription) {
     supabaseClient.removeChannel(realtimeSubscription);
+    realtimeSubscription = null;
   }
+
+  if (!SYNC_USER_ID) return;
 
   realtimeSubscription = supabaseClient
     .channel('realtime_span_plan_' + SYNC_USER_ID)

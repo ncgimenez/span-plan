@@ -48,12 +48,18 @@
       const syncParam = urlParams.get('sync');
       if (syncParam && syncParam.trim()) {
         const cleanSync = syncParam.trim();
+        localStorage.removeItem('span_user_logged_out');
         localStorage.setItem('span_account_id', cleanSync);
         localStorage.setItem('span_sync_user', cleanSync);
         localStorage.setItem('span_sync_key_manually_set', 'true');
         return cleanSync;
       }
     } catch (e) {}
+
+    // Si l'utilisateur s'est explicitement déconnecté, ne jamais fabriquer d'ID fantôme !
+    if (localStorage.getItem('span_user_logged_out') === 'true') {
+      return '';
+    }
 
     // 2. Détection via localStorage (supporte span_account_id et span_sync_user)
     let id = localStorage.getItem('span_account_id') || localStorage.getItem('span_sync_user');
@@ -257,15 +263,26 @@
     if (typeof document === 'undefined') return;
 
     const accountId = getOrCreateAccountId();
+    const isConnected = !!accountId;
     const pinHash = localStorage.getItem('span_pin_hash');
     const recoveryKey = getOrCreateRecoveryKey();
 
     // Identifiant de compte
     const accEl = document.getElementById('displayAccountId');
-    if (accEl) accEl.textContent = accountId;
+    if (accEl) accEl.textContent = isConnected ? accountId : 'Non connecté';
 
     const syncKeyEl = document.getElementById('displaySyncKey');
-    if (syncKeyEl) syncKeyEl.textContent = accountId;
+    if (syncKeyEl) syncKeyEl.textContent = isConnected ? accountId : 'Déconnecté (aucun compte lié)';
+
+    const connectedView = document.getElementById('syncConnectedView');
+    const disconnectedView = document.getElementById('syncDisconnectedView');
+    const btnLogout = document.getElementById('btnLogoutSync');
+    const btnCopy = document.getElementById('btnCopySyncKey');
+
+    if (connectedView) connectedView.style.display = isConnected ? 'block' : 'none';
+    if (disconnectedView) disconnectedView.style.display = isConnected ? 'none' : 'block';
+    if (btnLogout) btnLogout.style.display = isConnected ? 'inline-flex' : 'none';
+    if (btnCopy) btnCopy.style.display = isConnected ? 'inline-flex' : 'none';
 
     // Statut PIN
     const badge = document.getElementById('pinStatusBadge');
@@ -296,9 +313,9 @@
     }
 
     // QR Code de jumelage
-    const pairUrl = `${window.location.origin}${window.location.pathname}?sync=${encodeURIComponent(accountId)}`;
     const qrImg = document.getElementById('spanSyncQrCode');
-    if (qrImg) {
+    if (qrImg && isConnected) {
+      const pairUrl = `${window.location.origin}${window.location.pathname}?sync=${encodeURIComponent(accountId)}`;
       qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(pairUrl)}`;
     }
   }
@@ -324,6 +341,11 @@
 
   function copyDirectPairLink() {
     const accountId = getOrCreateAccountId();
+    if (!accountId) {
+      if (typeof window.showToast === 'function') window.showToast("Vous devez être connecté à un compte pour le jumeler.", 'warning');
+      else alert("Connectez-vous à un compte pour obtenir le lien de jumelage.");
+      return;
+    }
     const pairUrl = `${window.location.origin}${window.location.pathname}?sync=${encodeURIComponent(accountId)}`;
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(pairUrl).then(() => {

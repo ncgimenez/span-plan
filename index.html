@@ -40,7 +40,7 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="style.css?v=7.74">
+  <link rel="stylesheet" href="style.css?v=7.75">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -743,51 +743,71 @@
           <!-- CARD 1: PAIRING & QR CODE -->
           <div class="settings-card-box">
             <div class="card-box-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
-              <span class="card-box-title">Identifiant Anonyme & Jumelage iPhone</span>
+              <span class="card-box-title">Identifiant & Synchronisation iPhone</span>
               <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-                <button class="btn-theme-toggle mini" type="button" onclick="copyCurrentSyncKey()">📋 Copier</button>
-                <button class="btn-theme-toggle mini text-danger" type="button" onclick="unlinkAccountAndReset()" title="Délier ce compte et générer un compte privé isolé" style="color: #f59e0b; border-color: rgba(245, 158, 11, 0.3);">✂️ Délier</button>
-                <button class="btn-theme-toggle mini text-danger" type="button" onclick="logoutAccount()" title="Se déconnecter et vider les données de cet appareil pour repartir à zéro" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.08);">🚪 Se déconnecter</button>
+                <button class="btn-theme-toggle mini" id="btnCopySyncKey" type="button" onclick="copyCurrentSyncKey()">📋 Copier</button>
+                <button class="btn-theme-toggle mini text-danger" id="btnLogoutSync" type="button" onclick="logoutAccount()" title="Se déconnecter de ce compte" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.08);">🚪 Se déconnecter</button>
               </div>
             </div>
-            <div class="sync-key-display-pill">
-              <strong id="displaySyncKey">...</strong>
+
+            <!-- CONTENU QUAND CONNECTÉ -->
+            <div id="syncConnectedView">
+              <div class="sync-key-display-pill">
+                <strong id="displaySyncKey">...</strong>
+              </div>
+
+              <!-- QR CODE -->
+              <div class="qr-container">
+                <img id="spanSyncQrCode" class="qr-image" alt="QR Code de jumelage iPhone" src="">
+              </div>
+
+              <div style="text-align: center; margin-bottom: 8px;">
+                <button type="button" class="btn-theme-toggle mini" onclick="copyDirectPairLink()" style="padding: 6px 14px; font-weight: 600;">
+                  🔗 Copier le lien direct de jumelage
+                </button>
+              </div>
+              <p style="font-size: 11.5px; color: var(--text-muted); text-align: center; margin: 0 0 12px 0;">
+                Scannez simplement ce QR Code avec l'appareil photo de votre iPhone pour ouvrir Span Plan synchronisé en direct.
+              </p>
             </div>
 
-            <!-- QR CODE -->
-            <div class="qr-container">
-              <img id="spanSyncQrCode" class="qr-image" alt="QR Code de jumelage iPhone" src="">
-            </div>
-
-            <div style="text-align: center; margin-bottom: 8px;">
-              <button type="button" class="btn-theme-toggle mini" onclick="copyDirectPairLink()" style="padding: 6px 14px; font-weight: 600;">
-                🔗 Copier le lien direct de jumelage
+            <!-- CONTENU QUAND DÉCONNECTÉ -->
+            <div id="syncDisconnectedView" style="display: none; padding: 14px 10px; background: rgba(0, 0, 0, 0.2); border-radius: 10px; border: 1px dashed rgba(255, 255, 255, 0.15); text-align: center; margin: 8px 0 12px 0;">
+              <div style="font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">
+                Mode Local Déconnecté
+              </div>
+              <p style="font-size: 11.5px; color: var(--text-muted); margin: 0 auto 12px auto; max-width: 380px; line-height: 1.4;">
+                Aucun compte n'est actif. Vos tâches restent locales sur cet appareil. Pour synchroniser avec votre iPhone, connectez-vous ou créez un compte ci-dessous.
+              </p>
+              <button type="button" class="btn-primary-action" onclick="openCreateAccountPrompt()" style="margin: 0 auto;">
+                ✨ Créer un nouveau compte synchronisé
               </button>
             </div>
-            <p style="font-size: 11.5px; color: var(--text-muted); text-align: center; margin: 0 0 12px 0;">
-              Scannez simplement ce QR Code avec l'appareil photo de votre iPhone pour ouvrir Span Plan synchronisé en direct.
-            </p>
 
-            <div style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 4px;">
-              Vous avez déjà un compte ou une clé ? Collez votre identifiant :
+            <!-- FORMULAIRE DE CONNEXION / LIAISON -->
+            <div style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 4px; margin-top: 10px;">
+              Vous avez déjà un compte ou une clé ? Saisissez votre identifiant :
             </div>
             <form id="keychainSyncForm" onsubmit="event.preventDefault(); handleLinkClick();" autocomplete="on" style="display: flex; flex-direction: column; gap: 6px;">
               <div style="display: flex; gap: 8px;">
                 <input type="text" name="username" id="inputSyncKey" autocomplete="username" placeholder="Ex: span_... ou REC-..." class="settings-text-input">
                 <input type="password" name="password" id="inputSyncSecret" autocomplete="current-password" style="display: none;">
-                <button class="btn-primary-action" type="submit">Lier</button>
+                <button class="btn-primary-action" type="submit">Se connecter / Lier</button>
               </div>
               <label style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; cursor: pointer;">
                 <input type="checkbox" id="chkReplaceLocalOnLink" checked>
-                <span>Remplacer les tâches locales par celles du compte (évite de fusionner avec l'ancien compte)</span>
+                <span>Remplacer les tâches locales par celles du compte</span>
               </label>
             </form>
 
             <!-- OUTILS DE RETOUR EN ARRIÈRE & DÉMÊLAGE -->
             <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08);">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--text-main);">Historique des Liens & Restauration (Rollback)</span>
-                <button type="button" class="btn-theme-toggle mini" onclick="createManualSyncSnapshot()" title="Créer un point de sauvegarde maintenant">📸 Sauvegarder maintenant</button>
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-main);">Historique des Liens & Restauration</span>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <button type="button" class="btn-theme-toggle mini" onclick="createManualSyncSnapshot()" title="Créer un point de sauvegarde maintenant">📸 Sauvegarder</button>
+                  <button type="button" class="btn-theme-toggle mini text-danger" onclick="clearAllSyncHistory()" title="Effacer tous les anciens comptes fantômes et points de restauration" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">🗑️ Vider tout l'historique</button>
+                </div>
               </div>
 
               <div style="display: flex; gap: 8px; margin-bottom: 10px;">
@@ -1221,14 +1241,14 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/core.js?v=7.74"></script>
-  <script src="js/security.js?v=7.74"></script>
-  <script src="js/sync.js?v=7.74"></script>
-  <script src="js/gcal.js?v=7.74"></script>
-  <script src="js/plan.js?v=7.74"></script>
-  <script src="js/calendar-layout.js?v=7.74"></script>
-  <script src="js/calendar-drag.js?v=7.74"></script>
-  <script src="js/plan-modals.js?v=7.74"></script>
-  <script src="js/app.js?v=7.74"></script>
+  <script src="js/core.js?v=7.75"></script>
+  <script src="js/security.js?v=7.75"></script>
+  <script src="js/sync.js?v=7.75"></script>
+  <script src="js/gcal.js?v=7.75"></script>
+  <script src="js/plan.js?v=7.75"></script>
+  <script src="js/calendar-layout.js?v=7.75"></script>
+  <script src="js/calendar-drag.js?v=7.75"></script>
+  <script src="js/plan-modals.js?v=7.75"></script>
+  <script src="js/app.js?v=7.75"></script>
 </body>
 </html>
