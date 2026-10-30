@@ -1,6 +1,6 @@
 // Google Calendar OAuth 2.0 & Bidirectional Sync for Span Plan
-const GCAL_DEFAULT_CLIENT_ID = localStorage.getItem('span_gcal_client_id') || '784381920192-sampleclientid.apps.googleusercontent.com';
-const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly';
+const GCAL_DEFAULT_CLIENT_ID = '720058518059-jo6mru0q8htqt4k7armu4bhfqojols0o.apps.googleusercontent.com';
+const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly email';
 
 let gcalTokenClient = null;
 let gcalAccessToken = localStorage.getItem('span_gcal_access_token') || null;
@@ -31,7 +31,7 @@ function initGoogleAuth() {
         } else if (tokenResponse && tokenResponse.error) {
           console.error('Google OAuth error:', tokenResponse);
           if (typeof showToast === 'function') {
-            showToast('Google OAuth sign-in failed: ' + tokenResponse.error, 'danger');
+            showToast('Google OAuth sign-in failed: ' + (tokenResponse.error_description || tokenResponse.error), 'danger');
           }
         }
       }
@@ -87,7 +87,7 @@ function toggleGcalConfigBox() {
   if (box.style.display === 'flex') {
     const input = document.getElementById('inputGcalClientId');
     if (input) {
-      input.value = localStorage.getItem('span_gcal_client_id') || '';
+      input.value = localStorage.getItem('span_gcal_client_id') || GCAL_DEFAULT_CLIENT_ID;
       input.focus();
     }
   }
@@ -109,9 +109,9 @@ function saveCustomGcalClientId() {
 }
 
 function connectGoogleCalendar() {
-  const customClientId = localStorage.getItem('span_gcal_client_id');
+  const activeClientId = localStorage.getItem('span_gcal_client_id') || GCAL_DEFAULT_CLIENT_ID;
   
-  if (!customClientId || customClientId.includes('sampleclientid')) {
+  if (!activeClientId || activeClientId.includes('sampleclientid')) {
     toggleGcalConfigBox();
     if (typeof showToast === 'function') {
       showToast('Entrez votre Google Client ID ci-dessous', 'info');
@@ -126,7 +126,15 @@ function connectGoogleCalendar() {
   if (gcalTokenClient) {
     gcalTokenClient.requestAccessToken({ prompt: 'consent' });
   } else {
-    alert("Impossible d'initialiser Google Identity Services. Vérifiez votre Client ID.");
+    if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
+      if (typeof showToast === 'function') {
+        showToast("Chargement de Google Identity Services en cours, veuillez patienter un instant...", 'info');
+      } else {
+        alert("Chargement de Google Identity Services en cours, réessayez dans quelques secondes...");
+      }
+    } else {
+      alert("Impossible d'initialiser Google Identity Services. Vérifiez votre Client ID.");
+    }
   }
 }
 
@@ -166,6 +174,13 @@ async function getOrCreateSpanCalendar() {
     
     if (listRes.ok) {
       const data = await listRes.json();
+      const primary = (data.items || []).find(c => c.primary);
+      if (primary && primary.id && !gcalConnectedEmail) {
+        gcalConnectedEmail = primary.id;
+        localStorage.setItem('span_gcal_email', gcalConnectedEmail);
+        updateGcalUiState();
+      }
+
       const existing = (data.items || []).find(c => c.summary === 'Span Plan');
       if (existing) {
         gcalTargetCalendarId = existing.id;
@@ -457,8 +472,16 @@ function updateGcalUiState() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    initGoogleAuth();
-    updateGcalUiState();
-  }, 200);
+  let attempts = 0;
+  const pollInit = () => {
+    if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
+      initGoogleAuth();
+      updateGcalUiState();
+    } else if (attempts < 15) {
+      attempts++;
+      setTimeout(pollInit, 250);
+    }
+  };
+  pollInit();
+  updateGcalUiState();
 });
