@@ -348,14 +348,12 @@ function logoutAccount() {
   if (currentKey) {
     const msg = `Se déconnecter de ce compte (${currentKey}) ?\n\n` +
       `• Vos données restent en sécurité sur le cloud pour cet identifiant.\n` +
-      `• Vos ${taskCount} tâches actuelles seront effacées de cet appareil pour repartir sur un écran vierge.\n` +
-      `• Aucun nouveau compte ne sera créé : vous resterez déconnecté jusqu'à ce que vous choisissiez de vous reconnecter.`;
+      `• Cet appareil sera entièrement réinitialisé et l'historique des sessions sera effacé.\n` +
+      `• Aucun nouveau compte ne sera créé : vous resterez déconnecté.`;
 
     if (!confirm(msg)) {
       return;
     }
-
-    createSyncSnapshot(`Avant déconnexion de ${currentKey.slice(0, 16)}...`, currentKey);
   }
 
   // 1. Couper la souscription Realtime Supabase
@@ -372,7 +370,7 @@ function logoutAccount() {
     window.SpanPlanStore.tasks = [];
   }
 
-  // 3. Vider les clés de stockage locales de ce compte
+  // 3. Vider les clés de stockage locales et l'historique complet sur cet appareil
   localStorage.removeItem('span_plan_tasks');
   localStorage.removeItem('span_tasks');
   localStorage.removeItem('span_sync_user');
@@ -380,6 +378,8 @@ function logoutAccount() {
   localStorage.removeItem('span_sync_key_manually_set');
   localStorage.removeItem('span_plan_dismissed_focus_ids');
   localStorage.removeItem('span_deleted_task_ids');
+  localStorage.removeItem('span_sync_accounts_history');
+  localStorage.removeItem('span_sync_snapshots');
   sessionStorage.removeItem('span_session_unlocked');
 
   // 4. Marquer l'appareil comme explicitement déconnecté : ZÉRO NOUVEAU COMPTE CRÉÉ !
@@ -400,7 +400,7 @@ function logoutAccount() {
   renderSyncHistoryAndSnapshotsUI();
 
   if (typeof showToast === 'function') {
-    showToast("Déconnecté avec succès. Aucun compte actif.", 'info', 4000);
+    showToast("Déconnecté avec succès. Appareil et historique nettoyés.", 'info', 4000);
   }
 }
 window.logoutAccount = logoutAccount;
