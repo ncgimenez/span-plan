@@ -291,19 +291,21 @@ function removeAccountFromHistory(targetKey) {
 window.removeAccountFromHistory = removeAccountFromHistory;
 
 function openCreateAccountPrompt() {
+  const rand = Math.random().toString(36).substring(2, 6);
+  const defaultSuffix = Date.now().toString(36).slice(-4);
+
   const customName = prompt(
     "Créer un nouveau compte synchronisé :\n\n" +
-    "Entrez un pseudo ou un nom pour ce compte (optionnel, ex: nadia) :\n" +
-    "(Un code aléatoire sera ajouté en préfixe pour garantir l'unicité et la sécurité, ex: span_x7b2_nadia)."
+    `Préfixe généré fixe : span_${rand}_\n\n` +
+    "Personnalisez la fin de votre identifiant avec votre pseudo (ex: nadia) :\n" +
+    `(Laissez vide pour conserver l'identifiant automatique : span_${rand}_${defaultSuffix})`
   );
   if (customName === null) return; // Annulé
 
-  const sanitized = (customName || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 20);
-  const rand = Math.random().toString(36).substring(2, 6);
-  const time = Date.now().toString(36).slice(-4);
+  const sanitized = (customName || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 24);
   
-  // Format : span_random_pseudo ou span_random_time
-  const newId = sanitized ? `span_${rand}_${sanitized}` : `span_${rand}_${time}`;
+  // Format : span_<random>_<pseudo> ou span_<random>_<suffix>
+  const newId = sanitized ? `span_${rand}_${sanitized}` : `span_${rand}_${defaultSuffix}`;
 
   localStorage.removeItem('span_user_logged_out');
   SYNC_USER_ID = newId;
@@ -321,12 +323,78 @@ function openCreateAccountPrompt() {
   if (typeof SpanSecurity !== 'undefined' && SpanSecurity.updateSecurityUI) {
     SpanSecurity.updateSecurityUI();
   }
+  renderSyncHistoryAndSnapshotsUI();
 
   if (typeof showToast === 'function') {
     showToast(`Nouveau compte créé : ${newId}`, 'success', 4000);
   }
 }
 window.openCreateAccountPrompt = openCreateAccountPrompt;
+
+function editAccountPseudo() {
+  if (!SYNC_USER_ID) {
+    if (typeof showToast === 'function') showToast("Aucun compte actif à modifier.", 'warning');
+    return;
+  }
+
+  const parts = SYNC_USER_ID.split('_');
+  let prefix = 'span';
+  let rand = '';
+  let currentPseudo = '';
+
+  if (parts.length >= 3) {
+    prefix = parts[0];
+    rand = parts[1];
+    currentPseudo = parts.slice(2).join('_');
+  } else if (parts.length === 2) {
+    prefix = parts[0];
+    rand = parts[1];
+  } else {
+    prefix = 'span';
+    rand = Math.random().toString(36).substring(2, 6);
+    currentPseudo = parts[0] || '';
+  }
+
+  const basePrefix = `${prefix}_${rand}_`;
+  const input = prompt(
+    `Personnaliser la fin de votre identifiant :\n\n` +
+    `Préfixe fixe : ${basePrefix}\n\n` +
+    `Entrez votre pseudo (ex: nadia) :\n` +
+    `(Laissez vide pour générer un code aléatoire automatique)`,
+    currentPseudo
+  );
+  if (input === null) return; // Annulé
+
+  const sanitized = (input || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 24);
+  const defaultSuffix = Date.now().toString(36).slice(-4);
+  const newId = sanitized ? `${basePrefix}${sanitized}` : `${basePrefix}${defaultSuffix}`;
+
+  if (newId === SYNC_USER_ID) return;
+
+  const oldId = SYNC_USER_ID;
+  createSyncSnapshot(`Avant changement vers ${newId}`, oldId);
+
+  SYNC_USER_ID = newId;
+  localStorage.setItem('span_sync_user', newId);
+  localStorage.setItem('span_account_id', newId);
+  localStorage.setItem('span_sync_key_manually_set', 'true');
+
+  recordAccountInHistory(newId, sanitized ? `Compte (${sanitized})` : 'Mon compte');
+  syncKeychainInputs(newId);
+  updateSyncKeyDisplay();
+  setupRealtimeSubscription();
+  syncPlanToCloud();
+
+  if (typeof SpanSecurity !== 'undefined' && SpanSecurity.updateSecurityUI) {
+    SpanSecurity.updateSecurityUI();
+  }
+  renderSyncHistoryAndSnapshotsUI();
+
+  if (typeof showToast === 'function') {
+    showToast(`Identifiant mis à jour : ${newId}`, 'success', 4000);
+  }
+}
+window.editAccountPseudo = editAccountPseudo;
 
 function clearAllSyncHistory() {
   if (!confirm("Voulez-vous supprimer tout l'historique des anciens comptes déconnectés et des sauvegardes automatiques ?\n\n(Vos tâches actuelles et votre compte actif ne seront pas affectés).")) {
@@ -348,11 +416,16 @@ function logoutAccount() {
   if (currentKey) {
     const msg = `Se déconnecter de ce compte (${currentKey}) ?\n\n` +
       `• Vos données restent en sécurité sur le cloud pour cet identifiant.\n` +
-      `• Cet appareil sera entièrement réinitialisé et l'historique des sessions sera effacé.\n` +
+      `• Vos points de restauration pour ce compte restent conservés sur cet appareil.\n` +
       `• Aucun nouveau compte ne sera créé : vous resterez déconnecté.`;
 
     if (!confirm(msg)) {
       return;
+    }
+
+    // Sauvegarder automatiquement un point de restauration complet avant la déconnexion
+    if (taskCount > 0) {
+      createSyncSnapshot(`Avant déconnexion de ${currentKey}`, currentKey);
     }
   }
 
@@ -370,7 +443,7 @@ function logoutAccount() {
     window.SpanPlanStore.tasks = [];
   }
 
-  // 3. Vider les clés de stockage locales et l'historique complet sur cet appareil
+  // 3. Vider les clés de stockage locales actives (MAIS CONSERVER LES SAUVEGARDES ET L'HISTORIQUE DES COMPTES !)
   localStorage.removeItem('span_plan_tasks');
   localStorage.removeItem('span_tasks');
   localStorage.removeItem('span_sync_user');
@@ -378,8 +451,6 @@ function logoutAccount() {
   localStorage.removeItem('span_sync_key_manually_set');
   localStorage.removeItem('span_plan_dismissed_focus_ids');
   localStorage.removeItem('span_deleted_task_ids');
-  localStorage.removeItem('span_sync_accounts_history');
-  localStorage.removeItem('span_sync_snapshots');
   sessionStorage.removeItem('span_session_unlocked');
 
   // 4. Marquer l'appareil comme explicitement déconnecté : ZÉRO NOUVEAU COMPTE CRÉÉ !
@@ -400,7 +471,7 @@ function logoutAccount() {
   renderSyncHistoryAndSnapshotsUI();
 
   if (typeof showToast === 'function') {
-    showToast("Déconnecté avec succès. Appareil et historique nettoyés.", 'info', 4000);
+    showToast("Déconnecté avec succès. Vos sauvegardes sont conservées.", 'info', 4000);
   }
 }
 window.logoutAccount = logoutAccount;
@@ -419,10 +490,11 @@ function renderSyncHistoryAndSnapshotsUI() {
     } else {
       let snapHtml = `<div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Points de restauration récents :</div>`;
       snapshots.forEach(s => {
+        const keyTag = s.key ? `<span style="font-size: 9.5px; opacity: 0.75; font-family: monospace; background: rgba(255,255,255,0.06); padding: 1px 4px; border-radius: 3px; margin-left: 4px;">${escapeHtml(s.key)}</span>` : '';
         snapHtml += `
           <div class="sync-item-row">
             <div class="sync-item-meta">
-              <span class="sync-item-title">${escapeHtml(s.label)}</span>
+              <span class="sync-item-title">${escapeHtml(s.label)} ${keyTag}</span>
               <span class="sync-item-sub">📅 ${s.displayDate || s.createdAt.slice(0, 16)} • ${s.taskCount || 0} tâches</span>
             </div>
             <div style="display: flex; gap: 4px;">
@@ -450,7 +522,7 @@ function renderSyncHistoryAndSnapshotsUI() {
           <div class="sync-item-row">
             <div class="sync-item-meta">
               <span class="sync-item-title">${escapeHtml(a.label || a.id)}</span>
-              <span class="sync-item-sub">ID: ${escapeHtml(a.id.slice(0, 18))}... • ${a.lastUsedAt || ''}</span>
+              <span class="sync-item-sub">ID: ${escapeHtml(a.id)} • ${a.lastUsedAt || ''}</span>
             </div>
             <div style="display: flex; gap: 4px;">
               <button type="button" class="btn-theme-toggle mini" onclick="switchAccountFromHistory('${a.id}')" title="Basculer vers cet identifiant">Basculer</button>

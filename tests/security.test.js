@@ -23,4 +23,13 @@ test('SpanSecurity Architecture (span-plan)', async (t) => {
     // In Node test environment without browser storage, defaults to false
     assert.strictEqual(SpanSecurity.isAppLocked(), false);
   });
+
+  await t.test('account ID supports span_random_pseudo format', () => {
+    const sanitizePseudo = (str) => (str || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 24);
+    const rand = '7x9k';
+    const pseudo = sanitizePseudo('Nadia-92');
+    const accountId = `span_${rand}_${pseudo}`;
+    assert.strictEqual(accountId, 'span_7x9k_nadia-92');
+    assert.match(accountId, /^span_[a-z0-9]+_[a-z0-9_-]+$/);
+  });
 });
