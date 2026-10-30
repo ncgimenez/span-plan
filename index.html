@@ -40,7 +40,7 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="style.css?v=7.72">
+  <link rel="stylesheet" href="style.css?v=7.73">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -886,18 +886,28 @@
             </div>
 
             <!-- CONNECTED DETAILS -->
-            <div id="gcalConnectedDetails" class="gcal-connected-box" style="display: none;">
-              <div class="gcal-detail-item">
-                <span class="detail-label">Account:</span>
-                <span class="detail-value" id="gcalConnectedEmail">user@gmail.com</span>
+            <div id="gcalConnectedDetails" class="gcal-connected-box" style="display: none; flex-direction: column; gap: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                <div class="gcal-detail-item" style="margin: 0;">
+                  <span class="detail-label">Compte :</span>
+                  <span class="detail-value" id="gcalConnectedEmail">user@gmail.com</span>
+                </div>
+                <div class="gcal-detail-item" style="margin: 0;">
+                  <span class="detail-label">Statut :</span>
+                  <span class="detail-value" id="gcalLastSyncTime">Never synced</span>
+                </div>
               </div>
-              <div class="gcal-detail-item">
-                <span class="detail-label">Target:</span>
-                <span class="detail-value">Span Plan (Dedicated Calendar)</span>
-              </div>
-              <div class="gcal-detail-item">
-                <span class="detail-label">Status:</span>
-                <span class="detail-value" id="gcalLastSyncTime">Never synced</span>
+
+              <!-- SÉLECTEUR DE CALENDRIER CIBLE -->
+              <div style="display: flex; flex-direction: column; gap: 4px; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+                <label for="selectGcalTargetCalendar" style="font-size: 11.5px; font-weight: 600; color: var(--text-main);">
+                  Calendrier cible dans Google Agenda :
+                </label>
+                <select id="selectGcalTargetCalendar" class="settings-text-input" style="width: 100%; font-size: 11.5px; padding: 6px 8px; border-radius: 8px;" onchange="handleGcalTargetCalendarChange(this.value)">
+                  <option value="auto_span">📅 Calendrier dédié "Span Plan" (Isolé - Recommandé)</option>
+                  <option value="primary">👤 Mon calendrier principal</option>
+                </select>
+                <div id="gcalTargetHelperBox" style="display: none;"></div>
               </div>
             </div>
 
@@ -1212,14 +1222,14 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/core.js?v=7.72"></script>
-  <script src="js/security.js?v=7.72"></script>
-  <script src="js/sync.js?v=7.72"></script>
-  <script src="js/gcal.js?v=7.72"></script>
-  <script src="js/plan.js?v=7.72"></script>
-  <script src="js/calendar-layout.js?v=7.72"></script>
-  <script src="js/calendar-drag.js?v=7.72"></script>
-  <script src="js/plan-modals.js?v=7.72"></script>
-  <script src="js/app.js?v=7.72"></script>
+  <script src="js/core.js?v=7.73"></script>
+  <script src="js/security.js?v=7.73"></script>
+  <script src="js/sync.js?v=7.73"></script>
+  <script src="js/gcal.js?v=7.73"></script>
+  <script src="js/plan.js?v=7.73"></script>
+  <script src="js/calendar-layout.js?v=7.73"></script>
+  <script src="js/calendar-drag.js?v=7.73"></script>
+  <script src="js/plan-modals.js?v=7.73"></script>
+  <script src="js/app.js?v=7.73"></script>
 </body>
 </html>
