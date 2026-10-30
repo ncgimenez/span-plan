@@ -1,12 +1,12 @@
 // Google Calendar OAuth 2.0 & Bidirectional Sync for Span Plan
 const GCAL_DEFAULT_CLIENT_ID = '720058518059-jo6mru0q8htqt4k7armu4bhfqojols0o.apps.googleusercontent.com';
-const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.events email';
+const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.app.created email';
 
 let gcalTokenClient = null;
 let gcalAccessToken = localStorage.getItem('span_gcal_access_token') || null;
 let gcalTokenExpiresAt = parseInt(localStorage.getItem('span_gcal_token_expires') || '0', 10);
 let gcalConnectedEmail = localStorage.getItem('span_gcal_email') || '';
-let gcalTargetCalendarId = localStorage.getItem('span_gcal_calendar_id') || 'auto_span';
+let gcalTargetCalendarId = localStorage.getItem('span_gcal_calendar_id') || '';
 let isCalendarsListLoaded = false;
 
 function isGcalConnected() {
@@ -149,7 +149,7 @@ function disconnectGoogleCalendar() {
   gcalAccessToken = null;
   gcalTokenExpiresAt = 0;
   gcalConnectedEmail = '';
-  gcalTargetCalendarId = 'auto_span';
+  gcalTargetCalendarId = '';
   isCalendarsListLoaded = false;
 
   localStorage.removeItem('span_gcal_access_token');
@@ -157,119 +157,34 @@ function disconnectGoogleCalendar() {
   localStorage.removeItem('span_gcal_email');
   localStorage.removeItem('span_gcal_calendar_id');
 
-  const select = document.getElementById('selectGcalTargetCalendar');
-  if (select) {
-    select.innerHTML = `
-      <option value="auto_span">📅 Calendrier dédié "Span Plan" (Isolé - Recommandé)</option>
-      <option value="primary">👤 Mon calendrier principal</option>
-    `;
-    select.value = 'auto_span';
-  }
-  const helperBox = document.getElementById('gcalTargetHelperBox');
-  if (helperBox) {
-    helperBox.style.display = 'none';
-  }
-
   updateGcalUiState();
   if (typeof showToast === 'function') {
-    showToast('Google Calendar disconnected', 'info');
+    showToast('Google Calendar déconnecté', 'info');
   }
 }
 
-// GESTION DU CALENDRIER CIBLE (DÉDIÉ SPAN PLAN OU PRINCIPAL)
-async function loadUserCalendarsList() {
-  if (!gcalAccessToken) return [];
-  try {
-    const listRes = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
-      headers: { Authorization: `Bearer ${gcalAccessToken}` }
-    });
-    if (listRes.ok) {
-      const data = await listRes.json();
-      const items = data.items || [];
-      
-      const primary = items.find(c => c.primary);
-      if (primary && primary.id && !gcalConnectedEmail) {
-        gcalConnectedEmail = primary.id;
-        localStorage.setItem('span_gcal_email', gcalConnectedEmail);
-      }
-
-      renderCalendarPickerUI(items);
-      isCalendarsListLoaded = true;
-      return items;
-    }
-  } catch (e) {
-    console.warn('Failed to load user calendars:', e);
-  }
-  return [];
-}
-window.loadUserCalendarsList = loadUserCalendarsList;
-
-function renderCalendarPickerUI(items = []) {
-  const select = document.getElementById('selectGcalTargetCalendar');
-  const helperBox = document.getElementById('gcalTargetHelperBox');
-  if (!select) return;
-
-  const savedTarget = localStorage.getItem('span_gcal_calendar_id') || 'auto_span';
-  const spanCal = items.find(c => c.summary === 'Span Plan');
-
-  let html = '';
-  if (spanCal) {
-    html += `<option value="${spanCal.id}" ${(savedTarget === spanCal.id || savedTarget === 'auto_span') ? 'selected' : ''}>📅 Calendrier dédié "Span Plan" (Isolé - Recommandé)</option>`;
-  } else {
-    html += `<option value="auto_span" ${savedTarget === 'auto_span' ? 'selected' : ''}>📅 Calendrier dédié "Span Plan" (Isolé - Recommandé)</option>`;
-  }
-
-  items.forEach(c => {
-    if (spanCal && c.id === spanCal.id) return;
-    const isPrimary = !!c.primary;
-    const label = isPrimary ? `👤 Mon calendrier principal (${c.summary || c.id})` : `📁 ${c.summary || c.id}`;
-    const isSelected = (savedTarget === c.id) || (isPrimary && savedTarget === 'primary');
-    html += `<option value="${c.id}" ${isSelected ? 'selected' : ''}>${escapeHtml(label)}</option>`;
-  });
-
-  select.innerHTML = html;
-
-  if (helperBox) {
-    if (!spanCal && (savedTarget === 'auto_span' || !savedTarget)) {
-      helperBox.style.display = 'block';
-      helperBox.innerHTML = `
-        <div style="font-size: 11px; color: var(--text-muted); background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); padding: 8px 10px; border-radius: 8px; margin-top: 6px; line-height: 1.4;">
-          💡 <strong>Calendrier 100% séparé :</strong> Vos blocs seront créés dans un calendrier isolé « Span Plan ». Si vous ne le voyez pas encore, vous pouvez aussi le créer en 5 secondes sur <a href="https://calendar.google.com/calendar/u/0/r/settings/createcalendar" target="_blank" style="color: #818cf8; text-decoration: underline;">Google Agenda</a> (<em>Autres agendas ➔ + ➔ Créer un agenda "Span Plan"</em>).
-        </div>
-      `;
-    } else {
-      helperBox.style.display = 'none';
-    }
-  }
-}
-window.renderCalendarPickerUI = renderCalendarPickerUI;
-
-function handleGcalTargetCalendarChange(value) {
-  gcalTargetCalendarId = value;
-  localStorage.setItem('span_gcal_calendar_id', value);
-  const helperBox = document.getElementById('gcalTargetHelperBox');
-  if (helperBox) {
-    helperBox.style.display = value === 'auto_span' ? 'block' : 'none';
-  }
-  if (typeof showToast === 'function') {
-    const label = (value === 'auto_span' || value.includes('Span Plan')) ? 'Calendrier dédié Span Plan' : 'Calendrier sélectionné';
-    showToast(`Calendrier cible : ${label}`, 'info');
-  }
-}
-window.handleGcalTargetCalendarChange = handleGcalTargetCalendarChange;
-
-// Trouver ou créer le calendrier dédié "Span Plan"
+// Trouver ou créer automatiquement le calendrier dédié "Span Plan" (100% Isolé)
 async function getOrCreateSpanCalendar() {
   if (!gcalAccessToken) return null;
-  const savedTarget = localStorage.getItem('span_gcal_calendar_id') || gcalTargetCalendarId || 'auto_span';
 
-  // 1. Si l'utilisateur a explicitement choisi un calendrier précis existant (qui n'est pas 'auto_span')
-  if (savedTarget && savedTarget !== 'auto_span') {
-    return savedTarget;
+  // 1. Si on a déjà l'identifiant du calendrier sauvegardé, vérifier s'il existe toujours
+  const savedId = localStorage.getItem('span_gcal_calendar_id') || gcalTargetCalendarId;
+  if (savedId && savedId !== 'auto_span' && savedId !== 'primary') {
+    try {
+      const checkRes = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(savedId)}`, {
+        headers: { Authorization: `Bearer ${gcalAccessToken}` }
+      });
+      if (checkRes.ok) {
+        gcalTargetCalendarId = savedId;
+        return gcalTargetCalendarId;
+      }
+    } catch (e) {
+      console.warn('Vérification agenda existant :', e);
+    }
   }
 
+  // 2. Vérifier si l'agenda "Span Plan" existe déjà parmi les agendas créés par l'app
   try {
-    // 2. Vérifier si le calendrier "Span Plan" existe déjà dans le compte de l'utilisateur
     const listRes = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
       headers: { Authorization: `Bearer ${gcalAccessToken}` }
     });
@@ -277,23 +192,20 @@ async function getOrCreateSpanCalendar() {
     if (listRes.ok) {
       const data = await listRes.json();
       const items = data.items || [];
-      const primary = items.find(c => c.primary);
-      if (primary && primary.id && !gcalConnectedEmail) {
-        gcalConnectedEmail = primary.id;
-        localStorage.setItem('span_gcal_email', gcalConnectedEmail);
-        updateGcalUiState();
-      }
-
       const existing = items.find(c => c.summary === 'Span Plan');
       if (existing) {
         gcalTargetCalendarId = existing.id;
         localStorage.setItem('span_gcal_calendar_id', gcalTargetCalendarId);
-        renderCalendarPickerUI(items);
         return gcalTargetCalendarId;
       }
     }
+  } catch (err) {
+    console.warn('Recherche dans calendarList :', err);
+  }
 
-    // 3. Tenter de créer automatiquement le calendrier dédié "Span Plan"
+  // 3. Créer automatiquement l'agenda dédié "Span Plan" dans le compte Google
+  try {
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Paris';
     const createRes = await fetch('https://www.googleapis.com/calendar/v3/calendars', {
       method: 'POST',
       headers: {
@@ -302,8 +214,8 @@ async function getOrCreateSpanCalendar() {
       },
       body: JSON.stringify({
         summary: 'Span Plan',
-        description: 'Synchronized time blocks and schedule from Span Plan',
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Paris'
+        description: 'Agenda dédié et synchronisé Span Plan (Local-First Planning)',
+        timeZone: timeZone
       })
     });
 
@@ -311,30 +223,19 @@ async function getOrCreateSpanCalendar() {
       const newCal = await createRes.json();
       gcalTargetCalendarId = newCal.id;
       localStorage.setItem('span_gcal_calendar_id', gcalTargetCalendarId);
-      loadUserCalendarsList();
+      if (typeof showToast === 'function') {
+        showToast('Agenda dédié "Span Plan" créé avec succès dans Google Agenda !', 'success');
+      }
       return gcalTargetCalendarId;
+    } else {
+      const errBody = await createRes.text();
+      console.error('Erreur lors de la création du calendrier dédié :', createRes.status, errBody);
     }
   } catch (err) {
-    console.warn('Dedicated calendar creation check:', err);
+    console.error('Erreur de requête création calendrier :', err);
   }
 
-  // 4. Si la création automatique échoue (parce que l'accès restreint protège les calendriers),
-  // on ne pollue JAMAIS le calendrier principal sans confirmation explicite de l'utilisateur !
-  const shouldUsePrimary = confirm(
-    "Le calendrier dédié 'Span Plan' n'a pas encore été trouvé dans votre Google Agenda.\n\n" +
-    "• Cliquez sur 'OK' pour synchroniser temporairement sur votre calendrier principal.\n" +
-    "• Cliquez sur 'Annuler' pour ouvrir Google Agenda et créer le calendrier dédié 'Span Plan' en 5 secondes (recommandé)."
-  );
-
-  if (shouldUsePrimary) {
-    gcalTargetCalendarId = 'primary';
-    localStorage.setItem('span_gcal_calendar_id', 'primary');
-    loadUserCalendarsList();
-    return 'primary';
-  } else {
-    window.open('https://calendar.google.com/calendar/u/0/r/settings/createcalendar', '_blank');
-    return null;
-  }
+  return null;
 }
 
 // Synchronisation bidirectionnelle
@@ -588,10 +489,6 @@ function updateGcalUiState() {
   if (lastSyncSpan) {
     const last = localStorage.getItem('span_gcal_last_sync');
     lastSyncSpan.textContent = last ? `Last sync: ${last}` : 'Never synced';
-  }
-
-  if (connected && !isCalendarsListLoaded) {
-    loadUserCalendarsList();
   }
 }
 

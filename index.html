@@ -40,7 +40,7 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="style.css?v=7.73">
+  <link rel="stylesheet" href="style.css?v=7.74">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -898,16 +898,15 @@
                 </div>
               </div>
 
-              <!-- SÉLECTEUR DE CALENDRIER CIBLE -->
-              <div style="display: flex; flex-direction: column; gap: 4px; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.08);">
-                <label for="selectGcalTargetCalendar" style="font-size: 11.5px; font-weight: 600; color: var(--text-main);">
-                  Calendrier cible dans Google Agenda :
-                </label>
-                <select id="selectGcalTargetCalendar" class="settings-text-input" style="width: 100%; font-size: 11.5px; padding: 6px 8px; border-radius: 8px;" onchange="handleGcalTargetCalendarChange(this.value)">
-                  <option value="auto_span">📅 Calendrier dédié "Span Plan" (Isolé - Recommandé)</option>
-                  <option value="primary">👤 Mon calendrier principal</option>
-                </select>
-                <div id="gcalTargetHelperBox" style="display: none;"></div>
+              <!-- TARGET DEDICATED CALENDAR BADGE -->
+              <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 11.5px;">
+                <span class="detail-label">Agenda synchronisé :</span>
+                <span style="font-weight: 600; color: #818cf8; display: inline-flex; align-items: center; gap: 4px;">
+                  📅 Span Plan (Isolé & Dédié)
+                </span>
+              </div>
+              <div style="font-size: 11px; color: var(--text-muted); background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.2); padding: 6px 8px; border-radius: 6px; line-height: 1.35;">
+                🔒 <strong>Confidentialité totale :</strong> Span Plan ne peut ni lire ni modifier votre calendrier personnel. Seul l'agenda dédié « Span Plan » est géré par l'application.
               </div>
             </div>
 
@@ -1222,14 +1221,14 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/core.js?v=7.73"></script>
-  <script src="js/security.js?v=7.73"></script>
-  <script src="js/sync.js?v=7.73"></script>
-  <script src="js/gcal.js?v=7.73"></script>
-  <script src="js/plan.js?v=7.73"></script>
-  <script src="js/calendar-layout.js?v=7.73"></script>
-  <script src="js/calendar-drag.js?v=7.73"></script>
-  <script src="js/plan-modals.js?v=7.73"></script>
-  <script src="js/app.js?v=7.73"></script>
+  <script src="js/core.js?v=7.74"></script>
+  <script src="js/security.js?v=7.74"></script>
+  <script src="js/sync.js?v=7.74"></script>
+  <script src="js/gcal.js?v=7.74"></script>
+  <script src="js/plan.js?v=7.74"></script>
+  <script src="js/calendar-layout.js?v=7.74"></script>
+  <script src="js/calendar-drag.js?v=7.74"></script>
+  <script src="js/plan-modals.js?v=7.74"></script>
+  <script src="js/app.js?v=7.74"></script>
 </body>
 </html>
