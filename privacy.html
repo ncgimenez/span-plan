@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Politique de Confidentialité — Span Plan</title>
+  <link rel="icon" type="image/svg+xml" href="span-logo.svg">
+  <link rel="stylesheet" href="style.css?v=7.72">
+  <style>
+    body {
+      background: var(--bg-main, #0c0c0e);
+      color: var(--text-main, #f4f4f5);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.65;
+      padding: 32px 16px;
+      margin: 0;
+    }
+    .doc-container {
+      max-width: 780px;
+      margin: 0 auto;
+      background: var(--card-bg, #18181b);
+      border: 1px solid var(--card-border, rgba(255, 255, 255, 0.08));
+      border-radius: 16px;
+      padding: 36px 32px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+    }
+    h1 {
+      font-size: 26px;
+      margin-top: 0;
+      color: var(--text-main, #fff);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    h2 {
+      font-size: 18px;
+      margin-top: 28px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      color: #6366f1;
+    }
+    p, li {
+      font-size: 14px;
+      color: var(--text-muted, #a1a1aa);
+    }
+    strong {
+      color: var(--text-main, #fff);
+    }
+    .badge-date {
+      font-size: 12px;
+      color: var(--text-muted, #71717a);
+      margin-bottom: 24px;
+    }
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #6366f1;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+    .back-btn:hover {
+      text-decoration: underline;
+    }
+    .compliance-box {
+      background: rgba(99, 102, 241, 0.08);
+      border-left: 4px solid #6366f1;
+      padding: 14px 18px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="doc-container">
+    <a href="index.html" class="back-btn">← Retour à Span Plan</a>
+    
+    <h1>🛡️ Politique de Confidentialité — Span Plan</h1>
+    <div class="badge-date">Dernière mise à jour : 30 octobre 2026</div>
+
+    <p>
+      La confidentialité et la souveraineté de vos données sont au cœur de la conception de <strong>Span Plan</strong>. Cette application fonctionne selon une architecture <em>Local-First</em> et <em>Zero-Knowledge</em>, conçue pour vous laisser le contrôle absolu sur votre emploi du temps et vos données personnelles.
+    </p>
+
+    <h2>1. Données collectées et finalité</h2>
+    <p>Span Plan traite uniquement les données strictement nécessaires au bon fonctionnement de votre calendrier :</p>
+    <ul>
+      <li><strong>Tâches et plannings personnels :</strong> Titres, descriptions, horaires, sous-tâches et catégories que vous créez. Ces données sont stockées localement dans votre navigateur (via <code>localStorage</code>) et synchronisées sur votre compte Supabase chiffré via votre identifiant anonyme privé.</li>
+      <li><strong>Préférences de l'application :</strong> Thème visuel (sombre/clair), filtres actifs et options d'affichage.</li>
+    </ul>
+
+    <h2>2. Utilisation des données Google API (Google Calendar)</h2>
+    <p>
+      Lorsque vous choisissez de connecter votre compte Google Calendar à Span Plan :
+    </p>
+    <ul>
+      <li><strong>Données consultées :</strong> Span Plan lit les événements de votre calendrier Google afin de les afficher sur votre grille de planning hebdomadaire.</li>
+      <li><strong>Données créées / modifiées :</strong> Span Plan crée un calendrier secondaire dédié nommé <strong>« Span Plan »</strong> pour y synchroniser vos blocs d'événements. Vos autres calendriers Google ne sont jamais modifiés ni altérés.</li>
+      <li><strong>Adresse e-mail :</strong> Votre adresse e-mail Google est utilisée uniquement pour identifier le compte connecté dans les réglages et vérifier l'état de la connexion.</li>
+      <li><strong>Aucun partage avec des tiers :</strong> Les données de votre Google Calendar ne sont <strong>jamais vendues, jamais partagées</strong> avec des services tiers, et ne sont utilisées à aucune fin publicitaire ni d'entraînement de modèles d'intelligence artificielle.</li>
+    </ul>
+
+    <div class="compliance-box">
+      <strong>Engagement de conformité Google :</strong><br>
+      L'utilisation et le transfert par Span Plan des informations reçues des API Google vers toute autre application sont strictement conformes aux règles de la politique relative aux données utilisateur des services d'API Google (<a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" style="color:#818cf8;">Google API Services User Data Policy</a>), y compris les exigences d'utilisation limitée (<em>Limited Use requirements</em>).
+    </div>
+
+    <h2>3. Stockage et sécurité</h2>
+    <p>
+      Span Plan applique les meilleures pratiques de sécurité :
+    </p>
+    <ul>
+      <li>Vos jetons d'accès OAuth Google sont conservés uniquement dans la mémoire sécurisée de votre navigateur local et ne transitent par aucun serveur intermédiaire non autorisé.</li>
+      <li>Vous pouvez à tout moment activer un <strong>code PIN local</strong> (haché en SHA-256) pour verrouiller l'affichage de votre calendrier sur votre appareil.</li>
+    </ul>
+
+    <h2>4. Révocation et suppression des données</h2>
+    <p>
+      Vous conservez le contrôle total à tout moment :
+    </p>
+    <ul>
+      <li><strong>Déconnexion de Google Calendar :</strong> Vous pouvez déconnecter votre compte Google en un clic via <em>Réglages ➔ Intégrations Calendrier ➔ Déconnecter</em>. Le jeton d'accès est alors immédiatement révoqué auprès de Google et effacé de votre navigateur.</li>
+      <li><strong>Révocation directe Google :</strong> Vous pouvez également révoquer les autorisations accordées à Span Plan depuis votre compte Google à l'adresse <a href="https://myaccount.google.com/permissions" target="_blank" style="color:#818cf8;">myaccount.google.com/permissions</a>.</li>
+      <li><strong>Suppression des tâches locales :</strong> Vous pouvez supprimer l'intégralité de vos données locales depuis l'onglet <em>Données ➔ Réglages</em> ou en cliquant sur <em>Se déconnecter</em>.</li>
+    </ul>
+
+    <h2>5. Contact</h2>
+    <p>
+      Pour toute question concernant cette politique de confidentialité ou le traitement de vos données, vous pouvez nous contacter directement à :<br>
+      <strong>E-mail :</strong> <a href="mailto:support@spanplan.app" style="color:#818cf8;">contact.spanplan@gmail.com</a>
+    </p>
+  </div>
+
+</body>
+</html>
