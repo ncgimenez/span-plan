@@ -116,6 +116,17 @@ function updateSyncKeyDisplay() {
   const accEl = document.getElementById('displayAccountId');
   if (accEl) accEl.textContent = isConnected ? SYNC_USER_ID : 'Non connecté';
 
+  const pseudoEl = document.getElementById('displayPseudoLabel');
+  if (pseudoEl) {
+    if (isConnected) {
+      const parts = (SYNC_USER_ID || '').split('_');
+      const pseudo = parts.length >= 3 ? parts.slice(2).join('_') : 'Par défaut';
+      pseudoEl.textContent = pseudo;
+    } else {
+      pseudoEl.textContent = 'Non connecté';
+    }
+  }
+
   const connectedView = document.getElementById('syncConnectedView');
   const disconnectedView = document.getElementById('syncDisconnectedView');
   const btnLogout = document.getElementById('btnLogoutSync');
@@ -129,6 +140,18 @@ function updateSyncKeyDisplay() {
   syncKeychainInputs(SYNC_USER_ID || '');
   renderSyncHistoryAndSnapshotsUI();
 }
+
+function toggleQrCodeCollapsible() {
+  const body = document.getElementById('qrCollapsibleBody');
+  const chevron = document.getElementById('qrChevron');
+  if (!body) return;
+  const isHidden = (body.style.display === 'none' || !body.style.display);
+  body.style.display = isHidden ? 'block' : 'none';
+  if (chevron) {
+    chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+  }
+}
+window.toggleQrCodeCollapsible = toggleQrCodeCollapsible;
 
 // ==============================================================
 // GESTIONNAIRE D'HISTORIQUE, DE POINTS DE RESTAURATION & DÉLIAISON

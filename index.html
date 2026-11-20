@@ -41,7 +41,7 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="style.css?v=8.02">
+  <link rel="stylesheet" href="style.css?v=8.03">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -755,8 +755,10 @@
     <div class="modal-card settings-modal-card" onclick="event.stopPropagation()">
       <div class="modal-header">
         <div class="settings-header-brand">
-          <span class="settings-header-icon">⚙️</span>
-          <span class="settings-header-title">Settings</span>
+          <span class="settings-header-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </span>
+          <span class="settings-header-title">Réglages</span>
         </div>
         <button class="modal-close" onclick="closeSettingsModal()">✕</button>
       </div>
@@ -764,24 +766,24 @@
       <!-- CATEGORY TABS BAR -->
       <div class="settings-nav-tabs" id="settingsNavTabs">
         <button class="settings-tab-btn active" data-tab="sync" onclick="switchSettingsTab('sync')">
-          <span class="tab-icon">🛡️</span>
-          <span class="tab-label">Security & Sync</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span class="tab-label">Synchro</span>
         </button>
         <button class="settings-tab-btn" data-tab="calendars" onclick="switchSettingsTab('calendars')">
-          <span class="tab-icon">📅</span>
-          <span class="tab-label">Calendars</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span class="tab-label">Agendas</span>
         </button>
         <button class="settings-tab-btn" data-tab="data" onclick="switchSettingsTab('data')">
-          <span class="tab-icon">💾</span>
-          <span class="tab-label">Data</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          <span class="tab-label">Sauvegarde</span>
         </button>
-        <button class="settings-tab-btn" data-tab="appearance" onclick="switchSettingsTab('appearance')">
-          <span class="tab-icon">🎨</span>
-          <span class="tab-label">Appearance</span>
+        <button class="settings-tab-btn desktop-only" data-tab="appearance" onclick="switchSettingsTab('appearance')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a7 7 0 0 0 7 7c0 1.5-.5 2-1.5 2h-1a2 2 0 0 0-2 2c0 1.1-.9 2-2 2v0a2 2 0 0 1-2-2 4 4 0 0 1 4-4"/></svg>
+          <span class="tab-label">Apparence</span>
         </button>
-        <button class="settings-tab-btn" data-tab="shortcuts" onclick="switchSettingsTab('shortcuts')">
-          <span class="tab-icon">⌨️</span>
-          <span class="tab-label">Shortcuts</span>
+        <button class="settings-tab-btn desktop-only" data-tab="shortcuts" onclick="switchSettingsTab('shortcuts')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="6" y1="8" x2="6.01" y2="8"/><line x1="10" y1="8" x2="10.01" y2="8"/><line x1="14" y1="8" x2="14.01" y2="8"/><line x1="18" y1="8" x2="18.01" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="6" y1="16" x2="6.01" y2="16"/><line x1="18" y1="16" x2="18.01" y2="16"/></svg>
+          <span class="tab-label">Raccourcis</span>
         </button>
       </div>
 
@@ -790,62 +792,93 @@
         <!-- PAGE 1: SYNC & SECURITY -->
         <div class="settings-page-pane active" id="pane_sync" data-tab="sync">
           <div class="settings-section-head">
-            <div class="settings-pane-title">Sécurité Anonyme & Synchronisation Cloud</div>
-            <div class="settings-pane-desc">Architecture Zero-Knowledge avec code PIN local, QR Code de jumelage multi-appareils et synchronisation Supabase en direct.</div>
+            <div class="settings-pane-title">Synchronisation & Sécurité</div>
+            <div class="settings-pane-desc">Architecture chiffrée, jumelage instantané multi-appareils et synchronisation Supabase en direct.</div>
           </div>
 
-          <!-- CARD 1: PAIRING & QR CODE -->
+          <!-- CARD 1: PAIRING & QR CODE (iOS GROUPED LIST) -->
           <div class="settings-card-box">
-            <div class="card-box-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
-              <span class="card-box-title">Identifiant & Synchronisation iPhone</span>
-              <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-                <button class="btn-theme-toggle mini" id="btnCopySyncKey" type="button" onclick="copyCurrentSyncKey()">📋 Copier</button>
-                <button class="btn-theme-toggle mini text-danger" id="btnLogoutSync" type="button" onclick="logoutAccount()" title="Se déconnecter de ce compte" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.08);">🚪 Se déconnecter</button>
-              </div>
-            </div>
-
-            <!-- CONTENU QUAND CONNECTÉ -->
+            <!-- CONTENU QUAND CONNECTÉ (iOS Grouped List) -->
             <div id="syncConnectedView">
-              <div class="sync-key-display-pill" style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-                <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
-                  <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Clé :</span>
-                  <strong id="displaySyncKey" class="sync-key-text">...</strong>
+              <div class="settings-grouped-list">
+                <!-- LIGNE 1: CLÉ DE SYNCHRONISATION -->
+                <div class="settings-grouped-row">
+                  <div class="grouped-row-left">
+                    <span class="grouped-row-label">Clé de synchronisation</span>
+                    <strong id="displaySyncKey" class="grouped-row-value mono">...</strong>
+                  </div>
+                  <button class="settings-row-btn" id="btnCopySyncKey" type="button" onclick="copyCurrentSyncKey()" title="Copier la clé">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    <span>Copier</span>
+                  </button>
                 </div>
-                <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
-                  <button type="button" class="btn-theme-toggle mini" onclick="editAccountPseudo()" title="Modifier la fin de votre identifiant (votre pseudo)" style="padding: 3px 8px; font-size: 11px;">✏️ Pseudo</button>
+
+                <!-- LIGNE 2: PSEUDO DE L'APPAREIL -->
+                <div class="settings-grouped-row">
+                  <div class="grouped-row-left">
+                    <span class="grouped-row-label">Pseudo de l'appareil</span>
+                    <span class="grouped-row-value" id="displayPseudoLabel">Personnalisé</span>
+                  </div>
+                  <button class="settings-row-btn" type="button" onclick="editAccountPseudo()" title="Modifier votre pseudo">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <span>Modifier</span>
+                  </button>
+                </div>
+
+                <!-- LIGNE 3: COPIER LE LIEN DIRECT DE JUMELAGE -->
+                <div class="settings-grouped-row" onclick="copyDirectPairLink()" style="cursor: pointer;" title="Copier le lien direct de jumelage">
+                  <div class="grouped-row-left" style="display: flex; flex-direction: row; align-items: center; gap: 8px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                    <span class="grouped-row-title">Copier le lien direct de jumelage</span>
+                  </div>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.5;"><polyline points="9 18 15 12 9 6"/></svg>
+                </div>
+
+                <!-- LIGNE 4 (DÉPLIABLE): AFFICHER LE QR CODE IPHONE -->
+                <div class="settings-grouped-row-collapsible">
+                  <div class="settings-grouped-row" onclick="toggleQrCodeCollapsible()" style="cursor: pointer;">
+                    <div class="grouped-row-left" style="display: flex; flex-direction: row; align-items: center; gap: 8px;">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                      <span class="grouped-row-title">Afficher le QR Code iPhone</span>
+                    </div>
+                    <span id="qrChevron" style="font-size: 12px; opacity: 0.6; transition: transform 0.2s;">▾</span>
+                  </div>
+                  <div id="qrCollapsibleBody" style="display: none; padding: 14px; text-align: center; background: rgba(0,0,0,0.25); border-top: 1px solid rgba(255,255,255,0.06);">
+                    <div class="qr-container" style="margin: 0 auto 10px auto;">
+                      <img id="spanSyncQrCode" class="qr-image" alt="QR Code de jumelage iPhone" src="">
+                    </div>
+                    <p style="font-size: 11.5px; color: var(--text-muted); margin: 0; line-height: 1.4;">
+                      Scannez ce QR Code avec l'appareil photo de votre iPhone pour ouvrir Span Plan synchronisé en direct.
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <!-- QR CODE -->
-              <div class="qr-container">
-                <img id="spanSyncQrCode" class="qr-image" alt="QR Code de jumelage iPhone" src="">
-              </div>
-
-              <div style="text-align: center; margin-bottom: 8px;">
-                <button type="button" class="btn-theme-toggle mini" onclick="copyDirectPairLink()" style="padding: 6px 14px; font-weight: 600;">
-                  🔗 Copier le lien direct de jumelage
+              <!-- BOUTON DÉCONNEXION EN BAS, BIEN SÉPARÉ -->
+              <div style="margin-top: 20px; text-align: center;">
+                <button class="settings-logout-btn" id="btnLogoutSync" type="button" onclick="logoutAccount()" title="Se déconnecter de ce compte">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                  <span>Se déconnecter de ce compte</span>
                 </button>
               </div>
-              <p style="font-size: 11.5px; color: var(--text-muted); text-align: center; margin: 0 0 12px 0;">
-                Scannez simplement ce QR Code avec l'appareil photo de votre iPhone pour ouvrir Span Plan synchronisé en direct.
-              </p>
             </div>
 
             <!-- CONTENU QUAND DÉCONNECTÉ -->
-            <div id="syncDisconnectedView" style="display: none; padding: 14px 10px; background: rgba(0, 0, 0, 0.2); border-radius: 10px; border: 1px dashed rgba(255, 255, 255, 0.15); text-align: center; margin: 8px 0 12px 0;">
+            <div id="syncDisconnectedView" style="display: none; padding: 14px 10px; background: rgba(0, 0, 0, 0.2); border-radius: 12px; border: 1px dashed rgba(255, 255, 255, 0.15); text-align: center; margin: 8px 0 12px 0;">
               <div style="font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">
                 Mode Local Déconnecté
               </div>
               <p style="font-size: 11.5px; color: var(--text-muted); margin: 0 auto 12px auto; max-width: 380px; line-height: 1.4;">
                 Aucun compte n'est actif. Vos tâches restent locales sur cet appareil.
               </p>
-              <button type="button" class="btn-primary-action" onclick="openCreateAccountPrompt()" style="margin: 0 auto;">
-                ✨ Créer un nouveau compte (span_..._pseudo)
+              <button type="button" class="btn-primary-action" onclick="openCreateAccountPrompt()" style="margin: 0 auto; display: inline-flex; align-items: center; gap: 6px;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <span>Créer un nouveau compte (span_..._pseudo)</span>
               </button>
             </div>
 
             <!-- FORMULAIRE DE CONNEXION / LIAISON -->
-            <div style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 4px; margin-top: 10px;">
+            <div style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 4px; margin-top: 14px;">
               Vous avez déjà un compte ou une clé ? Saisissez votre identifiant :
             </div>
             <form id="keychainSyncForm" onsubmit="event.preventDefault(); handleLinkClick();" autocomplete="on" style="display: flex; flex-direction: column; gap: 6px;">
@@ -865,14 +898,19 @@
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
                 <span style="font-size: 12px; font-weight: 600; color: var(--text-main);">Historique des Liens & Restauration</span>
                 <div style="display: flex; gap: 6px; align-items: center;">
-                  <button type="button" class="btn-theme-toggle mini" onclick="createManualSyncSnapshot()" title="Créer un point de sauvegarde maintenant">📸 Sauvegarder</button>
-                  <button type="button" class="btn-theme-toggle mini text-danger" onclick="clearAllSyncHistory()" title="Effacer tous les anciens comptes fantômes et points de restauration" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">🗑️ Vider tout l'historique</button>
+                  <button type="button" class="btn-theme-toggle mini" onclick="createManualSyncSnapshot()" title="Créer un point de sauvegarde maintenant">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:3px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Sauvegarder
+                  </button>
+                  <button type="button" class="btn-theme-toggle mini text-danger" onclick="clearAllSyncHistory()" title="Effacer tous les anciens comptes fantômes et points de restauration" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:3px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Vider tout
+                  </button>
                 </div>
               </div>
 
               <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-                <button type="button" class="btn-rescue" onclick="openCleanImportedTasksModal()" style="width: 100%; font-size: 11.5px; padding: 7px 10px; background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; cursor: pointer;">
-                  🧹 Nettoyer les tâches importées par erreur
+                <button type="button" class="btn-rescue" onclick="openCleanImportedTasksModal()" style="width: 100%; font-size: 11.5px; padding: 7px 10px; background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/><path d="m21 21-6-6-6 6"/></svg>
+                  <span>Nettoyer les tâches importées par erreur</span>
                 </button>
               </div>
 
@@ -892,10 +930,10 @@
           <div class="settings-card-box">
             <div class="card-box-header-row" style="display: flex; justify-content: space-between; align-items: center;">
               <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 16px;">🔒</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                 <span class="card-box-title">Verrouillage par Code PIN (2FA Local)</span>
               </div>
-              <span class="security-badge inactive" id="pinStatusBadge">🔓 Désactivé</span>
+              <span class="security-badge inactive" id="pinStatusBadge">Désactivé</span>
             </div>
             <div class="card-box-desc" id="pinStatusDesc" style="margin-top: 2px;">
               Aucun code PIN configuré. Accès ouvert sur cet appareil.
@@ -925,7 +963,7 @@
           <!-- CARD 3: EMERGENCY RECOVERY KEY -->
           <div class="settings-card-box recovery-box">
             <div class="card-box-header-row" style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 16px;">⚠️</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               <span class="card-box-title" style="color: #f59e0b;">Clé de Secours d'Urgence</span>
             </div>
             <div class="card-box-desc" style="margin-top: 4px;">
@@ -934,7 +972,9 @@
             <div class="recovery-key-text" id="displayRecoveryKey">••••-••••-••••-••••</div>
             <div style="display: flex; gap: 8px; margin-top: 6px;">
               <button type="button" class="btn-theme-toggle mini" id="revealRecoveryBtn" onclick="toggleRevealRecovery()">Afficher</button>
-              <button type="button" class="btn-theme-toggle mini" onclick="copyRecoveryKey()">📋 Copier la clé</button>
+              <button type="button" class="btn-theme-toggle mini" onclick="copyRecoveryKey()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:3px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copier la clé
+              </button>
             </div>
           </div>
 
@@ -948,21 +988,21 @@
         <!-- PAGE 2: CALENDARS -->
         <div class="settings-page-pane" id="pane_calendars" data-tab="calendars">
           <div class="settings-section-head">
-            <div class="settings-pane-title">Calendar Integrations</div>
-            <div class="settings-pane-desc">Bidirectional synchronization with Google Calendar, Notion Calendar, Amie, and Apple Calendar.</div>
+            <div class="settings-pane-title">Agendas & Intégrations</div>
+            <div class="settings-pane-desc">Synchronisation bidirectionnelle avec Google Calendar, Notion Calendar, Amie et Apple Calendar.</div>
           </div>
 
           <!-- GOOGLE CALENDAR OAUTH (2-WAY SYNC) -->
           <div class="settings-card-box">
             <div class="card-box-header-row">
               <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 16px;">🌐</span>
-                <span class="card-box-title">Google Calendar (2-Way Sync)</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                <span class="card-box-title">Google Calendar (Synchronisation Bidirectionnelle)</span>
               </div>
-              <span class="sync-status-badge" id="gcalStatusBadge">○ Not connected</span>
+              <span class="sync-status-badge" id="gcalStatusBadge">○ Non connecté</span>
             </div>
             <div class="card-box-desc">
-              Instant 0-second sync to a dedicated <strong>"Span Plan"</strong> calendar. Automatically updates <strong>Notion Calendar</strong> and <strong>Amie</strong> with native category colors (🟣 Work, 🟢 Life, 🔴 Fun).
+              Synchronisation instantanée avec votre agenda Google dédié « Span Plan ». Met à jour automatiquement Notion Calendar et Amie avec pastilles de catégories.
             </div>
 
             <!-- CONNECTED DETAILS -->
@@ -974,7 +1014,7 @@
                 </div>
                 <div class="gcal-detail-item" style="margin: 0;">
                   <span class="detail-label">Statut :</span>
-                  <span class="detail-value" id="gcalLastSyncTime">Never synced</span>
+                  <span class="detail-value" id="gcalLastSyncTime">Jamais synchronisé</span>
                 </div>
               </div>
 
@@ -982,27 +1022,27 @@
               <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 11.5px;">
                 <span class="detail-label">Agenda synchronisé :</span>
                 <span style="font-weight: 600; color: #818cf8; display: inline-flex; align-items: center; gap: 4px;">
-                  📅 Span Plan (Isolé & Dédié)
+                  Span Plan (Isolé & Dédié)
                 </span>
               </div>
               <div style="font-size: 11px; color: var(--text-muted); background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.2); padding: 6px 8px; border-radius: 6px; line-height: 1.35;">
-                🔒 <strong>Confidentialité totale :</strong> Span Plan ne peut ni lire ni modifier votre calendrier personnel. Seul l'agenda dédié « Span Plan » est géré par l'application.
+                Confidentialité totale : Span Plan ne lit ni ne modifie votre calendrier personnel. Seul l'agenda dédié « Span Plan » est géré par l'application.
               </div>
             </div>
 
             <div class="gcal-actions-bar" style="display: flex; gap: 8px; margin-top: 10px; align-items: center; flex-wrap: wrap;">
               <button class="btn-gcal-connect" id="btnGcalConnect" onclick="connectGoogleCalendar()">
                 <svg width="15" height="15" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
-                Connect Google Calendar
+                Connecter Google Calendar
               </button>
               <button class="btn-primary-action" id="btnGcalSyncNow" onclick="syncGoogleCalendar()" style="display: none;">
-                🔄 Sync Now
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:3px;"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>Synchroniser
               </button>
               <button class="btn-outline-danger mini" id="btnGcalDisconnect" onclick="disconnectGoogleCalendar()" style="display: none;">
-                Disconnect
+                Déconnecter
               </button>
-              <button class="btn-backup mini-backup" type="button" onclick="toggleGcalConfigBox()" title="Configure Client ID" style="flex: none; font-size: 11px;">
-                ⚙️ Config
+              <button class="btn-backup mini-backup" type="button" onclick="toggleGcalConfigBox()" title="Configurer Client ID" style="flex: none; font-size: 11px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:3px;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Config
               </button>
             </div>
 
@@ -1023,31 +1063,35 @@
           <div class="settings-card-box">
             <div class="card-box-header-row">
               <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 16px;">🍏</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.22A4.91 4.91 0 0 0 17 5c-2.22 0-4 1.44-5 2-1-.56-2.78-2-5-2a4.9 4.9 0 0 0-5 4.78C2 14 5 22 8 22c1.25 0 2.5-1.06 4-1.06Z"/><path d="M10 2c1 .5 2 2 2 5"/></svg>
                 <span class="card-box-title">Apple Calendar (iOS & Mac)</span>
               </div>
               <span class="sync-status-badge">Webcal Native</span>
             </div>
             <div class="card-box-desc">
-              Subscribe in 1 tap on iPhone or Mac. Auto-refreshes every 5–15 minutes across Apple Watch, iOS Widgets, and Amie with category pastilles (🟣 Work, 🟢 Life, 🔴 Fun).
+              Abonnez-vous en 1 tap sur iPhone ou Mac. Rafraîchissement automatique dans Apple Calendar, Apple Watch et Widgets iOS.
             </div>
             <div style="margin-top: 10px;">
-              <button class="btn-backup" onclick="exportIcsFile('all')" style="width: 100%;">
-                🍏 Subscribe in Apple Calendar (.ics)
+              <button class="btn-backup" onclick="exportIcsFile('all')" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.22A4.91 4.91 0 0 0 17 5c-2.22 0-4 1.44-5 2-1-.56-2.78-2-5-2a4.9 4.9 0 0 0-5 4.78C2 14 5 22 8 22c1.25 0 2.5-1.06 4-1.06Z"/><path d="M10 2c1 .5 2 2 2 5"/></svg>
+                <span>S'abonner dans Apple Calendar (.ics)</span>
               </button>
             </div>
           </div>
 
           <!-- OFFLINE BACKUP EXPORT -->
           <div class="settings-card-box">
-            <div class="card-box-title">Offline iCalendar Export (.ics)</div>
-            <div class="card-box-desc">Export strictly your scheduled events (📅) to .ics, keeping your to-do tasks private:</div>
+            <div class="card-box-title">Export Hors-ligne iCalendar (.ics)</div>
+            <div class="card-box-desc">Exportez vos événements planifiés au format standard .ics :</div>
             <div class="calendar-export-grid" style="margin-top: 10px;">
-              <button class="btn-backup btn-ics-all" onclick="exportIcsFile('all')">📅 Export All Events (.ics)</button>
+              <button class="btn-backup btn-ics-all" onclick="exportIcsFile('all')" style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span>Tous les événements (.ics)</span>
+              </button>
               <div class="ics-category-pills">
-                <button class="btn-backup mini-backup" onclick="exportIcsFile('work')" title="Export Work events only">🟣 Work</button>
-                <button class="btn-backup mini-backup" onclick="exportIcsFile('life')" title="Export Life events only">🟢 Life</button>
-                <button class="btn-backup mini-backup" onclick="exportIcsFile('fun')" title="Export Fun events only">🔴 Fun</button>
+                <button class="btn-backup mini-backup" onclick="exportIcsFile('work')" title="Export Work events only">Work</button>
+                <button class="btn-backup mini-backup" onclick="exportIcsFile('life')" title="Export Life events only">Life</button>
+                <button class="btn-backup mini-backup" onclick="exportIcsFile('fun')" title="Export Fun events only">Fun</button>
               </div>
             </div>
           </div>
@@ -1056,26 +1100,35 @@
         <!-- PAGE 3: DATA & BACKUPS -->
         <div class="settings-page-pane" id="pane_data" data-tab="data">
           <div class="settings-section-head">
-            <div class="settings-pane-title">Data & Maintenance</div>
-            <div class="settings-pane-desc">Manage local backups, JSON data sovereignty, and task recovery.</div>
+            <div class="settings-pane-title">Sauvegarde & Maintenance</div>
+            <div class="settings-pane-desc">Gérez vos sauvegardes locales, la souveraineté de vos données JSON et la récupération.</div>
           </div>
 
           <div class="settings-card-box">
             <div class="card-box-title">Sauvegardes & Exportations (JSON, Tableur CSV, ICS)</div>
             <div class="card-box-desc">Exportez l'intégralité de vos tâches, backlog, sous-tâches et réglages dans le format de votre choix :</div>
-            <div class="backup-section" style="margin-top: 10px; flex-wrap: wrap;">
-              <button class="btn-backup" type="button" onclick="exportData()">💾 Sauvegarde JSON</button>
-              <button class="btn-backup" type="button" onclick="exportCsvFile()">📊 Tableur CSV (Excel)</button>
-              <button class="btn-backup" type="button" onclick="exportIcsFile('all')">📅 Événements ICS</button>
+            <div class="backup-section" style="margin-top: 10px; flex-wrap: wrap; gap: 8px;">
+              <button class="btn-backup" type="button" onclick="exportData()" style="display: inline-flex; align-items: center; gap: 6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                <span>Sauvegarde JSON</span>
+              </button>
+              <button class="btn-backup" type="button" onclick="exportCsvFile()" style="display: inline-flex; align-items: center; gap: 6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                <span>Tableur CSV (Excel)</span>
+              </button>
+              <button class="btn-backup" type="button" onclick="exportIcsFile('all')" style="display: inline-flex; align-items: center; gap: 6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span>Événements ICS</span>
+              </button>
             </div>
           </div>
 
           <div class="settings-card-box">
             <div class="card-box-title">Intégrer / Restaurer des Données (Nouvel utilisateur ou Restauration)</div>
-            <div class="card-box-desc">Span Plan reconnaît automatiquement vos sauvegardes complètes JSON ou fichiers tableurs CSV et vous permet d'intégrer toutes vos données en 1 clic pour un nouvel utilisateur ou un nouvel appareil :</div>
+            <div class="card-box-desc">Span Plan reconnaît automatiquement vos sauvegardes complètes JSON ou fichiers tableurs CSV et vous permet d'intégrer toutes vos données en 1 clic :</div>
             
             <div class="import-dropzone" style="margin-top: 10px;" onclick="document.getElementById('importUniversalFileInput').click()" ondragover="event.preventDefault(); this.classList.add('drag-active')" ondragleave="this.classList.remove('drag-active')" ondrop="event.preventDefault(); this.classList.remove('drag-active'); if(event.dataTransfer.files.length) handleImportFile(event.dataTransfer.files[0]);">
-              <span style="font-size: 24px;">📁</span>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 4px; opacity: 0.8;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
               <div style="font-size: 13px; font-weight: 600; color: var(--text-main);">Glissez-déposez votre fichier ici</div>
               <div style="font-size: 11px; color: var(--text-muted);">ou cliquez pour choisir un fichier (.json ou .csv)</div>
               <input type="file" id="importUniversalFileInput" accept=".json,.csv" style="display: none;" onchange="importData(event)">
@@ -1083,18 +1136,20 @@
           </div>
 
           <div class="settings-card-box">
-            <div class="card-box-title">Task Recovery & Repair</div>
-            <div class="card-box-desc">Recover any unscheduled, lost, or orphaned tasks directly to Today's To-do dock:</div>
-            <button class="btn-rescue" onclick="recoverMissingTasks()" style="margin-top: 8px;">
-              🔄 Recover tasks to Today
+            <div class="card-box-title">Récupération des Tâches</div>
+            <div class="card-box-desc">Récupérer toutes les tâches orphelines directement dans le to-do dock d'Aujourd'hui :</div>
+            <button class="btn-rescue" onclick="recoverMissingTasks()" style="margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+              <span>Récupérer les tâches sur Aujourd'hui</span>
             </button>
           </div>
 
           <div class="settings-card-box">
             <div class="card-box-title">Démêler & Nettoyer les tâches importées</div>
             <div class="card-box-desc">Supprimer rapidement des tâches importées par erreur lors d'une synchronisation :</div>
-            <button class="btn-rescue" onclick="openCleanImportedTasksModal()" style="margin-top: 8px; background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);">
-              🧹 Nettoyer les tâches importées par erreur
+            <button class="btn-rescue" onclick="openCleanImportedTasksModal()" style="margin-top: 8px; background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); display: flex; align-items: center; justify-content: center; gap: 6px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/><path d="m21 21-6-6-6 6"/></svg>
+              <span>Nettoyer les tâches importées par erreur</span>
             </button>
           </div>
         </div>
@@ -1301,14 +1356,14 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/core.js?v=8.02"></script>
-  <script src="js/security.js?v=8.02"></script>
-  <script src="js/sync.js?v=8.02"></script>
-  <script src="js/gcal.js?v=8.02"></script>
-  <script src="js/plan.js?v=8.02"></script>
-  <script src="js/calendar-layout.js?v=8.02"></script>
-  <script src="js/calendar-drag.js?v=8.02"></script>
-  <script src="js/plan-modals.js?v=8.02"></script>
-  <script src="js/app.js?v=8.02"></script>
+  <script src="js/core.js?v=8.03"></script>
+  <script src="js/security.js?v=8.03"></script>
+  <script src="js/sync.js?v=8.03"></script>
+  <script src="js/gcal.js?v=8.03"></script>
+  <script src="js/plan.js?v=8.03"></script>
+  <script src="js/calendar-layout.js?v=8.03"></script>
+  <script src="js/calendar-drag.js?v=8.03"></script>
+  <script src="js/plan-modals.js?v=8.03"></script>
+  <script src="js/app.js?v=8.03"></script>
 </body>
 </html>

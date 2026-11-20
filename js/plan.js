@@ -2106,6 +2106,10 @@ function setMobileDayView(mode) {
     renderBacklogDrawer();
     updateCounters();
   }
+
+  if (typeof renderDateStrip === 'function') {
+    renderDateStrip();
+  }
 }
 
 // GESTION UNIVERSELLE DU SWIPE (CALENDRIER, BACKLOG & TRACKPAD)

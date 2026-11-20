@@ -543,6 +543,21 @@ function renderPlanGrid(forceRebuild = false) {
   }
 
   updateRangeLabel(visibleDates);
+
+  const activeCount = visibleDates.length;
+  document.querySelectorAll('#daysSelectorGroup .pill-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.days, 10) === activeCount);
+  });
+  document.querySelectorAll('#mobileDaysSelectorGroup .pill-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.days, 10) === activeCount);
+  });
+  const appShell = document.getElementById('appShell') || document.body;
+  if (appShell) {
+    appShell.classList.toggle('is-mobile-view-7d', activeCount === 7);
+    appShell.classList.toggle('is-mobile-view-3d', activeCount === 3);
+    appShell.classList.toggle('is-mobile-view-1d', activeCount === 1);
+  }
+
   if (typeof renderDateStrip === 'function') renderDateStrip();
   if (typeof renderMiniMonthCalendar === 'function') renderMiniMonthCalendar();
 }
@@ -1402,9 +1417,11 @@ function renderDateStrip() {
   const strip = document.getElementById('mobileDateStrip');
   if (!strip) return;
 
-  // En vue 7J, ne pas afficher le strip au-dessus pour éviter les doublons
+  // En vues 3J et 7J (onglet Agenda), SUPPRIME la bande horizontale des 7 cases pour libérer la hauteur.
+  // Ne la garde qu'en vue 1J et To-do.
   const visibleCount = typeof getActiveVisibleDaysCount === 'function' ? getActiveVisibleDaysCount() : 1;
-  if (visibleCount === 7) {
+  const isTodoMode = (typeof currentMobileDayView !== 'undefined' && currentMobileDayView === 'todo');
+  if (!isTodoMode && visibleCount !== 1) {
     if (container) container.style.display = 'none';
     return;
   } else {
