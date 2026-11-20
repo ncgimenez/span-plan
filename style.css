@@ -850,12 +850,11 @@
 }
 
 
-* {
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
   -webkit-tap-highlight-color: transparent;
-  user-select: none;
 }
 
 html, body, #root {
@@ -867,17 +866,6 @@ html, body, #root {
   padding: 0;
   overflow: hidden;
   overscroll-behavior: none;
-}
-
-@media all and (display-mode: standalone) {
-  html, body, #root {
-    position: relative;
-    height: 100vh;
-    height: 100lvh;
-  }
-  .app-top-safe {
-    padding-top: max(72px, calc(env(safe-area-inset-top, 47px) + 24px)) !important;
-  }
 }
 
 body {
@@ -3006,9 +2994,13 @@ body {
 
 .cal-day-column {
   position: relative;
-  border-right: 1px solid rgba(255, 255, 255, 0.035);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
   height: 100%;
   min-width: 0;
+}
+
+[data-theme="light"] .cal-day-column {
+  border-right-color: rgba(0, 0, 0, 0.08);
 }
 
 .cal-day-column:last-child {
@@ -3030,15 +3022,15 @@ body {
   left: 0;
   right: 0;
   height: 1px;
-  background: rgba(255, 255, 255, 0.025);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 [data-theme="light"] .cal-hour-line {
-  background: rgba(0, 0, 0, 0.035);
+  background: rgba(0, 0, 0, 0.08);
 }
 
 .cal-hour-line.is-night {
-  background: rgba(255, 255, 255, 0.008);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .now-timeline-marker .now-dot {
@@ -6092,7 +6084,8 @@ body.is-card-dragging * {
 }
 
 /* NAVIGATION MOBILE AU BAS DE L'ÉCRAN (Masquée par défaut sur desktop) */
-.mobile-nav {
+.mobile-nav,
+.mobile-fab-btn {
   display: none;
 }
 
@@ -6115,8 +6108,60 @@ body.is-card-dragging * {
 
 .nav-btn.active { color: var(--text-main); }
 
+/* BADGE NUMÉRO DE SEMAINE ISO */
+.cal-week-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #a1a1aa;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.9;
+}
+
+[data-theme="light"] .cal-week-badge {
+  color: #71717a;
+}
+
+/* INDICATEUR FLOTTANT DE ZOOM SUR LA GRILLE (XXh visibles) */
+.grid-zoom-indicator {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-10px);
+  background: rgba(20, 20, 24, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  padding: 5px 13px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  z-index: 1200;
+  opacity: 0;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.grid-zoom-indicator.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+[data-theme="light"] .grid-zoom-indicator {
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  color: #d97706;
+}
+
 @media (min-width: 769px) {
   .mobile-nav,
+  .mobile-fab-btn,
   .mobile-date-strip-container,
   .mobile-day-segmented,
   .mobile-view-pills {
@@ -6159,22 +6204,22 @@ body.is-card-dragging * {
     min-height: 0 !important;
   }
 
-  /* Header compact 1 seule ligne épurée (42px) */
+  /* Header compact 1 seule ligne épurée (48px) façon Google Agenda */
   .app-header {
-    height: 42px !important;
-    min-height: 42px !important;
+    height: 48px !important;
+    min-height: 48px !important;
     padding-top: 0 !important;
     padding-bottom: 0 !important;
-    padding-left: 8px !important;
-    padding-right: 8px !important;
+    padding-left: 14px !important;
+    padding-right: 12px !important;
     margin: 0 !important;
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
     flex-wrap: nowrap !important;
-    gap: 4px !important;
+    gap: 8px !important;
     background: #0b0b0d !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
     flex-shrink: 0 !important;
     box-sizing: border-box !important;
   }
@@ -6188,80 +6233,43 @@ body.is-card-dragging * {
     width: auto !important;
     display: flex !important;
     align-items: center !important;
-    gap: 2px !important;
+    gap: 0 !important;
     flex-shrink: 0 !important;
   }
 
   .header-left .brand,
-  .sidebar-expand-btn {
+  .sidebar-expand-btn,
+  .nav-arrow-btn,
+  .today-jump-btn {
     display: none !important;
   }
 
   .timeline-nav {
     display: flex !important;
     align-items: center !important;
-    gap: 3px !important;
-  }
-
-  .nav-arrows-capsule {
-    display: contents !important;
-  }
-
-  .nav-arrow-btn {
-    width: 24px !important;
-    height: 24px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font-size: 13px !important;
-    border: none !important;
-    background: transparent !important;
-    color: var(--text-muted) !important;
-    cursor: pointer !important;
-    padding: 0 !important;
-    box-shadow: none !important;
-  }
-
-  .nav-arrow-btn:active {
-    color: var(--text-main) !important;
+    gap: 0 !important;
   }
 
   .current-range-label {
-    font-size: 13px !important;
+    font-size: 18px !important;
     font-weight: 600 !important;
     color: var(--text-main) !important;
     cursor: pointer !important;
     white-space: nowrap !important;
     background: transparent !important;
     border: none !important;
-    padding: 0 4px !important;
+    padding: 0 !important;
     box-shadow: none !important;
     display: flex !important;
     align-items: center !important;
-    gap: 2px !important;
-    max-width: none !important;
+    gap: 3px !important;
+    letter-spacing: -0.02em !important;
   }
 
   [data-theme="light"] .current-range-label {
     color: #111827 !important;
     background: transparent !important;
     border: none !important;
-  }
-
-  .today-jump-btn {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding: 2px 6px !important;
-    font-size: 10.5px !important;
-    font-weight: 600 !important;
-    border-radius: 4px !important;
-    background: rgba(245, 158, 11, 0.15) !important;
-    color: #f59e0b !important;
-    border: none !important;
-    cursor: pointer !important;
-    line-height: 1.2 !important;
-    margin-left: 2px !important;
   }
 
   .header-center {
@@ -6272,7 +6280,7 @@ body.is-card-dragging * {
     width: auto !important;
     display: flex !important;
     align-items: center !important;
-    gap: 4px !important;
+    gap: 6px !important;
     justify-content: flex-end !important;
     flex-shrink: 0 !important;
   }
@@ -6294,8 +6302,8 @@ body.is-card-dragging * {
   }
 
   .mobile-view-pills .pill-btn {
-    padding: 3px 6px !important;
-    font-size: 10.5px !important;
+    padding: 4px 7px !important;
+    font-size: 11px !important;
     font-weight: 600 !important;
     border-radius: 5px !important;
     border: none !important;
@@ -6311,6 +6319,33 @@ body.is-card-dragging * {
     color: #0b0b0d !important;
     font-weight: 750 !important;
     box-shadow: 0 1px 3px rgba(245, 158, 11, 0.35) !important;
+  }
+
+  /* Bouton carré Aujourd'hui façon Google Agenda [20] */
+  .header-today-square-btn {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    border-radius: 8px !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #f59e0b !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    font-variant-numeric: tabular-nums !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    transition: all 0.15s ease !important;
+    -webkit-tap-highlight-color: transparent !important;
+  }
+
+  [data-theme="light"] .header-today-square-btn {
+    background: rgba(0, 0, 0, 0.04) !important;
+    border-color: rgba(0, 0, 0, 0.1) !important;
+    color: #d97706 !important;
   }
 
   .header-actions {
@@ -6332,9 +6367,9 @@ body.is-card-dragging * {
     background: transparent !important;
     border: none !important;
     color: var(--text-muted) !important;
-    padding: 3px !important;
-    width: 28px !important;
-    height: 28px !important;
+    padding: 4px !important;
+    width: 32px !important;
+    height: 32px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -6347,54 +6382,15 @@ body.is-card-dragging * {
   .context-switch,
   .context-dropdown-wrap,
   .timeline-nav-group,
-  .header-actions .btn-new-task,
-  .header-actions #btnToggleDrawer,
-  .header-actions .plan-bridge-btn,
-  .plan-bridge-btn,
   .btn-shortcuts,
   .shortcuts-section-settings {
-    display: none !important; /* Masqués sur mobile pour libérer l'écran et éviter encombrement inutile */
-  }
-
-  .header-actions {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-  }
-
-  .plan-bridge-btn {
-    padding: 4px 9px !important;
-    font-size: 11px !important;
-  }
-
-  /* BANDEAU DE DATES HORIZONTAL (DATE STRIP) */
-  .mobile-date-strip-container {
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    padding: 3px 6px !important;
-    margin: 0 !important;
-    flex-shrink: 0 !important;
-    box-sizing: border-box;
-  }
-
-  .is-mobile-view-7d #mobileDateStripContainer,
-  .is-mobile-view-3d #mobileDateStripContainer {
     display: none !important;
   }
 
-  .mobile-mode-todo.is-mobile-view-7d #mobileDateStripContainer,
-  .mobile-mode-todo.is-mobile-view-3d #mobileDateStripContainer {
-    display: flex !important;
-  }
-
-  .mobile-date-strip {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    gap: 3px;
+  /* Supprime les barres de sélection superflues en haut */
+  #mobileDaySegmented,
+  #mobileDateStripContainer {
+    display: none !important;
   }
 
   .date-strip-item {
@@ -6619,12 +6615,7 @@ body.is-card-dragging * {
     min-height: calc(24 * var(--hour-height) + 24px) !important;
   }
 
-  /* Supprime la sous-ligne TIME | TUE 1 en vue 1J sur mobile */
-  .cal-unified-container.is-view-1d .cal-header-top-row {
-    display: none !important;
-  }
-
-  /* Colonne des heures ultra-compacte à ~36px avec gris lisible #71717A */
+  /* Colonne des heures ultra-compacte à ~36px avec chiffres gris clair lisible #A1A1AA */
   .cal-time-ruler,
   .cal-gutter-header,
   .cal-gutter-allday {
@@ -6638,7 +6629,7 @@ body.is-card-dragging * {
   }
 
   .cal-time-label-row {
-    color: #71717a !important;
+    color: #a1a1aa !important;
     font-weight: 600 !important;
   }
 
@@ -6901,13 +6892,16 @@ body.is-card-dragging * {
     display: none !important;
   }
 
-  /* BARRE DE NAVIGATION INFÉRIEURE MODERNE FIXÉE AU BAS ABSOLU */
+  /* BARRE DE NAVIGATION INFÉRIEURE ULTRA-FINE (46px) FAÇON GOOGLE AGENDA */
   .mobile-nav {
     display: flex !important;
     flex-shrink: 0 !important;
     width: 100% !important;
-    padding-top: 4px !important;
-    padding-bottom: max(6px, calc(env(safe-area-inset-bottom, 0px) - 12px)) !important;
+    height: 46px !important;
+    min-height: 46px !important;
+    max-height: 46px !important;
+    padding-top: 2px !important;
+    padding-bottom: max(6px, calc(env(safe-area-inset-bottom, 0px) - 10px)) !important;
     padding-left: 0 !important;
     padding-right: 0 !important;
     margin: 0 !important;
@@ -6915,10 +6909,7 @@ body.is-card-dragging * {
     bottom: auto !important;
     left: auto !important;
     right: auto !important;
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    box-sizing: border-box !important;
+    box-sizing: content-box !important;
     background: rgba(15, 15, 18, 0.98) !important;
     backdrop-filter: blur(20px) !important;
     -webkit-backdrop-filter: blur(20px) !important;
@@ -6932,12 +6923,12 @@ body.is-card-dragging * {
   }
 
   .mobile-nav .nav-items {
-    display: flex !important;
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
     align-items: center !important;
-    justify-content: space-around !important;
     width: 100% !important;
-    height: 48px !important;
-    padding: 0 8px !important;
+    height: 100% !important;
+    padding: 0 !important;
     margin: 0 !important;
     box-sizing: border-box !important;
   }
@@ -6947,15 +6938,14 @@ body.is-card-dragging * {
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
-    height: 48px !important;
+    height: 100% !important;
     background: transparent !important;
     border: none !important;
     color: var(--text-muted) !important;
-    font-size: 10px !important;
+    font-size: 9.5px !important;
     font-weight: 600 !important;
-    gap: 2.5px !important;
+    gap: 2px !important;
     cursor: pointer !important;
-    flex: 1 !important;
     padding: 0 !important;
     margin: 0 !important;
     -webkit-tap-highlight-color: transparent !important;
@@ -6977,35 +6967,31 @@ body.is-card-dragging * {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    font-size: 16px !important;
+    font-size: 17px !important;
     line-height: 1 !important;
   }
 
-  .mobile-nav .nav-btn-add {
-    flex: 0 0 48px !important;
-    height: 48px !important;
+  /* BOUTON FLOTTANT FAB AMBRE FAÇON GOOGLE AGENDA (52x52px) */
+  .mobile-fab-btn {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    position: fixed !important;
+    right: 16px !important;
+    bottom: calc(46px + max(6px, calc(env(safe-area-inset-bottom, 0px) - 10px)) + 12px) !important;
+    width: 52px !important;
+    height: 52px !important;
+    border-radius: 16px !important;
+    background: #f59e0b !important;
+    border: none !important;
+    box-shadow: 0 4px 18px rgba(245, 158, 11, 0.45), 0 2px 6px rgba(0, 0, 0, 0.4) !important;
+    z-index: 950 !important;
+    cursor: pointer !important;
+    -webkit-tap-highlight-color: transparent !important;
+    transition: transform 0.15s ease, box-shadow 0.15s ease !important;
   }
 
-  .nav-fab-circle {
-    width: 38px !important;
-    height: 38px !important;
-    border-radius: 50% !important;
-    background: linear-gradient(135deg, var(--streak) 0%, #d97706 100%) !important;
-    color: #ffffff !important;
-    font-size: 22px !important;
-    font-weight: 350 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.42) !important;
-    margin: 0 !important;
-    transition: transform 0.15s ease !important;
-  }
-
-  .mobile-nav .nav-btn-add:active .nav-fab-circle {
+  .mobile-fab-btn:active {
     transform: scale(0.92) !important;
   }
 

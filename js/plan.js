@@ -22,9 +22,24 @@ var START_HOUR = 0;
 var END_HOUR = 23;
 
 function getHourHeight() {
-  return (typeof isMobileScreen === 'function' && isMobileScreen()) ? 46 : 64;
+  const saved = localStorage.getItem('span_plan_hour_height');
+  if (saved) {
+    const val = parseInt(saved, 10);
+    if (!isNaN(val) && val >= 28 && val <= 112) return val;
+  }
+  return (typeof isMobileScreen === 'function' && isMobileScreen()) ? 48 : 64;
 }
+
+function setHourHeight(val) {
+  const clamped = Math.max(28, Math.min(112, Math.round(val)));
+  localStorage.setItem('span_plan_hour_height', clamped);
+  HOUR_HEIGHT = clamped;
+  document.documentElement.style.setProperty('--hour-height', `${clamped}px`);
+  return clamped;
+}
+
 window.getHourHeight = getHourHeight;
+window.setHourHeight = setHourHeight;
 var HOUR_HEIGHT = getHourHeight();
 
 function normalizePlanContext(cat) {
@@ -1420,6 +1435,11 @@ function updateCounters() {
     if (el) el.textContent = laterCount;
   });
 
+  const todayStr = typeof getLocalDateString === 'function' ? getLocalDateString(new Date()) : TODAY_STR;
+  const todayTasks = allTasks.filter(t => (t.date === todayStr) && !t.completed);
+  const elMobileTodo = document.getElementById('mobileTodoCount');
+  if (elMobileTodo) elMobileTodo.textContent = todayTasks.length;
+
   const countAll = allTasks.length;
   const countWork = allTasks.filter(t => t.context === 'work').length;
   const countLife = allTasks.filter(t => t.context === 'life').length;
@@ -1445,20 +1465,12 @@ function updateRangeLabel(visibleDates) {
 
   let text = '';
   if (isMobile) {
-    const monthsFr = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
-    const daysFr = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
-    if (visibleDates.length === 1) {
-      const dName = daysFr[first.getDay()];
-      const mName = monthsFr[first.getMonth()];
-      text = `${dName} ${first.getDate()} ${mName}`;
+    const fullMonthsFr = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+    if (first.getMonth() === last.getMonth()) {
+      text = fullMonthsFr[first.getMonth()];
     } else {
-      const m1 = monthsFr[first.getMonth()];
-      const m2 = monthsFr[last.getMonth()];
-      if (first.getMonth() === last.getMonth()) {
-        text = `${first.getDate()}–${last.getDate()} ${m1}`;
-      } else {
-        text = `${first.getDate()} ${m1}–${last.getDate()} ${m2}`;
-      }
+      const shortMonthsFr = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
+      text = `${shortMonthsFr[first.getMonth()]} – ${shortMonthsFr[last.getMonth()]}`;
     }
   } else {
     const firstStr = first.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -1471,7 +1483,7 @@ function updateRangeLabel(visibleDates) {
   if (currentTagFilter) {
     text += ` • #${currentTagFilter} (✕)`;
   }
-  label.innerHTML = `<span>${text}</span> <span style="font-size: 10px; opacity: 0.6; margin-left: 2px;">▾</span>`;
+  label.innerHTML = `<span>${text}</span> <span style="font-size: 11px; opacity: 0.6; margin-left: 2px;">▾</span>`;
   label.onclick = () => {
     if (currentTagFilter) {
       filterByTag(currentTagFilter);
@@ -1481,6 +1493,11 @@ function updateRangeLabel(visibleDates) {
   };
   label.style.cursor = 'pointer';
   label.title = 'Cliquer pour ouvrir le mini calendrier mensuel';
+
+  const todaySquareNum = document.getElementById('todaySquareNum');
+  if (todaySquareNum) {
+    todaySquareNum.textContent = new Date().getDate();
+  }
 
   const headerTodayBtn = document.getElementById('headerTodayBtn');
   if (headerTodayBtn) {
@@ -2096,10 +2113,15 @@ function setMobileDayView(mode) {
   if (btnA) btnA.classList.toggle('active', mode === 'agenda');
   if (btnT) btnT.classList.toggle('active', mode === 'todo');
 
-  const navBtnToday = document.getElementById('mobileNavToday');
+  const navBtnAgenda = document.getElementById('mobileNavAgenda');
+  const navBtnTodo = document.getElementById('mobileNavTodo');
   const navBtnBacklog = document.getElementById('mobileNavBacklog');
-  if (navBtnToday) navBtnToday.classList.toggle('active', (mode === 'agenda' || mode === 'todo') && currentTimelineOffset === 0);
+  if (navBtnAgenda) navBtnAgenda.classList.toggle('active', mode === 'agenda');
+  if (navBtnTodo) navBtnTodo.classList.toggle('active', mode === 'todo');
   if (navBtnBacklog) navBtnBacklog.classList.toggle('active', mode === 'backlog');
+
+  const navBtnToday = document.getElementById('mobileNavToday');
+  if (navBtnToday) navBtnToday.classList.toggle('active', (mode === 'agenda' || mode === 'todo') && currentTimelineOffset === 0);
 
   if (mode === 'backlog') {
     syncFocusTasksToPlanBacklog(true);

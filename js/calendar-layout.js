@@ -382,6 +382,33 @@ function handleMobileDayZoom(dateStr) {
 }
 window.handleMobileDayZoom = handleMobileDayZoom;
 
+function getISOWeekNumber(d) {
+  if (!d) return 1;
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+}
+window.getISOWeekNumber = getISOWeekNumber;
+
+function showZoomIndicator(hoursVisible) {
+  let el = document.getElementById('gridZoomIndicator');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'gridZoomIndicator';
+    el.className = 'grid-zoom-indicator';
+    document.body.appendChild(el);
+  }
+  el.textContent = `${hoursVisible}h visibles`;
+  el.classList.add('visible');
+  clearTimeout(showZoomIndicator._timer);
+  showZoomIndicator._timer = setTimeout(() => {
+    el.classList.remove('visible');
+  }, 900);
+}
+window.showZoomIndicator = showZoomIndicator;
+
 function setupViewportSwipe() {
   const vp = document.getElementById('calScrollViewport');
   if (!vp || vp.dataset.swipeBound) return;
@@ -391,15 +418,78 @@ function setupViewportSwipe() {
   let startY = 0;
   let startTime = 0;
 
+  // État du pinch-to-zoom vertical
+  let isPinching = false;
+  let lastPinchEnd = 0;
+  let initialPinchDist = 0;
+  let initialHourHeight = 48;
+  let anchorHour = 12;
+  let pinchCenterY = 0;
+
   vp.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      isPinching = true;
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      initialPinchDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      initialHourHeight = typeof getHourHeight === 'function' ? getHourHeight() : 48;
+      const vpRect = vp.getBoundingClientRect();
+      pinchCenterY = ((t1.clientY + t2.clientY) / 2) - vpRect.top;
+      anchorHour = (vp.scrollTop + pinchCenterY) / Math.max(20, initialHourHeight);
+      startX = 0;
+      startY = 0;
+      return;
+    }
+
     if (e.touches.length !== 1) return;
+    if (Date.now() - lastPinchEnd < 200) return;
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
     startTime = Date.now();
   }, { passive: true });
 
+  vp.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2 && isPinching) {
+      if (e.cancelable) e.preventDefault();
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const currentDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      if (initialPinchDist > 10) {
+        const ratio = currentDist / initialPinchDist;
+        const targetHeight = Math.max(28, Math.min(112, Math.round(initialHourHeight * ratio)));
+        const currentH = typeof getHourHeight === 'function' ? getHourHeight() : 48;
+        if (targetHeight !== currentH) {
+          if (typeof setHourHeight === 'function') {
+            setHourHeight(targetHeight);
+          }
+          renderPlanGrid(false);
+          const newVp = document.getElementById('calScrollViewport');
+          if (newVp) {
+            newVp.scrollTop = Math.max(0, anchorHour * targetHeight - pinchCenterY);
+            const visibleHours = Math.max(4, Math.round(newVp.clientHeight / targetHeight));
+            showZoomIndicator(visibleHours);
+          }
+        }
+      }
+    }
+  }, { passive: false });
+
   vp.addEventListener('touchend', (e) => {
-    if (!startX) return;
+    if (isPinching) {
+      isPinching = false;
+      lastPinchEnd = Date.now();
+      startX = 0;
+      startY = 0;
+      return;
+    }
+
+    if (Date.now() - lastPinchEnd < 200) {
+      startX = 0;
+      startY = 0;
+      return;
+    }
+
+    if (!startX || e.touches.length > 0) return;
     const touch = e.changedTouches[0];
     const dx = touch.clientX - startX;
     const dy = touch.clientY - startY;
@@ -417,6 +507,32 @@ function setupViewportSwipe() {
       }
     }
   }, { passive: true });
+
+  // Support du zoom trackpad Mac (wheel + ctrlKey)
+  vp.addEventListener('wheel', (e) => {
+    if (e.ctrlKey) {
+      e.preventDefault();
+      const vpRect = vp.getBoundingClientRect();
+      const centerY = e.clientY - vpRect.top;
+      const currentH = typeof getHourHeight === 'function' ? getHourHeight() : 48;
+      const anchorH = (vp.scrollTop + centerY) / currentH;
+      const delta = -e.deltaY;
+      const step = delta > 0 ? 3 : -3;
+      const targetHeight = Math.max(28, Math.min(112, currentH + step));
+      if (targetHeight !== currentH) {
+        if (typeof setHourHeight === 'function') {
+          setHourHeight(targetHeight);
+        }
+        renderPlanGrid(false);
+        const newVp = document.getElementById('calScrollViewport');
+        if (newVp) {
+          newVp.scrollTop = Math.max(0, anchorH * targetHeight - centerY);
+          const visibleHours = Math.max(4, Math.round(newVp.clientHeight / targetHeight));
+          showZoomIndicator(visibleHours);
+        }
+      }
+    }
+  }, { passive: false });
 }
 
 function renderPlanGrid(forceRebuild = false) {
@@ -507,11 +623,15 @@ function renderPlanGrid(forceRebuild = false) {
     `;
   }).join('');
 
+  const firstDate = visibleDates[0] || new Date();
+  const isoWeekNum = typeof getISOWeekNumber === 'function' ? getISOWeekNumber(firstDate) : 1;
+
   grid.innerHTML = `
     <div class="cal-unified-container is-view-${visibleDates.length}d">
       <div class="cal-sticky-header">
         <div class="cal-header-top-row">
-          <div class="cal-gutter-header">
+          <div class="cal-gutter-header" title="Semaine ISO ${isoWeekNum}">
+            <span class="cal-week-badge">${isoWeekNum}</span>
             <span class="cal-tz-label"></span>
           </div>
           <div class="cal-columns-header" style="grid-template-columns: repeat(${visibleDates.length}, 1fr);">
