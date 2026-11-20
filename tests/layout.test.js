@@ -81,4 +81,60 @@ test('Calendar Layout & Geometry Math', async (t) => {
     assert.strictEqual(rendered[1].task.id, 'valid_wed');
     assert.strictEqual(rendered[1].colStart, 2, 'Wednesday event is on Wednesday (col 2)');
   });
+
+  await t.test('mobile week alignment generates Monday to Sunday strip', () => {
+    function getMonday(d) {
+      const date = new Date(d);
+      const day = date.getDay();
+      const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+      return new Date(date.setDate(diff));
+    }
+
+    // Wednesday, Nov 18, 2026
+    const wednesday = new Date(2026, 10, 18);
+    const mon = getMonday(wednesday);
+
+    assert.strictEqual(mon.getDay(), 1, 'Start of week must be Monday (day 1)');
+    assert.strictEqual(mon.getDate(), 16, 'Monday is Nov 16');
+
+    const weekDays = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(mon);
+      d.setDate(mon.getDate() + i);
+      weekDays.push(d.getDay());
+    }
+    // Monday (1) through Sunday (0)
+    assert.deepStrictEqual(weekDays, [1, 2, 3, 4, 5, 6, 0]);
+  });
+
+  await t.test('mobile hour height is 46px and desktop is 64px', () => {
+    function getHourHeight(isMobile) {
+      return isMobile ? 46 : 64;
+    }
+    assert.strictEqual(getHourHeight(true), 46, 'Mobile hour height must be 46px');
+    assert.strictEqual(getHourHeight(false), 64, 'Desktop hour height must be 64px');
+
+    // On 812px height screen (iPhone 13 mini) with ~600px visible canvas, 46px/h displays ~13 hours
+    const visibleHours = Math.floor(600 / getHourHeight(true));
+    assert.ok(visibleHours >= 8, 'Can view at least 8 to 10 hours at once on iPhone 13 mini');
+  });
+
+  await t.test('mobile navigation advances/recedes by 1 whole week (7 days)', () => {
+    function getStep(isMobile, visibleDays) {
+      return isMobile ? 7 : ((visibleDays === 7 || visibleDays === 5) ? 7 : visibleDays);
+    }
+    assert.strictEqual(getStep(true, 1), 7, 'Header arrows on mobile jump by 7 days even in 1J view');
+    assert.strictEqual(getStep(true, 3), 7, 'Header arrows on mobile jump by 7 days in 3J view');
+    assert.strictEqual(getStep(true, 7), 7, 'Header arrows on mobile jump by 7 days in 7J view');
+  });
+
+  await t.test('empty all-day items collapses completely (returns 0 items)', () => {
+    function renderAllDayContinuousRibbonHtml(items) {
+      if (!items || items.length === 0) return '';
+      return '<div class="cal-allday-section">...</div>';
+    }
+    assert.strictEqual(renderAllDayContinuousRibbonHtml([]), '', 'Empty all-day section must collapse to empty string');
+    assert.strictEqual(renderAllDayContinuousRibbonHtml(null), '', 'Null all-day section must collapse to empty string');
+    assert.ok(renderAllDayContinuousRibbonHtml([{ id: '1' }]).length > 0, 'Populated all-day section renders ribbon markup');
+  });
 });

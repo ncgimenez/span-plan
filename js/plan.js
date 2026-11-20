@@ -20,7 +20,12 @@ const TOMORROW_STR = getLocalDateString(tomorrow);
 // CYCLE COMPLET 24 HEURES (00:00 - 23:59)
 var START_HOUR = 0;
 var END_HOUR = 23;
-var HOUR_HEIGHT = 64;
+
+function getHourHeight() {
+  return (typeof isMobileScreen === 'function' && isMobileScreen()) ? 46 : 64;
+}
+window.getHourHeight = getHourHeight;
+var HOUR_HEIGHT = getHourHeight();
 
 function normalizePlanContext(cat) {
   if (!cat) return 'work';
@@ -660,6 +665,18 @@ window.addEventListener('storage', (e) => {
 
 var visibleDaysCount = parseInt(localStorage.getItem('span_plan_visible_days')) || 3;
 if (visibleDaysCount < 3) visibleDaysCount = 3;
+
+var mobileVisibleDaysCount = parseInt(localStorage.getItem('span_plan_mobile_visible_days'), 10) || 1;
+if (![1, 3, 7].includes(mobileVisibleDaysCount)) mobileVisibleDaysCount = 1;
+
+function getActiveVisibleDaysCount() {
+  if (typeof isMobileScreen === 'function' && isMobileScreen()) {
+    const saved = parseInt(localStorage.getItem('span_plan_mobile_visible_days'), 10);
+    return [1, 3, 7].includes(saved) ? saved : (mobileVisibleDaysCount || 1);
+  }
+  return visibleDaysCount;
+}
+window.getActiveVisibleDaysCount = getActiveVisibleDaysCount;
 
 var currentTimelineOffset = 0;
 var currentContextFilter = 'all';
@@ -1420,24 +1437,50 @@ function updateCounters() {
 
 function updateRangeLabel(visibleDates) {
   const label = document.getElementById('currentRangeLabel');
-  if (!label || visibleDates.length === 0) return;
+  if (!label || !visibleDates || visibleDates.length === 0) return;
 
   const first = visibleDates[0];
   const last = visibleDates[visibleDates.length - 1];
+  const isMobile = typeof isMobileScreen === 'function' && isMobileScreen();
 
-  const firstStr = first.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  const lastStr = last.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
-  let text = (visibleDates.length === 1) 
-    ? `${first.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}`
-    : `${firstStr} – ${lastStr}`;
+  let text = '';
+  if (isMobile) {
+    const monthsFr = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+    const daysFr = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+    if (visibleDates.length === 1) {
+      const dName = daysFr[first.getDay()];
+      const mName = monthsFr[first.getMonth()];
+      text = `${dName} ${first.getDate()} ${mName}`;
+    } else {
+      const m1 = monthsFr[first.getMonth()];
+      const m2 = monthsFr[last.getMonth()];
+      if (first.getMonth() === last.getMonth()) {
+        text = `${first.getDate()}–${last.getDate()} ${m1}`;
+      } else {
+        text = `${first.getDate()} ${m1}–${last.getDate()} ${m2}`;
+      }
+    }
+  } else {
+    const firstStr = first.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const lastStr = last.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    text = (visibleDates.length === 1) 
+      ? `${first.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}`
+      : `${firstStr} – ${lastStr}`;
+  }
 
   if (currentTagFilter) {
     text += ` • #${currentTagFilter} (✕)`;
   }
-  label.textContent = text;
-  label.onclick = currentTagFilter ? () => filterByTag(currentTagFilter) : null;
-  label.style.cursor = currentTagFilter ? 'pointer' : 'default';
+  label.innerHTML = `<span>${text}</span> <span style="font-size: 10px; opacity: 0.6; margin-left: 2px;">▾</span>`;
+  label.onclick = () => {
+    if (currentTagFilter) {
+      filterByTag(currentTagFilter);
+    } else if (typeof openMiniMonthPickerModal === 'function') {
+      openMiniMonthPickerModal();
+    }
+  };
+  label.style.cursor = 'pointer';
+  label.title = 'Cliquer pour ouvrir le mini calendrier mensuel';
 }
 
 function toggleTaskCompletion(id) {
@@ -1854,12 +1897,22 @@ function addSidebarBacklogTask() {
 
 // NAVIGATION
 function navigateTimeline(direction) {
-  const step = isMobileScreen() ? 1 : ((visibleDaysCount === 7 || visibleDaysCount === 5) ? 7 : visibleDaysCount);
+  // Sur mobile, les flèches du header avancent/reculent d'une semaine complète (±7 jours)
+  const isMobile = typeof isMobileScreen === 'function' && isMobileScreen();
+  const step = isMobile ? 7 : ((visibleDaysCount === 7 || visibleDaysCount === 5) ? 7 : visibleDaysCount);
   currentTimelineOffset += (direction * step);
   renderPlanGrid(true);
   if (typeof renderDateStrip === 'function') renderDateStrip();
   applyDynamicScroll();
 }
+
+function navigateTimelineByDays(days) {
+  currentTimelineOffset += days;
+  renderPlanGrid(true);
+  if (typeof renderDateStrip === 'function') renderDateStrip();
+  applyDynamicScroll();
+}
+window.navigateTimelineByDays = navigateTimelineByDays;
 
 function jumpToToday() {
   currentTimelineOffset = 0;
@@ -1870,6 +1923,39 @@ function jumpToToday() {
   if (typeof renderDateStrip === 'function') renderDateStrip();
   applyDynamicScroll();
 }
+
+function setMobileVisibleDays(num) {
+  num = parseInt(num, 10) || 1;
+  if (![1, 3, 7].includes(num)) num = 1;
+  mobileVisibleDaysCount = num;
+  localStorage.setItem('span_plan_mobile_visible_days', num);
+
+  document.querySelectorAll('#mobileDaysSelectorGroup .pill-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.days, 10) === num);
+  });
+
+  const appShell = document.getElementById('appShell') || document.body;
+  if (appShell) {
+    appShell.classList.toggle('is-mobile-view-7d', num === 7);
+    appShell.classList.toggle('is-mobile-view-3d', num === 3);
+    appShell.classList.toggle('is-mobile-view-1d', num === 1);
+  }
+
+  // Si passage en 7J : caler sur le lundi de la semaine
+  if (num === 7) {
+    const curDate = new Date();
+    curDate.setDate(curDate.getDate() + currentTimelineOffset);
+    const monday = getMonday(curDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    currentTimelineOffset = Math.round((monday.getTime() - today.getTime()) / 86400000);
+  }
+
+  renderPlanGrid(true);
+  if (typeof renderDateStrip === 'function') renderDateStrip();
+  applyDynamicScroll();
+}
+window.setMobileVisibleDays = setMobileVisibleDays;
 
 function setVisibleDays(num) {
   num = parseInt(num, 10) || 7;
@@ -2210,21 +2296,24 @@ window.addEventListener('touchend', (e) => {
   const minCooldown = wasBacklog ? 220 : 350;
   if (now - lastTouchNavTime < minCooldown) return; // Anti-rebond
 
-  const velocity = Math.abs(diffX) / elapsed;
-  const isFastFlick = (velocity > 0.20 && Math.abs(diffX) >= (wasBacklog ? 13 : 25));
-  const isDistanceSwipe = (Math.abs(diffX) >= (wasBacklog ? 16 : 48));
-  const angleRatio = wasBacklog ? 0.85 : 1.2;
-  const isHorizontalIntent = Math.abs(diffX) >= Math.abs(diffY) * angleRatio;
+  // Verrouillage strict d'axe : |dx| > 50px et |dx| > |dy| * 1.5
+  const isHorizontalIntent = Math.abs(diffX) > (wasBacklog ? 25 : 50) && Math.abs(diffX) > Math.abs(diffY) * 1.5;
 
-  if ((isFastFlick || isDistanceSwipe) && isHorizontalIntent && elapsed < 700) {
+  if (isHorizontalIntent && elapsed < 700) {
     lastTouchNavTime = now;
     if (wasBacklog) {
       cycleBacklogCategory(diffX < 0 ? 1 : -1);
     } else {
-      if (diffX < 0) {
-        navigateTimeline(1); // Swipe gauche -> période suivante
+      const activeDays = typeof getActiveVisibleDaysCount === 'function' ? getActiveVisibleDaysCount() : 1;
+      const step = activeDays === 1 ? 1 : (activeDays === 3 ? 3 : 7);
+      const direction = diffX < 0 ? 1 : -1;
+      if (typeof navigateTimelineByDays === 'function') {
+        navigateTimelineByDays(direction * step);
       } else {
-        navigateTimeline(-1); // Swipe droite -> période précédente
+        currentTimelineOffset += (direction * step);
+        renderPlanGrid(true);
+        if (typeof renderDateStrip === 'function') renderDateStrip();
+        applyDynamicScroll();
       }
     }
   }

@@ -858,34 +858,24 @@
   user-select: none;
 }
 
-html {
-  height: 100%;
+html, body, #root {
+  position: fixed;
+  inset: 0;
   width: 100%;
-  overflow: hidden;
-}
-
-body {
   height: 100%;
-  height: 100dvh;
-  min-height: 100%;
-  min-height: -webkit-fill-available;
-  width: 100%;
   margin: 0;
   padding: 0;
   overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
   background-color: var(--bg);
   color: var(--text-main);
   font-family: var(--font);
   transition: background-color 0.25s ease, color 0.25s ease;
-  display: flex;
-  justify-content: center;
-  align-items: stretch;
-}
-
-@supports (-webkit-touch-callout: none) {
-  html, body {
-    height: -webkit-fill-available;
-  }
+  box-sizing: border-box;
+  border: 3px solid red; /* Diagnostic visuel temporaire demandé */
 }
 
 /* SCROLLBARS RAFFINÉES & DISCRÈTES */
@@ -912,10 +902,10 @@ body {
 
 /* SHELL PRINCIPAL */
 .desktop-shell {
-  width: 100vw;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
   max-width: 100vw;
-  height: 100vh;
-  height: 100dvh;
   display: flex;
   flex-direction: row;
   padding: 0;
@@ -1764,13 +1754,15 @@ body {
 .app-main-area {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   position: relative;
   background: var(--bg);
-  padding: env(safe-area-inset-top, 6px) 16px env(safe-area-inset-bottom, 8px) 16px;
+  padding: 0;
+  margin: 0;
   box-sizing: border-box;
 }
 
@@ -1789,7 +1781,8 @@ body {
     display: inline-flex !important;
   }
   .app-main-area {
-    padding: env(safe-area-inset-top, 6px) 8px env(safe-area-inset-bottom, 8px) 8px;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 }
 
@@ -6088,22 +6081,9 @@ body.is-card-dragging * {
   font-size: 11.5px;
 }
 
-/* NAVIGATION MOBILE AU BAS DE L'ÉCRAN */
+/* NAVIGATION MOBILE AU BAS DE L'ÉCRAN (Masquée par défaut sur desktop) */
 .mobile-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: calc(48px + env(safe-area-inset-bottom, 0px));
-  background: rgba(13, 13, 15, 0.95);
-  backdrop-filter: blur(12px);
-  border-top: 1px solid var(--card-border);
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding-top: 4px;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  z-index: 100;
+  display: none;
 }
 
 .nav-items {
@@ -6128,8 +6108,9 @@ body.is-card-dragging * {
 @media (min-width: 769px) {
   .mobile-nav,
   .mobile-date-strip-container,
-  .mobile-day-segmented {
-    display: none;
+  .mobile-day-segmented,
+  .mobile-view-pills {
+    display: none !important;
   }
 }
 
@@ -6137,43 +6118,117 @@ body.is-card-dragging * {
    RESPONSIVE MOBILE (SMARTPHONES / IPHONE 13 MINI)
    ============================================================== */
 @media (max-width: 768px) {
-  .desktop-shell {
-    height: 100%;
-    height: -webkit-fill-available;
-    max-height: 100%;
-    min-height: -webkit-fill-available;
-    padding-top: max(48px, env(safe-area-inset-top, 44px));
-    padding-left: 8px;
-    padding-right: 8px;
-    padding-bottom: calc(56px + env(safe-area-inset-bottom, 16px));
-    overflow: hidden;
-    box-sizing: border-box;
+  :root {
+    --hour-height: 46px;
   }
 
-  /* Header compact 1 seule ligne avec dégagement du notch */
+  .desktop-shell {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  .app-main-area {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    width: 100% !important;
+    padding-top: env(safe-area-inset-top) !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-bottom: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+  }
+
+  /* Header compact 1 seule ligne */
   .app-header {
-    height: 40px !important;
-    padding: 0 6px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    margin: 0 !important;
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
     flex-wrap: nowrap !important;
-    gap: 0 !important;
+    gap: 6px !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    margin-bottom: 4px !important;
+    flex-shrink: 0 !important;
+    box-sizing: border-box !important;
   }
 
   .header-left {
     width: auto !important;
-    display: flex;
-    align-items: center;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    flex-shrink: 0 !important;
   }
 
-  .header-left .brand-name {
-    font-size: 15px !important;
+  .header-left .brand {
+    display: none !important;
   }
-  .header-left .brand-app {
-    font-size: 11px !important;
+
+  .today-jump-btn {
+    display: none !important; /* Supprime le bouton Today en double (déjà dans la barre du bas) */
+  }
+
+  .nav-arrows-capsule {
+    display: flex !important;
+    align-items: center !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-radius: 8px !important;
+    padding: 1px !important;
+    gap: 1px !important;
+  }
+
+  .nav-arrow-btn {
+    width: 26px !important;
+    height: 26px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 14px !important;
+    border-radius: 6px !important;
+    border: none !important;
+    background: transparent !important;
+    color: var(--text-main) !important;
+    cursor: pointer !important;
+  }
+
+  .current-range-label {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    cursor: pointer !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 112px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 3px !important;
+    padding: 4px 6px !important;
+    border-radius: 6px !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
+
+  [data-theme="light"] .current-range-label {
+    color: #111827 !important;
+    background: rgba(0, 0, 0, 0.04) !important;
+    border-color: rgba(0, 0, 0, 0.08) !important;
   }
 
   .header-center {
@@ -6186,6 +6241,48 @@ body.is-card-dragging * {
     align-items: center !important;
     gap: 6px !important;
     justify-content: flex-end !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Compact View Switcher 1J | 3J | 7J */
+  .mobile-view-pills {
+    display: flex !important;
+    align-items: center !important;
+    gap: 2px !important;
+    padding: 2px !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    border-radius: 8px !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
+
+  [data-theme="light"] .mobile-view-pills {
+    background: rgba(0, 0, 0, 0.05) !important;
+    border-color: rgba(0, 0, 0, 0.08) !important;
+  }
+
+  .mobile-view-pills .pill-btn {
+    padding: 3.5px 7px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    border-radius: 6px !important;
+    border: none !important;
+    background: transparent !important;
+    color: var(--text-muted) !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+    line-height: 1 !important;
+  }
+
+  .mobile-view-pills .pill-btn.active {
+    background: rgba(255, 255, 255, 0.18) !important;
+    color: #ffffff !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  [data-theme="light"] .mobile-view-pills .pill-btn.active {
+    background: #ffffff !important;
+    color: #111827 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
   }
 
   .view-mode-pills,
@@ -6219,7 +6316,14 @@ body.is-card-dragging * {
     align-items: center;
     justify-content: center;
     width: 100%;
-    padding: 4px 0 2px 0;
+    padding: 3px 6px !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+    box-sizing: border-box;
+  }
+
+  .is-mobile-view-7d #mobileDateStripContainer {
+    display: none !important;
   }
 
   .mobile-date-strip {
@@ -6227,7 +6331,7 @@ body.is-card-dragging * {
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    gap: 4px;
+    gap: 3px;
   }
 
   .date-strip-item {
@@ -6236,8 +6340,8 @@ body.is-card-dragging * {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 5px 2px 4px 2px;
-    border-radius: 10px;
+    padding: 4px 1px 3px 1px !important;
+    border-radius: 8px !important;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.06);
     color: var(--text-muted);
@@ -6263,6 +6367,23 @@ body.is-card-dragging * {
   .date-strip-item.active .strip-day-num {
     font-weight: 750;
     color: #ffffff;
+  }
+
+  [data-theme="light"] .date-strip-item {
+    background: rgba(0, 0, 0, 0.03);
+    border-color: rgba(0, 0, 0, 0.06);
+    color: var(--text-muted);
+  }
+
+  [data-theme="light"] .date-strip-item.active {
+    background: #ffffff !important;
+    border-color: rgba(0, 0, 0, 0.14) !important;
+    color: #141416 !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  }
+
+  [data-theme="light"] .date-strip-item.active .strip-day-num {
+    color: #141416;
   }
 
   .strip-day-name {
@@ -6293,20 +6414,21 @@ body.is-card-dragging * {
   .mobile-day-segmented {
     display: flex !important;
     background: rgba(255, 255, 255, 0.05);
-    border-radius: 9px;
-    padding: 2.5px;
-    margin: 3px 0 6px 0;
-    gap: 3px;
+    border-radius: 8px;
+    padding: 2px;
+    margin: 2px 6px 3px 6px !important;
+    gap: 2px;
+    flex-shrink: 0 !important;
   }
 
   .mobile-day-segmented .seg-btn {
     flex: 1;
-    padding: 5.5px 8px;
-    border-radius: 7px;
+    padding: 5px 8px;
+    border-radius: 6px;
     border: none;
     background: transparent;
     color: var(--text-muted);
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.15s ease;
@@ -6323,24 +6445,176 @@ body.is-card-dragging * {
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
   }
 
-  /* GRILLE ET COLONNE JOUR EN PLEIN ÉCRAN */
+  [data-theme="light"] .mobile-day-segmented {
+    background: rgba(0, 0, 0, 0.05) !important;
+  }
+
+  [data-theme="light"] .mobile-day-segmented .seg-btn {
+    color: var(--text-muted) !important;
+  }
+
+  [data-theme="light"] .mobile-day-segmented .seg-btn.active {
+    background: #ffffff !important;
+    color: #141416 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  /* GRILLE ET COLONNE JOUR EN PLEIN ÉCRAN (PLEIN BORD SANS MARGES MORTES) */
   .workspace-main {
-    flex: 1;
-    min-height: 0;
+    flex: 1 !important;
+    min-height: 0 !important;
+    height: auto !important;
     overflow: hidden !important;
     width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
 
   .planner-board-container {
+    flex: 1 !important;
+    min-height: 0 !important;
     justify-content: center !important;
     width: 100% !important;
-    overflow-x: hidden !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
   }
 
   .planner-grid {
+    flex: 1 !important;
+    min-height: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
+    height: 100% !important;
     display: flex !important;
+    flex-direction: column !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+  }
+
+  .cal-unified-container {
+    flex: 1 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    width: 100% !important;
+    border-radius: 0 !important;
+    border: none !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  [data-theme="light"] .cal-unified-container {
+    border-top-color: rgba(0, 0, 0, 0.08) !important;
+  }
+
+  .cal-scroll-viewport {
+    flex: 1 !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    touch-action: pan-y !important;
+    overscroll-behavior-y: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .cal-scroll-content {
+    padding-bottom: 24px !important;
+    min-height: calc(24 * var(--hour-height) + 24px) !important;
+  }
+
+  /* Supprime la sous-ligne TIME | TUE 1 en vue 1J sur mobile pour éviter de répéter la date */
+  .cal-unified-container.is-view-1d .cal-header-top-row {
+    display: none !important;
+  }
+
+  /* Colonne des heures ultra-compacte à ~36px */
+  .cal-time-ruler,
+  .cal-gutter-header,
+  .cal-gutter-allday {
+    width: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
+  }
+  .cal-time-label-row span {
+    font-size: 10px !important;
+    letter-spacing: -0.02em !important;
+    padding-right: 3px !important;
+  }
+  .cal-time-now-badge {
+    display: none !important;
+  }
+
+  /* Vue 7J mobile : 7 colonnes égales compactes */
+  .is-view-7d .cal-day-header-cell {
+    padding: 3px 1px !important;
+    cursor: pointer !important;
+  }
+  .is-view-7d .cal-day-name {
+    font-size: 8.5px !important;
+    font-weight: 700 !important;
+  }
+  .is-view-7d .cal-day-disc {
+    width: 19px !important;
+    height: 19px !important;
+    font-size: 10px !important;
+  }
+  .is-view-7d .capacity-mini-bar,
+  .is-view-7d .capacity-total-txt {
+    display: none !important;
+  }
+  .is-view-7d .schedule-block-item {
+    padding: 2px 2px !important;
+    border-radius: 4px !important;
+    margin: 0 !important;
+  }
+  .is-view-7d .block-title {
+    font-size: 9px !important;
+    line-height: 1.1 !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    word-break: break-word !important;
+  }
+  .is-view-7d .block-header-row {
+    margin-bottom: 0 !important;
+  }
+  .is-view-7d .btn-task-menu,
+  .is-view-7d .btn-block-quick-add-subtask,
+  .is-view-7d .event-progress-pill,
+  .is-view-7d .block-subtasks-container,
+  .is-view-7d .accordion-subtasks,
+  .is-view-7d .block-time-badge {
+    display: none !important;
+  }
+
+  /* Vue 3J mobile : 3 colonnes lisibles avec titres complets */
+  .is-view-3d .cal-day-header-cell {
+    padding: 4px 2px !important;
+  }
+  .is-view-3d .cal-day-name {
+    font-size: 9.5px !important;
+  }
+  .is-view-3d .cal-day-disc {
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 11px !important;
+  }
+  .is-view-3d .schedule-block-item {
+    padding: 3px 4px !important;
+  }
+  .is-view-3d .block-title {
+    font-size: 10.5px !important;
   }
 
   .day-column {
@@ -6348,7 +6622,7 @@ body.is-card-dragging * {
     min-width: 100% !important;
     max-width: 100% !important;
     flex: 1 0 100% !important;
-    border-radius: 14px !important;
+    border-radius: 0 !important;
     height: 100% !important;
     margin: 0 !important;
   }
@@ -6412,10 +6686,10 @@ body.is-card-dragging * {
   .backlog-drawer.open {
     display: flex;
     position: fixed;
-    top: calc(44px + env(safe-area-inset-top, 14px));
+    top: calc(44px + env(safe-area-inset-top, 0px));
     left: 0;
     right: 0;
-    bottom: calc(54px + env(safe-area-inset-bottom, 14px));
+    bottom: calc(52px + 8px + max(8px, env(safe-area-inset-bottom)));
     width: 100vw;
     height: auto;
     max-width: 100vw;
@@ -6448,84 +6722,101 @@ body.is-card-dragging * {
 
   /* BARRE DE NAVIGATION INFÉRIEURE MODERNE FIXÉE AU BAS ABSOLU */
   .mobile-nav {
-    display: flex;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    width: 100vw;
-    height: calc(56px + env(safe-area-inset-bottom, 16px));
-    padding-bottom: env(safe-area-inset-bottom, 16px);
-    background: rgba(15, 15, 18, 0.96);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    z-index: 1000;
-    box-sizing: border-box;
+    display: flex !important;
+    flex-shrink: 0 !important;
+    width: 100% !important;
+    padding-top: 8px !important;
+    padding-bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin: 0 !important;
+    position: static !important;
+    bottom: auto !important;
+    left: auto !important;
+    right: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    box-sizing: border-box !important;
+    background: #1d4ed8 !important; /* Diagnostic visuel temporaire demandé */
+    border-top: 1px solid rgba(255, 255, 255, 0.2) !important;
+    z-index: 100 !important;
   }
 
   .mobile-nav .nav-items {
-    display: flex;
-    align-items: center;
-    justify-content: space-around;
-    width: 100%;
-    height: 56px;
-    padding: 0 8px;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-around !important;
+    width: 100% !important;
+    height: 52px !important;
+    padding: 0 8px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
   }
 
   .mobile-nav .nav-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    font-size: 10px;
-    font-weight: 600;
-    gap: 3px;
-    cursor: pointer;
-    flex: 1;
-    -webkit-tap-highlight-color: transparent;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 52px !important;
+    background: transparent !important;
+    border: none !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    gap: 3px !important;
+    cursor: pointer !important;
+    flex: 1 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    -webkit-tap-highlight-color: transparent !important;
   }
 
   .mobile-nav .nav-btn.active {
-    color: #ffffff;
+    color: #ffffff !important;
   }
 
   .mobile-nav .nav-icon {
-    font-size: 16px;
-    line-height: 1;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 16px !important;
+    line-height: 1 !important;
   }
 
   .mobile-nav .nav-btn-add {
-    flex: 0 0 52px;
+    flex: 0 0 52px !important;
+    height: 52px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 
   .nav-fab-circle {
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--streak) 0%, #d97706 100%);
-    color: #ffffff;
-    font-size: 24px;
-    font-weight: 350;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.42);
-    margin-top: -14px;
-    transition: transform 0.15s ease;
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+    background: linear-gradient(135deg, var(--streak) 0%, #d97706 100%) !important;
+    color: #ffffff !important;
+    font-size: 22px !important;
+    font-weight: 350 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.42) !important;
+    margin: 0 !important;
+    transition: transform 0.15s ease !important;
   }
 
   .mobile-nav .nav-btn-add:active .nav-fab-circle {
-    transform: scale(0.92);
+    transform: scale(0.92) !important;
   }
 
   /* BARRE FLOTTANTE MULTI-SÉLECTION : POSITIONNÉE CLAIREMENT AU-DESSUS DE LA BARRE BASSE */
   .multi-select-bar {
     position: fixed;
-    bottom: calc(56px + env(safe-area-inset-bottom, 16px) + 10px);
+    bottom: calc(52px + 8px + max(8px, env(safe-area-inset-bottom)) + 8px) !important;
     left: 50%;
     right: auto;
     width: auto;

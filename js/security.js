@@ -39,6 +39,14 @@
   }
 
   // 2. Anonymous Account ID Management (Zero-Knowledge)
+  function generateAccountId(pseudo = null) {
+    const rand = Math.random().toString(36).substring(2, 6);
+    const suffix = pseudo 
+      ? pseudo.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 24) 
+      : Math.random().toString(36).substring(2, 6);
+    return `span_${rand}_${suffix}`;
+  }
+
   function getOrCreateAccountId() {
     if (typeof window === 'undefined') return 'span_test_account';
     
@@ -63,17 +71,9 @@
 
     // 2. Détection via localStorage (supporte span_account_id et span_sync_user)
     let id = localStorage.getItem('span_account_id') || localStorage.getItem('span_sync_user');
-    const isLocalhost = Boolean(
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1' ||
-      window.location.hostname === '0.0.0.0'
-    );
-    const manuallySet = localStorage.getItem('span_sync_key_manually_set') === 'true';
 
-    if (!id || (isLocalhost && !manuallySet)) {
-      const part = Math.random().toString(36).substring(2, 8);
-      const time = Date.now().toString(36);
-      id = isLocalhost ? 'span_local_user' : `span_${part}_${time}`;
+    if (!id || id === 'span_local_user') {
+      id = generateAccountId();
       localStorage.setItem('span_account_id', id);
       localStorage.setItem('span_sync_user', id);
     } else {
@@ -442,6 +442,7 @@
 
   return {
     sha256,
+    generateAccountId,
     getOrCreateAccountId,
     generateRecoveryKey,
     getOrCreateRecoveryKey,

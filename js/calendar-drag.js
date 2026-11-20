@@ -190,6 +190,10 @@ function updateSelectionVisuals() {
 }
 
 // POINTER DOWN SUR UN BLOC (CLIC OU DÉPLACEMENT SIMPLE/GROUPE)
+let touchBlockLongPressTimer = null;
+let touchBlockCanDrag = true;
+let touchBlockMoved = false;
+
 function handleBlockPointerDown(e, taskId, dateStr) {
   if (e.target.closest('.btn-task-menu') || 
       e.target.closest('.checkbox') || 
@@ -209,6 +213,23 @@ function handleBlockPointerDown(e, taskId, dateStr) {
 
   closeQuickAddPopover();
   e.stopPropagation();
+
+  const isTouch = e.pointerType === 'touch' || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  touchBlockCanDrag = !isTouch;
+  touchBlockMoved = false;
+  if (touchBlockLongPressTimer) clearTimeout(touchBlockLongPressTimer);
+
+  if (isTouch) {
+    // Appui long (400ms sans bouger) -> drag-to-create / déplacement
+    touchBlockLongPressTimer = setTimeout(() => {
+      touchBlockCanDrag = true;
+      if (navigator.vibrate) {
+        try { navigator.vibrate(50); } catch (err) {}
+      }
+      const el = document.getElementById(`block_${taskId}`) || document.getElementById(`block_${taskId}_cont`);
+      if (el) el.classList.add('is-touch-held');
+    }, 400);
+  }
 
   const isModifier = (e.metaKey || e.ctrlKey || e.shiftKey);
 
@@ -274,6 +295,19 @@ function handleBlockPointerMove(e) {
 
   const deltaY = e.clientY - dragAnchorClientY;
   const deltaX = e.clientX - dragAnchorClientX;
+
+  const isTouch = e.pointerType === 'touch' || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  if (isTouch && !touchBlockCanDrag) {
+    if (Math.hypot(deltaX, deltaY) > 8) {
+      touchBlockMoved = true;
+      if (touchBlockLongPressTimer) clearTimeout(touchBlockLongPressTimer);
+      dragAnchorTaskId = null;
+      window.removeEventListener('pointermove', handleBlockPointerMove);
+      window.removeEventListener('pointerup', handleBlockPointerUp);
+      window.removeEventListener('pointercancel', handleBlockPointerUp);
+    }
+    return;
+  }
 
   if (!hasMovedBeyondThreshold) {
     if (Math.hypot(deltaX, deltaY) > 5) {
@@ -428,6 +462,9 @@ let lastBlockClickTime = 0;
 let lastBlockClickTaskId = null;
 
 function handleBlockPointerUp(e) {
+  if (touchBlockLongPressTimer) clearTimeout(touchBlockLongPressTimer);
+  document.querySelectorAll('.schedule-block-item.is-touch-held').forEach(el => el.classList.remove('is-touch-held'));
+
   window.removeEventListener('pointermove', handleBlockPointerMove);
   window.removeEventListener('pointerup', handleBlockPointerUp);
   window.removeEventListener('pointercancel', handleBlockPointerUp);
@@ -453,6 +490,13 @@ function handleBlockPointerUp(e) {
   hasMovedBeyondThreshold = false;
 
   if (!moved) {
+    const isTouch = e && (e.pointerType === 'touch' || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches));
+    if (isTouch && anchorId && !touchBlockMoved) {
+      dragInitialTops.clear();
+      openEditModal(anchorId);
+      return;
+    }
+
     const clickNow = Date.now();
     const isDoubleClick = (lastBlockClickTaskId === anchorId && (clickNow - lastBlockClickTime) < 400);
 
@@ -731,12 +775,95 @@ function handleBlockPointerUp(e) {
   }
 }
 
-// SÉLECTION MARQUEE SUR LA GRILLE VIDE (EXACTEMENT DU PORTFOLIO)
+// GESTION DU TACTILE SUR LA GRILLE VIDE (SANS MARQUEE, SCROLL NATIF & CRÉATION FLUIDE)
+function handleCanvasTouchInteraction(e, dateStr) {
+  const canvas = e.currentTarget || document.getElementById(`canvas_${dateStr}`);
+  if (!canvas) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const startX = e.clientX;
+  const startY = e.clientY;
+  const startTime = Date.now();
+  let hasMoved = false;
+  let longPressTriggered = false;
+
+  const hHeight = typeof getHourHeight === 'function' ? getHourHeight() : (isMobileScreen() ? 46 : 64);
+  const offsetY = startY - rect.top;
+  const hoursFraction = offsetY / hHeight;
+  let totalMinutes = Math.round((START_HOUR * 60) + (hoursFraction * 60));
+  totalMinutes = Math.round(totalMinutes / 15) * 15;
+  totalMinutes = Math.max(0, Math.min(23 * 60 + 45, totalMinutes));
+  const h = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
+  const m = String(totalMinutes % 60).padStart(2, '0');
+  const clickedTime = `${h}:${m}`;
+
+  // Long press (400ms sans bouger) -> haptic feedback + ouverture feuille de création
+  const longPressTimer = setTimeout(() => {
+    if (!hasMoved) {
+      longPressTriggered = true;
+      if (navigator.vibrate) {
+        try { navigator.vibrate(50); } catch (err) {}
+      }
+      openCreateModalWithDefaults(dateStr, clickedTime);
+    }
+  }, 400);
+
+  function onPointerMove(moveEvent) {
+    const dx = moveEvent.clientX - startX;
+    const dy = moveEvent.clientY - startY;
+    if (Math.hypot(dx, dy) > 10) {
+      hasMoved = true;
+      clearTimeout(longPressTimer);
+    }
+  }
+
+  function onPointerUp(upEvent) {
+    clearTimeout(longPressTimer);
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
+    window.removeEventListener('pointercancel', onPointerUp);
+
+    if (longPressTriggered) return;
+
+    const dx = upEvent.clientX - startX;
+    const dy = upEvent.clientY - startY;
+    const elapsed = Date.now() - startTime;
+
+    // 1. Swipe horizontal avec verrouillage d'axe : |dx| > 50px et |dx| > |dy| * 1.5
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5 && elapsed < 600) {
+      const activeDays = typeof getActiveVisibleDaysCount === 'function' ? getActiveVisibleDaysCount() : 1;
+      const step = activeDays === 1 ? 1 : (activeDays === 3 ? 3 : 7);
+      const direction = dx < 0 ? 1 : -1;
+      if (typeof navigateTimelineByDays === 'function') {
+        navigateTimelineByDays(direction * step);
+      }
+      return;
+    }
+
+    // 2. Tap simple sur créneau vide (pas bougé > 10px, < 350ms) -> ouvre la feuille de création
+    if (!hasMoved && elapsed < 350) {
+      openCreateModalWithDefaults(dateStr, clickedTime);
+    }
+  }
+
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('pointercancel', onPointerUp);
+}
+
+// SÉLECTION MARQUEE SUR LA GRILLE VIDE (DESKTOP AVEC SOURIS UNIQUEMENT)
 function handleCanvasPointerDown(e, dateStr) {
   if (e.target.closest('.schedule-block-item') || e.target.closest('.resize-handle') || e.target.closest('.now-timeline-marker')) {
     return;
   }
   if (e.button !== 0) return;
+
+  const isTouch = e.pointerType === 'touch' || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  if (isTouch) {
+    // DÉSACTIVE totalement la multi-sélection marquee sur tactile pour permettre le scroll fluide natif
+    handleCanvasTouchInteraction(e, dateStr);
+    return;
+  }
 
   const isModifier = (e.metaKey || e.ctrlKey || e.shiftKey);
   if (!isModifier) {
