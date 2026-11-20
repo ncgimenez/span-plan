@@ -1481,6 +1481,13 @@ function updateRangeLabel(visibleDates) {
   };
   label.style.cursor = 'pointer';
   label.title = 'Cliquer pour ouvrir le mini calendrier mensuel';
+
+  const headerTodayBtn = document.getElementById('headerTodayBtn');
+  if (headerTodayBtn) {
+    const todayStr = typeof getLocalDateString === 'function' ? getLocalDateString(new Date()) : new Date().toISOString().split('T')[0];
+    const isShowingToday = visibleDates.some(d => (typeof getLocalDateString === 'function' ? getLocalDateString(d) : d.toISOString().split('T')[0]) === todayStr);
+    headerTodayBtn.style.display = isShowingToday ? 'none' : 'inline-flex';
+  }
 }
 
 function toggleTaskCompletion(id) {

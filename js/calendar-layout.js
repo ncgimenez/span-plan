@@ -450,27 +450,28 @@ function renderPlanGrid(forceRebuild = false) {
     });
   });
 
-  // Construction des en-têtes de colonnes (Badge jour + Capacité horaire)
+  // Construction des en-têtes de colonnes (Badge jour empilé sur 2 lignes)
   const is7d = (visibleDates.length === 7);
+  const singleLettersFr = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+  const threeLettersFr = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
   const headerCellsHtml = visibleDates.map(dateObj => {
     const dateStr = getLocalDateString(dateObj);
     const isToday = (dateStr === TODAY_STR);
-    const weekdayShort = dateObj.toLocaleDateString('fr-FR', { weekday: 'short' }).toUpperCase();
+    const weekdayName = is7d ? singleLettersFr[dateObj.getDay()] : threeLettersFr[dateObj.getDay()];
     const dayNumber = dateObj.getDate();
-    const { timedTasks } = dayDataMap.get(dateStr);
-
-    const capacityHtml = renderDayCapacityHtml(timedTasks, dateStr);
+    const dayInfo = dayDataMap.get(dateStr) || {};
+    const timedTasks = dayInfo.timedTasks || [];
+    const unscheduledTasks = dayInfo.unscheduledTasks || [];
+    const hasEvents = (timedTasks.length > 0) || (unscheduledTasks.length > 0);
 
     return `
       <div class="cal-day-header-cell ${isToday ? 'is-today' : ''}" data-date="${dateStr}" ${is7d ? `onclick="handleMobileDayZoom('${dateStr}')" title="Zoomer sur cette journée"` : ''}>
-        <div class="cal-day-title-row">
-          <div class="cal-day-left-badge">
-            <span class="cal-day-name">${isToday ? 'AUJ' : weekdayShort}</span>
-            <div class="cal-day-disc ${isToday ? 'is-today-disc' : ''}">
-              <span class="cal-day-date-number">${dayNumber}</span>
-            </div>
+        <div class="cal-day-stacked-wrap">
+          <span class="cal-day-name-label">${weekdayName}</span>
+          <div class="cal-day-number-wrap ${isToday ? 'is-today-disc' : ''}">
+            <span class="cal-day-number-text">${dayNumber}</span>
           </div>
-          ${capacityHtml}
+          ${hasEvents ? '<span class="cal-day-has-events-dot"></span>' : '<span class="cal-day-has-events-dot is-empty"></span>'}
         </div>
       </div>
     `;
@@ -511,7 +512,7 @@ function renderPlanGrid(forceRebuild = false) {
       <div class="cal-sticky-header">
         <div class="cal-header-top-row">
           <div class="cal-gutter-header">
-            <span class="cal-tz-label">TIME</span>
+            <span class="cal-tz-label"></span>
           </div>
           <div class="cal-columns-header" style="grid-template-columns: repeat(${visibleDates.length}, 1fr);">
             ${headerCellsHtml}
@@ -1359,7 +1360,7 @@ function renderUnscheduledList(tasks) {
   }).join('');
 }
 
-// SMART SCROLL (1H30 AVANT LE 1ER EVENT OU HEURE ACTUELLE)
+// SMART SCROLL (07H00 PAR DÉFAUT OU 1H AVANT HEURE ACTUELLE)
 function applyDynamicScroll(onlyIfUnscrolled = false) {
   const viewport = document.getElementById('calScrollViewport');
   if (!viewport) return;
@@ -1373,10 +1374,10 @@ function applyDynamicScroll(onlyIfUnscrolled = false) {
   const visibleDateStrs = new Set(visibleDates.map(d => getLocalDateString(d)));
   const visibleTimedTasks = (window.SpanPlanState.tasks || []).filter(t => visibleDateStrs.has(t.date) && !!t.time);
 
-  let targetMinutes = 8.5 * 60; // 08:30 par défaut
+  let targetMinutes = 7 * 60; // 07h00 par défaut (évite 0h-6h vide)
 
   if (visibleDateStrs.has(TODAY_STR)) {
-    targetMinutes = Math.max(0, currentMinutes - 60);
+    targetMinutes = Math.max(7 * 60, currentMinutes - 60);
   } else if (visibleTimedTasks.length > 0) {
     let earliestMinutes = 24 * 60;
     visibleTimedTasks.forEach(t => {
@@ -1384,10 +1385,11 @@ function applyDynamicScroll(onlyIfUnscrolled = false) {
       const m = parseInt(parts[0], 10) * 60 + (parseInt(parts[1], 10) || 0);
       if (m < earliestMinutes) earliestMinutes = m;
     });
-    targetMinutes = Math.max(0, earliestMinutes - 60);
+    targetMinutes = Math.max(7 * 60, earliestMinutes - 60);
   }
 
-  const scrollPx = Math.max(0, (targetMinutes / 60) * HOUR_HEIGHT);
+  const hHeight = typeof getHourHeight === 'function' ? getHourHeight() : (typeof HOUR_HEIGHT !== 'undefined' ? HOUR_HEIGHT : 46);
+  const scrollPx = Math.max(0, (targetMinutes / 60) * hHeight);
   viewport.scrollTop = scrollPx;
 }
 
@@ -1396,8 +1398,18 @@ function applyDynamicScroll(onlyIfUnscrolled = false) {
 // DATE STRIP (MOBILE NAVIGATION - VRAIE SEMAINE CALENDAIRE LUN -> DIM)
 // ==============================================================
 function renderDateStrip() {
+  const container = document.getElementById('mobileDateStripContainer');
   const strip = document.getElementById('mobileDateStrip');
   if (!strip) return;
+
+  // En vue 7J, ne pas afficher le strip au-dessus pour éviter les doublons
+  const visibleCount = typeof getActiveVisibleDaysCount === 'function' ? getActiveVisibleDaysCount() : 1;
+  if (visibleCount === 7) {
+    if (container) container.style.display = 'none';
+    return;
+  } else {
+    if (container) container.style.display = '';
+  }
 
   const baseDate = new Date();
   baseDate.setDate(baseDate.getDate() + currentTimelineOffset);

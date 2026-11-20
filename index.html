@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <title>Span Plan</title>
   
-  <meta name="theme-color" content="#0d0d0f" id="themeMetaColor">
+  <meta name="theme-color" content="#0b0b0d" id="themeMetaColor">
   <meta name="apple-mobile-web-app-title" content="Plan">
 
   <link rel="icon" type="image/svg+xml" href="span-logo.svg?v=7.50">
@@ -41,7 +41,7 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="style.css?v=8.01">
+  <link rel="stylesheet" href="style.css?v=8.02">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -164,7 +164,7 @@
     </aside>
 
     <!-- MAIN APP AREA -->
-    <div class="app-main-area">
+    <div class="app-main-area app-top-safe">
       
       <!-- TOP APP HEADER (Streamlined & Minimalist) -->
       <header class="app-header">
@@ -177,16 +177,14 @@
           </button>
 
           <div class="timeline-nav" id="timelineNav">
-            <button class="today-jump-btn" onclick="jumpToToday()" title="Today (T)">Today</button>
-            <div class="nav-arrows-capsule">
-              <button class="nav-arrow-btn nav-prev" onclick="navigateTimeline(-1)" title="Semaine précédente (←)">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-              </button>
-              <button class="nav-arrow-btn nav-next" onclick="navigateTimeline(1)" title="Semaine suivante (→)">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
-            </div>
+            <button type="button" class="nav-arrow-btn nav-prev" onclick="navigateTimeline(-1)" title="Semaine précédente (←)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
             <span class="current-range-label" id="currentRangeLabel" title="Cliquer pour sauter rapidement à une autre semaine">Loading...</span>
+            <button type="button" class="nav-arrow-btn nav-next" onclick="navigateTimeline(1)" title="Semaine suivante (→)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+            <button type="button" class="today-jump-btn" id="headerTodayBtn" onclick="jumpToToday()" title="Revenir à aujourd'hui" style="display: none;">Auj.</button>
           </div>
         </div>
 
@@ -1303,14 +1301,14 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/core.js?v=8.01"></script>
-  <script src="js/security.js?v=8.01"></script>
-  <script src="js/sync.js?v=8.01"></script>
-  <script src="js/gcal.js?v=8.01"></script>
-  <script src="js/plan.js?v=8.01"></script>
-  <script src="js/calendar-layout.js?v=8.01"></script>
-  <script src="js/calendar-drag.js?v=8.01"></script>
-  <script src="js/plan-modals.js?v=8.01"></script>
-  <script src="js/app.js?v=8.01"></script>
+  <script src="js/core.js?v=8.02"></script>
+  <script src="js/security.js?v=8.02"></script>
+  <script src="js/sync.js?v=8.02"></script>
+  <script src="js/gcal.js?v=8.02"></script>
+  <script src="js/plan.js?v=8.02"></script>
+  <script src="js/calendar-layout.js?v=8.02"></script>
+  <script src="js/calendar-drag.js?v=8.02"></script>
+  <script src="js/plan-modals.js?v=8.02"></script>
+  <script src="js/app.js?v=8.02"></script>
 </body>
 </html>

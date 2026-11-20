@@ -1,5 +1,5 @@
 :root {
-  --bg: #0d0d0f;
+  --bg: #0b0b0d;
   --card-bg: #18181b;
   --card-sub-bg: #121215;
   --card-border: rgba(255, 255, 255, 0.08);
@@ -874,6 +874,9 @@ html, body, #root {
     position: relative;
     height: 100vh;
     height: 100lvh;
+  }
+  .app-top-safe {
+    padding-top: calc(env(safe-area-inset-top, 47px) + 12px) !important;
   }
 }
 
@@ -6156,109 +6159,132 @@ body.is-card-dragging * {
     min-height: 0 !important;
   }
 
-  /* Header compact 1 seule ligne */
+  /* Header compact 1 seule ligne épurée (42px) */
   .app-header {
-    height: 44px !important;
-    min-height: 44px !important;
+    height: 42px !important;
+    min-height: 42px !important;
     padding-top: 0 !important;
     padding-bottom: 0 !important;
-    padding-left: 10px !important;
-    padding-right: 10px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
     margin: 0 !important;
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
     flex-wrap: nowrap !important;
-    gap: 6px !important;
+    gap: 4px !important;
+    background: #0b0b0d !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     flex-shrink: 0 !important;
     box-sizing: border-box !important;
+  }
+
+  [data-theme="light"] .app-header {
+    background: #f7f5f0 !important;
+    border-bottom-color: rgba(0, 0, 0, 0.08) !important;
   }
 
   .header-left {
     width: auto !important;
     display: flex !important;
     align-items: center !important;
-    gap: 6px !important;
+    gap: 2px !important;
     flex-shrink: 0 !important;
   }
 
-  .header-left .brand {
+  .header-left .brand,
+  .sidebar-expand-btn {
     display: none !important;
   }
 
-  .today-jump-btn {
-    display: none !important; /* Supprime le bouton Today en double (déjà dans la barre du bas) */
+  .timeline-nav {
+    display: flex !important;
+    align-items: center !important;
+    gap: 3px !important;
   }
 
   .nav-arrows-capsule {
-    display: flex !important;
-    align-items: center !important;
-    background: rgba(255, 255, 255, 0.05) !important;
-    border-radius: 8px !important;
-    padding: 1px !important;
-    gap: 1px !important;
+    display: contents !important;
   }
 
   .nav-arrow-btn {
-    width: 26px !important;
-    height: 26px !important;
+    width: 24px !important;
+    height: 24px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    font-size: 14px !important;
-    border-radius: 6px !important;
+    font-size: 13px !important;
     border: none !important;
     background: transparent !important;
-    color: var(--text-main) !important;
+    color: var(--text-muted) !important;
     cursor: pointer !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .nav-arrow-btn:active {
+    color: var(--text-main) !important;
   }
 
   .current-range-label {
     font-size: 13px !important;
-    font-weight: 700 !important;
-    color: #ffffff !important;
+    font-weight: 600 !important;
+    color: var(--text-main) !important;
     cursor: pointer !important;
     white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    max-width: 112px !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 4px !important;
+    box-shadow: none !important;
     display: flex !important;
     align-items: center !important;
-    gap: 3px !important;
-    padding: 4px 6px !important;
-    border-radius: 6px !important;
-    background: rgba(255, 255, 255, 0.04) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    gap: 2px !important;
+    max-width: none !important;
   }
 
   [data-theme="light"] .current-range-label {
     color: #111827 !important;
-    background: rgba(0, 0, 0, 0.04) !important;
-    border-color: rgba(0, 0, 0, 0.08) !important;
+    background: transparent !important;
+    border: none !important;
+  }
+
+  .today-jump-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 2px 6px !important;
+    font-size: 10.5px !important;
+    font-weight: 600 !important;
+    border-radius: 4px !important;
+    background: rgba(245, 158, 11, 0.15) !important;
+    color: #f59e0b !important;
+    border: none !important;
+    cursor: pointer !important;
+    line-height: 1.2 !important;
+    margin-left: 2px !important;
   }
 
   .header-center {
-    display: none !important; /* Pas de timeline-nav lourd sur mobile */
+    display: none !important;
   }
 
   .header-right {
     width: auto !important;
     display: flex !important;
     align-items: center !important;
-    gap: 6px !important;
+    gap: 4px !important;
     justify-content: flex-end !important;
     flex-shrink: 0 !important;
   }
 
-  /* Compact View Switcher 1J | 3J | 7J */
+  /* Segmented control 1J | 3J | 7J (Actif en ambre #F59E0B, texte sombre) */
   .mobile-view-pills {
     display: flex !important;
     align-items: center !important;
-    gap: 2px !important;
+    gap: 1px !important;
     padding: 2px !important;
-    background: rgba(255, 255, 255, 0.06) !important;
-    border-radius: 8px !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-radius: 7px !important;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
   }
 
@@ -6268,10 +6294,10 @@ body.is-card-dragging * {
   }
 
   .mobile-view-pills .pill-btn {
-    padding: 3.5px 7px !important;
-    font-size: 11px !important;
-    font-weight: 700 !important;
-    border-radius: 6px !important;
+    padding: 3px 6px !important;
+    font-size: 10.5px !important;
+    font-weight: 600 !important;
+    border-radius: 5px !important;
     border: none !important;
     background: transparent !important;
     color: var(--text-muted) !important;
@@ -6281,15 +6307,39 @@ body.is-card-dragging * {
   }
 
   .mobile-view-pills .pill-btn.active {
-    background: rgba(255, 255, 255, 0.18) !important;
-    color: #ffffff !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+    background: #f59e0b !important;
+    color: #0b0b0d !important;
+    font-weight: 750 !important;
+    box-shadow: 0 1px 3px rgba(245, 158, 11, 0.35) !important;
   }
 
-  [data-theme="light"] .mobile-view-pills .pill-btn.active {
-    background: #ffffff !important;
-    color: #111827 !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  .header-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 2px !important;
+  }
+
+  /* Supprime le bouton soleil dupliqué sur mobile + boutons inutiles */
+  .header-actions #headerThemeToggleBtn,
+  .header-actions .btn-new-task,
+  .header-actions #btnToggleDrawer,
+  .header-actions .plan-bridge-btn {
+    display: none !important;
+  }
+
+  /* Icône réglages sans bordure */
+  .header-actions .btn-settings {
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-muted) !important;
+    padding: 3px !important;
+    width: 28px !important;
+    height: 28px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: none !important;
+    cursor: pointer !important;
   }
 
   .view-mode-pills,
@@ -6417,21 +6467,25 @@ body.is-card-dragging * {
     bottom: 2px;
   }
 
-  /* CONTRÔLE SEGMENTÉ (AGENDA VS TO-DO DU JOUR) */
+  /* CONTRÔLE SEGMENTÉ (AGENDA VS TO-DO DU JOUR) - HAUTEUR MAX 32PX */
   .mobile-day-segmented {
     display: flex !important;
+    height: 30px !important;
+    max-height: 32px !important;
     background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    padding: 2px;
-    margin: 2px 6px 3px 6px !important;
+    border-radius: 7px;
+    padding: 2px !important;
+    margin: 2px 8px 3px 8px !important;
     gap: 2px;
     flex-shrink: 0 !important;
+    box-sizing: border-box !important;
   }
 
   .mobile-day-segmented .seg-btn {
     flex: 1;
-    padding: 5px 8px;
-    border-radius: 6px;
+    height: 26px !important;
+    padding: 0 8px !important;
+    border-radius: 5px;
     border: none;
     background: transparent;
     color: var(--text-muted);
@@ -6449,7 +6503,7 @@ body.is-card-dragging * {
   .mobile-day-segmented .seg-btn.active {
     background: #27272a;
     color: #ffffff;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
   }
 
   [data-theme="light"] .mobile-day-segmented {
@@ -6532,6 +6586,8 @@ body.is-card-dragging * {
     touch-action: pan-y !important;
     overscroll-behavior-y: contain !important;
     -webkit-overflow-scrolling: touch !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   .cal-scroll-content {
@@ -6539,12 +6595,12 @@ body.is-card-dragging * {
     min-height: calc(24 * var(--hour-height) + 24px) !important;
   }
 
-  /* Supprime la sous-ligne TIME | TUE 1 en vue 1J sur mobile pour éviter de répéter la date */
+  /* Supprime la sous-ligne TIME | TUE 1 en vue 1J sur mobile */
   .cal-unified-container.is-view-1d .cal-header-top-row {
     display: none !important;
   }
 
-  /* Colonne des heures ultra-compacte à ~36px */
+  /* Colonne des heures ultra-compacte à ~36px avec gris lisible #71717A */
   .cal-time-ruler,
   .cal-gutter-header,
   .cal-gutter-allday {
@@ -6552,38 +6608,130 @@ body.is-card-dragging * {
     min-width: 36px !important;
     max-width: 36px !important;
   }
+
+  .cal-tz-label {
+    display: none !important;
+  }
+
+  .cal-time-label-row {
+    color: #71717a !important;
+    font-weight: 600 !important;
+  }
+
+  .cal-time-label-row.is-night {
+    opacity: 0.65 !important;
+  }
+
   .cal-time-label-row span {
     font-size: 10px !important;
     letter-spacing: -0.02em !important;
     padding-right: 3px !important;
   }
+
   .cal-time-now-badge {
     display: none !important;
   }
 
-  /* Vue 7J mobile : 7 colonnes égales compactes */
-  .is-view-7d .cal-day-header-cell {
-    padding: 3px 1px !important;
+  /* AFFICHAGE DES JOURS / DATES EMPILÉ SUR 2 LIGNES */
+  .cal-day-header-cell {
+    padding: 4px 2px 3px 2px !important;
     cursor: pointer !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.04) !important;
   }
-  .is-view-7d .cal-day-name {
-    font-size: 8.5px !important;
-    font-weight: 700 !important;
+
+  .cal-day-stacked-wrap {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    gap: 1.5px !important;
   }
-  .is-view-7d .cal-day-disc {
-    width: 19px !important;
-    height: 19px !important;
+
+  .cal-day-name-label {
     font-size: 10px !important;
+    font-weight: 600 !important;
+    color: var(--text-muted) !important;
+    text-transform: uppercase !important;
+    line-height: 1 !important;
   }
+
+  .cal-day-number-wrap {
+    width: 26px !important;
+    height: 26px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 50% !important;
+    transition: all 0.15s ease !important;
+  }
+
+  .cal-day-number-text {
+    font-size: 12.5px !important;
+    font-weight: 600 !important;
+    font-variant-numeric: tabular-nums !important;
+    line-height: 1 !important;
+    color: var(--text-main) !important;
+  }
+
+  /* Aujourd'hui : cercle plein ambre #F59E0B avec chiffre en noir #0B0B0D */
+  .cal-day-header-cell.is-today .cal-day-number-wrap {
+    background: #f59e0b !important;
+    box-shadow: 0 1px 4px rgba(245, 158, 11, 0.4) !important;
+  }
+
+  .cal-day-header-cell.is-today .cal-day-number-text {
+    color: #0b0b0d !important;
+    font-weight: 800 !important;
+  }
+
+  .cal-day-header-cell.is-today .cal-day-name-label {
+    color: #f59e0b !important;
+    font-weight: 750 !important;
+  }
+
+  /* Point indicateur discret de 4px sous le chiffre pour jours avec événements */
+  .cal-day-has-events-dot {
+    width: 4px !important;
+    height: 4px !important;
+    border-radius: 50% !important;
+    background: #f59e0b !important;
+    margin-top: 1px !important;
+  }
+
+  .cal-day-has-events-dot.is-empty {
+    visibility: hidden !important;
+  }
+
+  /* Vue 7J mobile : 7 colonnes compactes sans double bandeau */
+  .is-view-7d .cal-day-header-cell {
+    padding: 2px 0 !important;
+  }
+
+  .is-view-7d .cal-day-number-wrap {
+    width: 24px !important;
+    height: 24px !important;
+  }
+
+  .is-view-7d .cal-day-number-text {
+    font-size: 11.5px !important;
+  }
+
+  .is-view-7d .cal-day-name-label {
+    font-size: 9.5px !important;
+  }
+
   .is-view-7d .capacity-mini-bar,
   .is-view-7d .capacity-total-txt {
     display: none !important;
   }
+
   .is-view-7d .schedule-block-item {
     padding: 2px 2px !important;
     border-radius: 4px !important;
     margin: 0 !important;
   }
+
   .is-view-7d .block-title {
     font-size: 9px !important;
     line-height: 1.1 !important;
@@ -6593,9 +6741,11 @@ body.is-card-dragging * {
     overflow: hidden !important;
     word-break: break-word !important;
   }
+
   .is-view-7d .block-header-row {
     margin-bottom: 0 !important;
   }
+
   .is-view-7d .btn-task-menu,
   .is-view-7d .btn-block-quick-add-subtask,
   .is-view-7d .event-progress-pill,
