@@ -165,51 +165,149 @@ function deleteSelectedTasks() {
   }
 }
 
+function formatTaskPreviewDateTime(task) {
+  if (!task) return '';
+  const dateStr = task.date;
+  if (!dateStr) return 'Backlog';
+
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dateObj = new Date(y, m - 1, d);
+  const daysFr = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+  const monthsFr = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+  const dayName = daysFr[dateObj.getDay()];
+  const monthName = monthsFr[dateObj.getMonth()];
+  const formattedDate = `${dayName} ${d} ${monthName}`;
+
+  if (task.endDate && task.endDate !== task.date) {
+    const [ey, em, ed] = task.endDate.split('-').map(Number);
+    const endObj = new Date(ey, em - 1, ed);
+    const endFormatted = `${daysFr[endObj.getDay()]} ${ed} ${monthsFr[endObj.getMonth()]}`;
+    return `${formattedDate} – ${endFormatted} · Toute la journée`;
+  }
+
+  if (!task.time) {
+    return `${formattedDate} · Toute la journée`;
+  }
+
+  const [hStr, mStr] = task.time.split(':');
+  const startM = parseInt(hStr, 10) * 60 + (parseInt(mStr, 10) || 0);
+  const dur = task.duration || 30;
+  const endMTotal = startM + dur;
+  const endH = String(Math.floor((endMTotal % (24 * 60)) / 60)).padStart(2, '0');
+  const endM = String(endMTotal % 60).padStart(2, '0');
+
+  let durStr = '';
+  if (dur < 60) {
+    durStr = ` (${dur} min)`;
+  } else {
+    const hours = Math.floor(dur / 60);
+    const mins = dur % 60;
+    durStr = mins > 0 ? ` (${hours}h${String(mins).padStart(2, '0')})` : ` (${hours}h)`;
+  }
+
+  return `${formattedDate} · ${task.time} – ${endH}:${endM}${durStr}`;
+}
+window.formatTaskPreviewDateTime = formatTaskPreviewDateTime;
+
+function togglePreviewSubtask(parentTaskId, subtaskId) {
+  if (typeof toggleSubtaskCompletion === 'function') {
+    toggleSubtaskCompletion(parentTaskId, subtaskId);
+  }
+  updateSelectionVisuals();
+}
+window.togglePreviewSubtask = togglePreviewSubtask;
+
 function updateSelectionVisuals() {
-  document.querySelectorAll('.schedule-block-item').forEach(el => {
-    const id = el.dataset.taskId;
-    el.classList.toggle('is-selected', selectedTaskIds.has(id));
+  document.querySelectorAll('.schedule-block-item, .cal-allday-ribbon').forEach(el => {
+    const id = el.dataset.taskId || (el.id ? el.id.replace('allday_', '').replace('block_', '').replace('_cont', '') : null);
+    el.classList.toggle('is-selected', Boolean(id && selectedTaskIds.has(id)));
   });
 
   const bar = document.getElementById('multiSelectActionBar');
   if (!bar) return;
 
   if (selectedTaskIds.size === 0) {
-    bar.classList.remove('show');
+    bar.classList.remove('show', 'preview-card-mode');
     return;
   }
 
   bar.classList.add('show');
 
   if (selectedTaskIds.size === 1) {
+    bar.classList.add('preview-card-mode');
     const singleId = Array.from(selectedTaskIds)[0];
-    const task = (window.SpanPlanState.tasks || []).find(t => t.id === singleId);
-    const title = task ? escapeHtml(task.title || 'Sans titre') : 'Sélection';
-    const timeStr = task && task.time ? task.time : '';
-    const isCompleted = task && task.completed;
+    const task = (window.SpanPlanState.tasks || []).find(t => String(t.id) === String(singleId));
+    if (!task) {
+      bar.classList.remove('show', 'preview-card-mode');
+      return;
+    }
+
+    const titleHtml = (typeof renderTitleWithTagsHtml === 'function')
+      ? renderTitleWithTagsHtml(task.title || 'Sans titre')
+      : (typeof escapeHtml === 'function' ? escapeHtml(task.title || 'Sans titre') : (task.title || 'Sans titre'));
+
+    const dateTimeStr = formatTaskPreviewDateTime(task);
+    const isCompleted = Boolean(task.completed);
+    const cat = task.context || 'work';
+    const catLabels = { work: 'Work', life: 'Life', fun: 'Fun' };
+    const catLabel = catLabels[cat] || 'Work';
+
+    const childSubtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
+    let subtasksPreviewHtml = '';
+    if (childSubtasks.length > 0) {
+      const doneCount = childSubtasks.filter(s => s.completed).length;
+      subtasksPreviewHtml = `
+        <div class="preview-card-subtasks-wrap">
+          <div class="preview-card-subtasks-header">
+            <span class="preview-subtasks-title">Sous-tâches</span>
+            <span class="preview-subtasks-badge">${doneCount}/${childSubtasks.length}</span>
+          </div>
+          <div class="preview-card-subtasks-list">
+            ${childSubtasks.map(sub => `
+              <div class="preview-subtask-row ${sub.completed ? 'is-completed' : ''}" 
+                   onclick="event.stopPropagation(); togglePreviewSubtask('${task.id}', '${sub.id}')">
+                <div class="preview-subtask-checkbox ${sub.completed ? 'is-checked' : ''}">
+                  ${sub.completed ? '✓' : ''}
+                </div>
+                <span class="preview-subtask-label">${typeof escapeHtml === 'function' ? escapeHtml(sub.title || 'Sans titre') : (sub.title || 'Sans titre')}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
 
     bar.innerHTML = `
-      <div class="selected-block-info-bar">
-        <span class="selected-block-title">${title}</span>
-        ${timeStr ? `<span class="selected-block-time">${timeStr}</span>` : ''}
-      </div>
-      <div class="selected-block-actions">
-        <button type="button" class="btn-block-action" onclick="openEditModal('${singleId}')" title="Modifier">
-          Modifier
-        </button>
-        <button type="button" class="btn-block-action ${isCompleted ? 'is-completed' : ''}" onclick="toggleSelectedTasksCompletion()" title="${isCompleted ? 'Marquer non fait' : 'Terminer'}">
-          ${isCompleted ? '↩ Fait' : '✓ Terminer'}
-        </button>
-        <button type="button" class="btn-block-action btn-focus-action" onclick="pushSelectedTaskToFocus()" title="Lancer en Focus">
-          Focus ↗
-        </button>
-        <button type="button" class="btn-block-action danger" onclick="deleteSelectedTasks()" title="Supprimer">
-          Suppr
-        </button>
-        <button type="button" class="multi-select-close-btn" onclick="clearSelection()" title="Désélectionner">✕</button>
+      <div class="preview-card-container">
+        <div class="preview-card-top-row">
+          <div class="preview-card-meta-left">
+            <span class="preview-card-cat-badge cat-${cat}">${catLabel}</span>
+            <span class="preview-card-datetime">${dateTimeStr}</span>
+          </div>
+          <button type="button" class="preview-card-close-btn" onclick="event.stopPropagation(); clearSelection()" title="Fermer l'aperçu (Échap)">✕</button>
+        </div>
+
+        <div class="preview-card-body">
+          <h3 class="preview-card-title">${titleHtml}</h3>
+        </div>
+
+        ${subtasksPreviewHtml}
+
+        <div class="preview-card-actions-row">
+          <button type="button" class="preview-action-btn btn-finish ${isCompleted ? 'is-completed' : ''}" onclick="event.stopPropagation(); toggleSelectedTasksCompletion()" title="${isCompleted ? 'Marquer non fait' : 'Terminer'}">
+            ${isCompleted ? '↩ Non fait' : '✓ Terminer'}
+          </button>
+          <button type="button" class="preview-action-btn btn-edit" onclick="event.stopPropagation(); openEditModal('${singleId}')" title="Modifier">
+            ✎ Modifier
+          </button>
+          <button type="button" class="preview-action-btn btn-delete danger" onclick="event.stopPropagation(); deleteSelectedTasks()" title="Supprimer">
+            🗑 Supprimer
+          </button>
+        </div>
       </div>
     `;
   } else {
+    bar.classList.remove('preview-card-mode');
     bar.innerHTML = `
       <span class="multi-select-count-badge" id="multiSelectCountText">${selectedTaskIds.size} sélections</span>
       <div class="multi-select-divider"></div>

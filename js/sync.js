@@ -3,7 +3,11 @@ const SUPABASE_URL = 'https://xzoukiveknyuxmbrcsvb.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_8g571gv3CFOyJ0lMtaAf4w_CcITQovd';
 
 const supabaseClient = (typeof supabase !== 'undefined') 
-  ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) 
+  ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: {
+        fetch: (url, options = {}) => fetch(url, { ...options, cache: 'no-store' })
+      }
+    }) 
   : null;
 
 function getOrCreateSyncId() {
@@ -758,6 +762,9 @@ let lastPlanCloudWriteTime = 0;
 
 // ENVOI VERS SUPABASE
 async function syncPlanToCloud() {
+  if (!SYNC_USER_ID) {
+    SYNC_USER_ID = getOrCreateSyncId();
+  }
   if (!supabaseClient || !SYNC_USER_ID) return;
   try {
     lastPlanCloudWriteTime = Date.now();
@@ -949,6 +956,9 @@ async function syncPlanToCloud() {
 
 // FUSION INTELLIGENTE ET APPLICATION DIRECTE
 async function loadPlanFromCloud(forceReplace = false) {
+  if (!SYNC_USER_ID) {
+    SYNC_USER_ID = getOrCreateSyncId();
+  }
   if (!supabaseClient || !SYNC_USER_ID) return;
   try {
     // 0. Synchronisation des paramètres de sécurité depuis user_sync
@@ -1101,6 +1111,12 @@ async function loadPlanFromCloud(forceReplace = false) {
         }
         window.SpanPlanState.tasks = mergedList;
         localStorage.setItem('span_plan_tasks', JSON.stringify(mergedList));
+        if (window.SpanPlanStore) {
+          window.SpanPlanStore.tasks = mergedList;
+          if (typeof window.SpanPlanStore.save === 'function') {
+            window.SpanPlanStore.save();
+          }
+        }
       }
 
       // 2. ENSUITE : Rapprocher les tâches Span Focus sans créer de doublons ni réinsérer les supprimées
@@ -1117,6 +1133,9 @@ async function loadPlanFromCloud(forceReplace = false) {
 
       // Mettre à jour le stockage local propre
       localStorage.setItem('span_plan_tasks', JSON.stringify(window.SpanPlanState.tasks));
+      if (window.SpanPlanStore) {
+        window.SpanPlanStore.tasks = window.SpanPlanState.tasks;
+      }
 
       if (typeof executeAutoRollover === 'function') executeAutoRollover();
       if (typeof renderPlanGrid === 'function') renderPlanGrid(true);
@@ -1131,15 +1150,76 @@ async function loadPlanFromCloud(forceReplace = false) {
   }
 }
 
+// ACTUALISATION MANUELLE DEPUIS LE BOUTON PHYSIQUE DU HEADER (↻)
+async function handleManualRefreshClick() {
+  const refreshBtns = document.querySelectorAll('.btn-header-refresh');
+  refreshBtns.forEach(b => {
+    b.classList.add('is-refreshing');
+    b.disabled = true;
+  });
+
+  try {
+    if (!SYNC_USER_ID) {
+      SYNC_USER_ID = getOrCreateSyncId();
+    }
+    if (!navigator.onLine) {
+      if (typeof showToast === 'function') showToast("Vous êtes actuellement hors-ligne.", 'warning');
+      refreshBtns.forEach(b => {
+        b.classList.remove('is-refreshing');
+        b.disabled = false;
+      });
+      return;
+    }
+    if (!SYNC_USER_ID) {
+      if (typeof showToast === 'function') showToast("Aucun compte de synchronisation lié.", 'warning');
+      refreshBtns.forEach(b => {
+        b.classList.remove('is-refreshing');
+        b.disabled = false;
+      });
+      return;
+    }
+
+    await loadPlanFromCloud(false);
+
+    refreshBtns.forEach(b => {
+      b.classList.remove('is-refreshing');
+      b.classList.add('is-success');
+    });
+
+    if (typeof showToast === 'function') {
+      showToast("Calendrier à jour", 'success', 2000);
+    }
+
+    setTimeout(() => {
+      refreshBtns.forEach(b => {
+        b.classList.remove('is-success');
+        b.disabled = false;
+      });
+    }, 1500);
+  } catch (err) {
+    refreshBtns.forEach(b => {
+      b.classList.remove('is-refreshing');
+      b.disabled = false;
+    });
+    if (typeof showToast === 'function') showToast("Erreur de synchronisation", 'danger');
+  }
+}
+window.handleManualRefreshClick = handleManualRefreshClick;
+
 // ABONNEMENT EN TEMPS RÉEL (WEBSOCKET SUPABASE)
 function setupRealtimeSubscription() {
   if (!supabaseClient) return;
 
   if (realtimeSubscription) {
-    supabaseClient.removeChannel(realtimeSubscription);
+    try {
+      supabaseClient.removeChannel(realtimeSubscription);
+    } catch (e) {}
     realtimeSubscription = null;
   }
 
+  if (!SYNC_USER_ID) {
+    SYNC_USER_ID = getOrCreateSyncId();
+  }
   if (!SYNC_USER_ID) return;
 
   realtimeSubscription = supabaseClient
@@ -1153,8 +1233,8 @@ function setupRealtimeSubscription() {
         filter: `id=eq.${SYNC_USER_ID}`
       },
       (payload) => {
-        // Ignorer l'écho immédiat de notre propre écriture (moins de 1.5s)
-        if (Date.now() - lastPlanCloudWriteTime < 1500) {
+        // Ignorer l'écho immédiat de notre propre écriture (moins de 2s)
+        if (Date.now() - lastPlanCloudWriteTime < 2000) {
           return;
         }
         if (payload.new && payload.new.tasks) {
@@ -1167,16 +1247,40 @@ function setupRealtimeSubscription() {
     .subscribe();
 }
 
-// RÉACTUALISATION AUTOMATIQUE QUAND ON ROUVRE L'APP SUR MOBILE
+// RÉACTUALISATION AUTOMATIQUE AU RETOUR AU PREMIER PLAN (PWA / ONGLET)
+let lastAutoPullTime = 0;
+function triggerAutoSync(force = false) {
+  const now = Date.now();
+  if (!force && (now - lastAutoPullTime < 2000)) return;
+  lastAutoPullTime = now;
+  loadPlanFromCloud();
+}
+window.triggerAutoSync = triggerAutoSync;
+
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
-    loadPlanFromCloud();
+    triggerAutoSync();
   }
 });
 
 window.addEventListener('focus', () => {
-  loadPlanFromCloud();
+  triggerAutoSync();
 });
+
+window.addEventListener('pageshow', () => {
+  triggerAutoSync();
+});
+
+window.addEventListener('online', () => {
+  triggerAutoSync(true);
+});
+
+// Polling doux toutes les 30s quand l'application est active au premier plan
+setInterval(() => {
+  if (document.visibilityState === 'visible' && !isCloudSyncInProgress) {
+    triggerAutoSync();
+  }
+}, 30000);
 
 window.addEventListener('DOMContentLoaded', () => {
   updateSyncKeyDisplay();

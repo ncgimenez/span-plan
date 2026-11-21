@@ -1416,10 +1416,11 @@ function renderBacklogDrawer() {
             </div>
           `}
           <div class="backlog-task-info">
-            <span class="task-text ${completedClass}">${renderTitleWithTagsHtml(task.title)}${actionTagHtml}</span>
+            <span class="task-text ${completedClass}">${renderTitleWithTagsHtml(task.title)}</span>
             <div class="backlog-task-meta">
               <span class="backlog-cat-badge cat-${task.context || 'work'}">${catLabel}</span>
               <span class="backlog-duration-badge">${durationStr}</span>
+              ${actionTagHtml}
             </div>
           </div>
           ${backlogLinkHtml}
@@ -1474,10 +1475,12 @@ function updateRangeLabel(visibleDates) {
   let text = '';
   if (isMobile) {
     const fullMonthsFr = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+    const shortMonthsFr = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
+    const useShort = window.innerWidth <= 390;
+    const monthsList = useShort ? shortMonthsFr : fullMonthsFr;
     if (first.getMonth() === last.getMonth()) {
-      text = fullMonthsFr[first.getMonth()];
+      text = monthsList[first.getMonth()];
     } else {
-      const shortMonthsFr = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
       text = `${shortMonthsFr[first.getMonth()]} – ${shortMonthsFr[last.getMonth()]}`;
     }
   } else {

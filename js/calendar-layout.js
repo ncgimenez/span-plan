@@ -333,6 +333,7 @@ function renderAllDayContinuousRibbonHtml(visibleDates) {
     return `
       <div class="cal-allday-ribbon cat-${task.context || 'work'} ${task.completed ? 'completed' : ''} ${multiDayClasses} ${task.important ? 'is-important' : ''}"
            id="allday_${task.id}"
+           data-task-id="${task.id}"
            style="grid-column: ${colStart + 1} / ${colEnd + 2}; grid-row: ${track + 1}; z-index: 2;"
            draggable="true"
            ondragstart="handleDragStart(event, '${task.id}')"
@@ -1284,10 +1285,11 @@ function renderTimedBlocks(tasks, dateStr) {
       `;
     }
 
+    const isMobile = typeof isMobileScreen === 'function' && isMobileScreen();
     const is7d = (typeof visibleDaysCount !== 'undefined' && visibleDaysCount === 7) || (typeof getActiveVisibleDaysCount === 'function' && getActiveVisibleDaysCount() === 7);
 
     let innerContentHtml = '';
-    if (is7d) {
+    if (is7d && isMobile) {
       innerContentHtml = `
         <span class="schedule-block-title">${renderTitleWithTagsHtml(task.title)}</span>
       `;
