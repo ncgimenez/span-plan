@@ -202,7 +202,7 @@ function renderAllDayContinuousRibbonHtml(visibleDates) {
     const taskDate = task.date.trim();
     const cleanEndDate = (task.endDate && typeof task.endDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(task.endDate.trim())) ? task.endDate.trim() : null;
     const isMultiDay = !!(cleanEndDate && cleanEndDate > taskDate);
-    const isAllDay = !!task.allDay || (!task.time && !!taskDate) || isMultiDay;
+    const isAllDay = !!task.allDay || isMultiDay;
     if (!isAllDay) return;
 
     const contextMatch = isTaskCategoryVisible(task);
@@ -337,19 +337,20 @@ function renderAllDayContinuousRibbonHtml(visibleDates) {
            draggable="true"
            ondragstart="handleDragStart(event, '${task.id}')"
            ondragend="handleDragEnd(event)"
-           onclick="event.stopPropagation(); openEditModal('${task.id}')"
+           onclick="event.stopPropagation(); toggleTaskSelection('${task.id}')"
+           oncontextmenu="event.preventDefault(); openEditModal('${task.id}')"
            title="${escapeHtml(task.title)}${rangeTooltip}">
         <div class="ribbon-content">
-          ${!isEvent ? `
+          ${(!isEvent && visibleDates.length < 7) ? `
             <div class="subtask-mini-checkbox ${task.completed ? 'checked' : ''}" 
                  onclick="event.stopPropagation(); toggleTaskCompletion('${task.id}')">
               ${task.completed ? '✓' : ''}
             </div>
-          ` : '<span style="font-size:10.5px; flex-shrink:0;">📅</span>'}
-          <span class="ribbon-title">${recIcon}${renderTitleWithTagsHtml(task.title)}</span>
-          ${dateRangeLabel}
-          ${alldayLocHtml}
-          ${progressPillHtml}
+          ` : ''}
+          <span class="ribbon-title">${visibleDates.length === 7 ? '' : recIcon}${renderTitleWithTagsHtml(task.title)}</span>
+          ${visibleDates.length === 7 ? '' : dateRangeLabel}
+          ${visibleDates.length === 7 ? '' : alldayLocHtml}
+          ${visibleDates.length === 7 ? '' : progressPillHtml}
         </div>
       </div>
     `;
@@ -497,10 +498,11 @@ function setupViewportSwipe() {
     startX = 0;
     startY = 0;
 
-    // Horizontal swipe with axis locking : |dx| > 50px et |dx| > |dy| * 1.5
-    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5 && elapsed < 600) {
-      const activeDays = typeof getActiveVisibleDaysCount === 'function' ? getActiveVisibleDaysCount() : 1;
-      const step = activeDays === 1 ? 1 : (activeDays === 3 ? 3 : 7);
+    // Horizontal swipe with axis locking : |dx| > 40px et |dx| > |dy| * 1.5
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5 && elapsed < 600) {
+      const curDates = typeof calculateVisibleDates === 'function' ? calculateVisibleDates() : [];
+      const curCount = curDates.length || (typeof getActiveVisibleDaysCount === 'function' ? getActiveVisibleDaysCount() : 1);
+      const step = (curCount === 7) ? 7 : ((curCount === 3) ? 3 : 1);
       const direction = dx < 0 ? 1 : -1;
       if (typeof navigateTimelineByDays === 'function') {
         navigateTimelineByDays(direction * step);
@@ -656,10 +658,14 @@ function renderPlanGrid(forceRebuild = false) {
 
   setupViewportSwipe();
 
-  // Restaurer le scroll fluide
+  // Restaurer le scroll fluide ou positionner intelligemment sur la journée
   const newViewport = document.getElementById('calScrollViewport');
-  if (newViewport && prevScroll !== null) {
-    newViewport.scrollTop = prevScroll;
+  if (newViewport) {
+    if (prevScroll !== null && prevScroll > 10) {
+      newViewport.scrollTop = prevScroll;
+    } else {
+      applyDynamicScroll();
+    }
   }
 
   updateRangeLabel(visibleDates);
@@ -1277,8 +1283,14 @@ function renderTimedBlocks(tasks, dateStr) {
       `;
     }
 
+    const is7d = (typeof visibleDaysCount !== 'undefined' && visibleDaysCount === 7) || (typeof getActiveVisibleDaysCount === 'function' && getActiveVisibleDaysCount() === 7);
+
     let innerContentHtml = '';
-    if (isCompact) {
+    if (is7d) {
+      innerContentHtml = `
+        <span class="schedule-block-title">${renderTitleWithTagsHtml(task.title)}</span>
+      `;
+    } else if (isCompact) {
       innerContentHtml = `
         <div class="schedule-block-compact-row">
           ${!isEvent ? `
@@ -1355,12 +1367,12 @@ function renderTimedBlocks(tasks, dateStr) {
            data-original-height="${height}"
            style="--block-height: ${height}px; ${positionStyle}"
            onpointerdown="handleBlockPointerDown(event, '${task.id}', '${dateStr}')"
-           ondblclick="event.stopPropagation(); openEditModal('${task.id}')"
            onclick="event.stopPropagation()"
+           oncontextmenu="event.preventDefault()"
            ondragover="handleBlockDragOver(event, '${task.id}')"
            ondragleave="handleBlockDragLeave(event, '${task.id}')"
            ondrop="handleBlockDrop(event, '${task.id}')"
-           title="${isEvent ? '📅 Event: ' : '📋 Task: '}${escapeHtml(task.title)} (${timeRangeStr})${locTooltip}${notesTooltip}${taskUrl ? `\n🔗 ${taskUrl}` : ''}">
+           title="${isEvent ? 'Event: ' : 'Task: '}${escapeHtml(task.title)} (${timeRangeStr})${locTooltip}${notesTooltip}${taskUrl ? `\n🔗 ${taskUrl}` : ''}">
         ${innerContentHtml}
         ${cornerLinkHtml}
         <div class="resize-handle" 
@@ -1495,7 +1507,7 @@ function renderUnscheduledList(tasks) {
   }).join('');
 }
 
-// SMART SCROLL (07H00 PAR DÉFAUT OU 1H AVANT HEURE ACTUELLE)
+// SMART SCROLL (07H30 PAR DÉFAUT OU PREMIER ÉVÉNEMENT DU JOUR - ÉVITE 00H-07H VIDE)
 function applyDynamicScroll(onlyIfUnscrolled = false) {
   const viewport = document.getElementById('calScrollViewport');
   if (!viewport) return;
@@ -1509,22 +1521,40 @@ function applyDynamicScroll(onlyIfUnscrolled = false) {
   const visibleDateStrs = new Set(visibleDates.map(d => getLocalDateString(d)));
   const visibleTimedTasks = (window.SpanPlanState.tasks || []).filter(t => visibleDateStrs.has(t.date) && !!t.time);
 
-  let targetMinutes = 7 * 60; // 07h00 par défaut (évite 0h-6h vide)
-
-  if (visibleDateStrs.has(TODAY_STR)) {
-    targetMinutes = Math.max(7 * 60, currentMinutes - 60);
-  } else if (visibleTimedTasks.length > 0) {
-    let earliestMinutes = 24 * 60;
+  let earliestMinutes = null;
+  if (visibleTimedTasks.length > 0) {
+    let minM = 24 * 60;
     visibleTimedTasks.forEach(t => {
       const parts = (t.time || '00:00').split(':');
       const m = parseInt(parts[0], 10) * 60 + (parseInt(parts[1], 10) || 0);
-      if (m < earliestMinutes) earliestMinutes = m;
+      if (m < minM) minM = m;
     });
-    targetMinutes = Math.max(7 * 60, earliestMinutes - 60);
+    earliestMinutes = minM;
   }
 
-  const hHeight = typeof getHourHeight === 'function' ? getHourHeight() : (typeof HOUR_HEIGHT !== 'undefined' ? HOUR_HEIGHT : 46);
-  const scrollPx = Math.max(0, (targetMinutes / 60) * hHeight);
+  const DAY_DEFAULT_MINUTES = 7 * 60 + 30; // 07h30 par défaut
+  let targetMinutes = DAY_DEFAULT_MINUTES;
+
+  if (visibleDateStrs.has(TODAY_STR)) {
+    // Si l'heure actuelle est entre 00h00 et 07h30 (ex: 00h30 la nuit)
+    if (currentMinutes < DAY_DEFAULT_MINUTES) {
+      if (earliestMinutes !== null && earliestMinutes >= 6 * 60) {
+        targetMinutes = Math.min(DAY_DEFAULT_MINUTES, Math.max(0, earliestMinutes - 30));
+      } else {
+        targetMinutes = DAY_DEFAULT_MINUTES; // Scrolle vers 07h30 au lieu d'afficher 0h-7h
+      }
+    } else {
+      // Heure de jour : centrer ~45-60 min avant l'heure actuelle
+      targetMinutes = Math.max(DAY_DEFAULT_MINUTES, currentMinutes - 60);
+    }
+  } else if (earliestMinutes !== null) {
+    targetMinutes = Math.max(DAY_DEFAULT_MINUTES, earliestMinutes - 60);
+  } else {
+    targetMinutes = DAY_DEFAULT_MINUTES;
+  }
+
+  const hHeight = typeof getHourHeight === 'function' ? getHourHeight() : (typeof HOUR_HEIGHT !== 'undefined' ? HOUR_HEIGHT : 48);
+  const scrollPx = Math.max(0, Math.round((targetMinutes / 60) * hHeight));
   viewport.scrollTop = scrollPx;
 }
 

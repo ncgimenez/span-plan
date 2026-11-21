@@ -1403,21 +1403,29 @@ function renderBacklogDrawer() {
       li.ondragstart = (e) => handleDragStart(e, task.id);
       li.ondragend = (e) => handleDragEnd(e);
 
+      const durationStr = task.duration ? `${task.duration}m` : '30m';
+      const catLabel = (task.context || 'work').toUpperCase();
+
       li.innerHTML = `
-        <div class="task-row-main" onclick="handleTaskRowClick(event, '${task.id}')" ondblclick="openEditModal('${task.id}')">
+        <div class="task-row-main" onclick="handleTaskRowClick(event, '${task.id}')">
           ${isEvent ? `
-            <span class="event-icon" title="Event (non-checkable)">📅</span>
+            <span class="event-icon" title="Événement">⏱</span>
           ` : `
-            <div class="checkbox" onclick="event.stopPropagation(); toggleTaskCompletion('${task.id}')" title="Toggle completion">
+            <div class="checkbox" onclick="event.stopPropagation(); toggleTaskCompletion('${task.id}')" title="Marquer fait">
               ${task.completed ? '✓' : ''}
             </div>
           `}
-          <span class="task-text ${completedClass}">${renderTitleWithTagsHtml(task.title)}${actionTagHtml}</span>
+          <div class="backlog-task-info">
+            <span class="task-text ${completedClass}">${renderTitleWithTagsHtml(task.title)}${actionTagHtml}</span>
+            <div class="backlog-task-meta">
+              <span class="backlog-cat-badge cat-${task.context || 'work'}">${catLabel}</span>
+              <span class="backlog-duration-badge">⏱ ${durationStr}</span>
+            </div>
+          </div>
           ${backlogLinkHtml}
-          <div class="schedule-block-top-actions">
+          <div class="backlog-item-actions">
             ${progressPillHtml}
-            <button type="button" class="btn-block-quick-add-subtask" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); quickAddSubtaskFromBlock('${task.id}')" title="Ajouter une sous-tâche">➕</button>
-            <button type="button" class="btn-backlog-today" onclick="event.stopPropagation(); scheduleTaskDirectly('${task.id}', '${TODAY_STR}')" title="Planifier pour aujourd'hui (${TODAY_STR})">+</button>
+            <button type="button" class="btn-plan-backlog" onclick="event.stopPropagation(); scheduleTaskDirectly('${task.id}', '${TODAY_STR}')" title="Planifier pour aujourd'hui (${TODAY_STR})">Planifier</button>
             <button type="button" class="btn-task-menu" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
           </div>
         </div>
@@ -1651,9 +1659,42 @@ function moveToBacklog(id) {
 function scheduleTaskDirectly(id, targetDate) {
   const task = window.SpanPlanState.tasks.find(t => t.id === id);
   if (!task) return;
-  task.date = targetDate;
+  task.date = targetDate || TODAY_STR;
   savePlanState();
+  renderPlanGrid();
+  renderBacklogDrawer();
+  updateCounters();
+  if (typeof showToast === 'function') {
+    showToast(`Planifié pour ${task.date === TODAY_STR ? "aujourd'hui" : task.date}`, 'success');
+  }
 }
+
+function submitDrawerQuickAdd() {
+  const input = document.getElementById('drawerQuickTaskInput');
+  if (!input || !input.value.trim()) return;
+  const title = input.value.trim();
+  const newTask = {
+    id: 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+    title: title,
+    date: null,
+    time: '',
+    duration: 30,
+    context: 'work',
+    type: 'task',
+    completed: false,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+  window.SpanPlanState.tasks.push(newTask);
+  savePlanState();
+  input.value = '';
+  renderBacklogDrawer();
+  updateCounters();
+  if (typeof showToast === 'function') {
+    showToast('Tâche ajoutée au Backlog', 'success');
+  }
+}
+window.submitDrawerQuickAdd = submitDrawerQuickAdd;
 
 function pushToSpanFocus(id) {
   const task = window.SpanPlanState.tasks.find(t => t.id === id);
@@ -2123,10 +2164,17 @@ function setMobileDayView(mode) {
   const navBtnToday = document.getElementById('mobileNavToday');
   if (navBtnToday) navBtnToday.classList.toggle('active', (mode === 'agenda' || mode === 'todo') && currentTimelineOffset === 0);
 
-  if (mode === 'backlog') {
-    syncFocusTasksToPlanBacklog(true);
-    renderBacklogDrawer();
-    updateCounters();
+  const drawer = document.getElementById('backlogDrawer');
+  if (drawer) {
+    drawer.style.display = '';
+    if (mode === 'backlog') {
+      drawer.classList.add('open');
+      syncFocusTasksToPlanBacklog(true);
+      renderBacklogDrawer();
+      updateCounters();
+    } else if (isMobileScreen()) {
+      drawer.classList.remove('open');
+    }
   }
 
   if (typeof renderDateStrip === 'function') {
@@ -2315,6 +2363,21 @@ window.addEventListener('touchstart', (e) => {
 
 window.addEventListener('touchend', (e) => {
   if (!touchStartX) return;
+
+  // Bloquer tout swipe si une modale est ouverte (Settings, Edit, etc.)
+  const settingsModal = document.getElementById('settingsModalOverlay');
+  if (settingsModal && settingsModal.style.display !== 'none' && !settingsModal.classList.contains('hidden')) {
+    touchStartX = 0;
+    touchStartY = 0;
+    return;
+  }
+  const editModal = document.getElementById('editModalOverlay');
+  if (editModal && editModal.style.display !== 'none') {
+    touchStartX = 0;
+    touchStartY = 0;
+    return;
+  }
+
   const touch = e.changedTouches[0];
   const diffX = touch.clientX - touchStartX;
   const diffY = touch.clientY - touchStartY;
@@ -2336,18 +2399,6 @@ window.addEventListener('touchend', (e) => {
     lastTouchNavTime = now;
     if (wasBacklog) {
       cycleBacklogCategory(diffX < 0 ? 1 : -1);
-    } else {
-      const activeDays = typeof getActiveVisibleDaysCount === 'function' ? getActiveVisibleDaysCount() : 1;
-      const step = activeDays === 1 ? 1 : (activeDays === 3 ? 3 : 7);
-      const direction = diffX < 0 ? 1 : -1;
-      if (typeof navigateTimelineByDays === 'function') {
-        navigateTimelineByDays(direction * step);
-      } else {
-        currentTimelineOffset += (direction * step);
-        renderPlanGrid(true);
-        if (typeof renderDateStrip === 'function') renderDateStrip();
-        applyDynamicScroll();
-      }
     }
   }
 }, { passive: true });

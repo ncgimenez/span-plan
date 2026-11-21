@@ -171,28 +171,83 @@ function updateSelectionVisuals() {
     el.classList.toggle('is-selected', selectedTaskIds.has(id));
   });
 
-  document.querySelectorAll('.task-item').forEach(el => {
-    const id = el.getAttribute('data-task-id') || el.querySelector('.task-row-main')?.getAttribute('data-task-id');
-  });
-
   const bar = document.getElementById('multiSelectActionBar');
-  const countSpan = document.getElementById('multiSelectCountText');
-  if (bar) {
-    if (selectedTaskIds.size > 0) {
-      bar.classList.add('show');
-      if (countSpan) {
-        countSpan.textContent = `${selectedTaskIds.size} sélection${selectedTaskIds.size > 1 ? 's' : ''}`;
-      }
-    } else {
-      bar.classList.remove('show');
-    }
+  if (!bar) return;
+
+  if (selectedTaskIds.size === 0) {
+    bar.classList.remove('show');
+    return;
+  }
+
+  bar.classList.add('show');
+
+  if (selectedTaskIds.size === 1) {
+    const singleId = Array.from(selectedTaskIds)[0];
+    const task = (window.SpanPlanState.tasks || []).find(t => t.id === singleId);
+    const title = task ? escapeHtml(task.title || 'Sans titre') : 'Sélection';
+    const timeStr = task && task.time ? task.time : '';
+    const isCompleted = task && task.completed;
+
+    bar.innerHTML = `
+      <div class="selected-block-info-bar">
+        <span class="selected-block-title">${title}</span>
+        ${timeStr ? `<span class="selected-block-time">⏰ ${timeStr}</span>` : ''}
+      </div>
+      <div class="selected-block-actions">
+        <button type="button" class="btn-block-action ${isCompleted ? 'is-completed' : ''}" onclick="toggleSelectedTasksCompletion()" title="${isCompleted ? 'Marquer non fait' : 'Terminer'}">
+          ${isCompleted ? '↩ Fait' : '✓ Terminer'}
+        </button>
+        <button type="button" class="btn-block-action btn-focus-action" onclick="pushSelectedTaskToFocus()" title="Lancer en Focus">
+          ⚡ Focus
+        </button>
+        <button type="button" class="btn-block-action danger" onclick="deleteSelectedTasks()" title="Supprimer">
+          ✕
+        </button>
+        <button type="button" class="multi-select-close-btn" onclick="clearSelection()" title="Désélectionner">✕</button>
+      </div>
+    `;
+  } else {
+    bar.innerHTML = `
+      <span class="multi-select-count-badge" id="multiSelectCountText">${selectedTaskIds.size} sélections</span>
+      <div class="multi-select-divider"></div>
+      <button type="button" class="multi-select-action-btn" onclick="toggleSelectedTasksCompletion()" title="Basculer fait">
+        <span>✓ Terminer</span>
+      </button>
+      <button type="button" class="multi-select-action-btn danger" onclick="deleteSelectedTasks()" title="Supprimer">
+        <span>✕ Supprimer</span>
+      </button>
+      <button type="button" class="multi-select-close-btn" onclick="clearSelection()" title="Désélectionner">✕</button>
+    `;
   }
 }
 
-// POINTER DOWN SUR UN BLOC (CLIC OU DÉPLACEMENT SIMPLE/GROUPE)
+function toggleSelectedTasksCompletion() {
+  if (selectedTaskIds.size === 0) return;
+  selectedTaskIds.forEach(id => {
+    if (typeof toggleTaskCompletion === 'function') toggleTaskCompletion(id);
+  });
+  updateSelectionVisuals();
+}
+window.toggleSelectedTasksCompletion = toggleSelectedTasksCompletion;
+
+function pushSelectedTaskToFocus() {
+  if (selectedTaskIds.size === 0) return;
+  const id = Array.from(selectedTaskIds)[0];
+  if (typeof pushToSpanFocus === 'function') {
+    pushToSpanFocus(id);
+  } else if (typeof goToFocusApp === 'function') {
+    goToFocusApp();
+  }
+}
+window.pushSelectedTaskToFocus = pushSelectedTaskToFocus;
+
+// POINTER DOWN SUR UN BLOC (1 TAP = SÉLECTION, APPUI LONG UNIQUEMENT = PARAMÈTRES)
 let touchBlockLongPressTimer = null;
 let touchBlockCanDrag = true;
 let touchBlockMoved = false;
+let blockLongPressTriggered = false;
+let blockPointerStartX = 0;
+let blockPointerStartY = 0;
 
 function handleBlockPointerDown(e, taskId, dateStr) {
   if (e.target.closest('.btn-task-menu') || 
@@ -214,22 +269,29 @@ function handleBlockPointerDown(e, taskId, dateStr) {
   closeQuickAddPopover();
   e.stopPropagation();
 
-  const isTouch = e.pointerType === 'touch' || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
-  touchBlockCanDrag = !isTouch;
+  blockPointerStartX = e.clientX;
+  blockPointerStartY = e.clientY;
   touchBlockMoved = false;
+  blockLongPressTriggered = false;
+
+  const targetEl = document.getElementById(`block_${taskId}`) || document.getElementById(`block_${taskId}_cont`);
+
   if (touchBlockLongPressTimer) clearTimeout(touchBlockLongPressTimer);
 
-  if (isTouch) {
-    // Appui long (400ms sans bouger) -> drag-to-create / déplacement
-    touchBlockLongPressTimer = setTimeout(() => {
-      touchBlockCanDrag = true;
+  // Appui long (~450ms sans bouger de plus de 10px) -> ouvre la fiche / paramètres du bloc
+  touchBlockLongPressTimer = setTimeout(() => {
+    if (!touchBlockMoved) {
+      blockLongPressTriggered = true;
+      if (targetEl) targetEl.classList.add('is-touch-held');
       if (navigator.vibrate) {
-        try { navigator.vibrate(50); } catch (err) {}
+        try { navigator.vibrate(15); } catch (err) {}
       }
-      const el = document.getElementById(`block_${taskId}`) || document.getElementById(`block_${taskId}_cont`);
-      if (el) el.classList.add('is-touch-held');
-    }, 400);
-  }
+      setTimeout(() => {
+        if (targetEl) targetEl.classList.remove('is-touch-held');
+        openEditModal(taskId);
+      }, 60);
+    }
+  }, 450);
 
   const isModifier = (e.metaKey || e.ctrlKey || e.shiftKey);
 
@@ -296,11 +358,19 @@ function handleBlockPointerMove(e) {
   const deltaY = e.clientY - dragAnchorClientY;
   const deltaX = e.clientX - dragAnchorClientX;
 
+  if (Math.hypot(deltaX, deltaY) > 8) {
+    touchBlockMoved = true;
+    if (touchBlockLongPressTimer) {
+      clearTimeout(touchBlockLongPressTimer);
+      touchBlockLongPressTimer = null;
+    }
+    const targetEl = document.getElementById(`block_${dragAnchorTaskId}`) || document.getElementById(`block_${dragAnchorTaskId}_cont`);
+    if (targetEl) targetEl.classList.remove('is-touch-held');
+  }
+
   const isTouch = e.pointerType === 'touch' || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
   if (isTouch && !touchBlockCanDrag) {
     if (Math.hypot(deltaX, deltaY) > 8) {
-      touchBlockMoved = true;
-      if (touchBlockLongPressTimer) clearTimeout(touchBlockLongPressTimer);
       dragAnchorTaskId = null;
       window.removeEventListener('pointermove', handleBlockPointerMove);
       window.removeEventListener('pointerup', handleBlockPointerUp);
@@ -489,31 +559,25 @@ function handleBlockPointerUp(e) {
   isPointerDragging = false;
   hasMovedBeyondThreshold = false;
 
+  if (touchBlockLongPressTimer) {
+    clearTimeout(touchBlockLongPressTimer);
+    touchBlockLongPressTimer = null;
+  }
+  const targetEl = document.getElementById(`block_${anchorId}`) || document.getElementById(`block_${anchorId}_cont`);
+  if (targetEl) targetEl.classList.remove('is-touch-held');
+
+  if (blockLongPressTriggered) {
+    blockLongPressTriggered = false;
+    dragInitialTops.clear();
+    return;
+  }
+
   if (!moved) {
-    const isTouch = e && (e.pointerType === 'touch' || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches));
-    if (isTouch && anchorId && !touchBlockMoved) {
-      dragInitialTops.clear();
-      openEditModal(anchorId);
-      return;
-    }
-
-    const clickNow = Date.now();
-    const isDoubleClick = (lastBlockClickTaskId === anchorId && (clickNow - lastBlockClickTime) < 400);
-
-    if (isDoubleClick) {
-      lastBlockClickTime = 0;
-      lastBlockClickTaskId = null;
-      dragInitialTops.clear();
-      openEditModal(anchorId);
-      return;
-    }
-
-    lastBlockClickTime = clickNow;
-    lastBlockClickTaskId = anchorId;
-
+    // 1 clic court (tap) : 1 clic sélectionne le bloc, un 2e clic le désélectionne sans jamais ouvrir ses paramètres
     if (anchorId) {
-      if (dragWasAlreadySelected) {
-        clearSelection();
+      if (selectedTaskIds.has(anchorId)) {
+        selectedTaskIds.delete(anchorId);
+        updateSelectionVisuals();
       } else {
         selectTaskExclusively(anchorId);
       }
@@ -522,7 +586,6 @@ function handleBlockPointerUp(e) {
     return;
   }
 
-  // Si déplacement effectué, réinitialiser le compteur de double clic
   lastBlockClickTime = 0;
   lastBlockClickTaskId = null;
 
@@ -777,6 +840,13 @@ function handleBlockPointerUp(e) {
 
 // GESTION DU TACTILE SUR LA GRILLE VIDE (SANS MARQUEE, SCROLL NATIF & CRÉATION FLUIDE)
 function handleCanvasTouchInteraction(e, dateStr) {
+  // Taper dans le vide de la grille quand un bloc est sélectionné -> désélectionne le bloc d'abord (sans créer un bloc par erreur)
+  if (typeof selectedTaskIds !== 'undefined' && selectedTaskIds.size > 0) {
+    clearSelection();
+    e.stopPropagation();
+    return;
+  }
+
   const canvas = e.currentTarget || document.getElementById(`canvas_${dateStr}`);
   if (!canvas) return;
 
@@ -825,23 +895,17 @@ function handleCanvasTouchInteraction(e, dateStr) {
 
     if (longPressTriggered) return;
 
+    if (typeof selectedTaskIds !== 'undefined' && selectedTaskIds.size > 0) {
+      clearSelection();
+      return;
+    }
+
     const dx = upEvent.clientX - startX;
     const dy = upEvent.clientY - startY;
     const elapsed = Date.now() - startTime;
 
-    // 1. Swipe horizontal avec verrouillage d'axe : |dx| > 50px et |dx| > |dy| * 1.5
-    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5 && elapsed < 600) {
-      const activeDays = typeof getActiveVisibleDaysCount === 'function' ? getActiveVisibleDaysCount() : 1;
-      const step = activeDays === 1 ? 1 : (activeDays === 3 ? 3 : 7);
-      const direction = dx < 0 ? 1 : -1;
-      if (typeof navigateTimelineByDays === 'function') {
-        navigateTimelineByDays(direction * step);
-      }
-      return;
-    }
-
-    // 2. Tap simple sur créneau vide (pas bougé > 10px, < 350ms) -> ouvre la feuille de création
-    if (!hasMoved && elapsed < 350) {
+    // Tap simple sur créneau vide (pas bougé > 10px, < 350ms) -> ouvre la feuille de création
+    if (!hasMoved && Math.hypot(dx, dy) < 10 && elapsed < 350) {
       openCreateModalWithDefaults(dateStr, clickedTime);
     }
   }
@@ -857,6 +921,13 @@ function handleCanvasPointerDown(e, dateStr) {
     return;
   }
   if (e.button !== 0) return;
+
+  // Taper dans le vide de la grille quand un bloc est sélectionné -> désélectionne le bloc d'abord (sans créer un bloc par erreur)
+  if (typeof selectedTaskIds !== 'undefined' && selectedTaskIds.size > 0) {
+    clearSelection();
+    e.stopPropagation();
+    return;
+  }
 
   const isTouch = e.pointerType === 'touch' || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
   if (isTouch) {

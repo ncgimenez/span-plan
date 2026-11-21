@@ -41,7 +41,7 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="style.css?v=8.04">
+  <link rel="stylesheet" href="style.css?v=8.05">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -312,15 +312,20 @@
         </div>
 
         <!-- Hidden/Fallback Drawer for mobile -->
-        <aside class="backlog-drawer" id="backlogDrawer" style="display: none;" ondragover="allowDrop(event)" ondragleave="handleBacklogDragLeave(event)" ondrop="handleDropToBacklog(event)">
+        <aside class="backlog-drawer" id="backlogDrawer" ondragover="allowDrop(event)" ondragleave="handleBacklogDragLeave(event)" ondrop="handleDropToBacklog(event)">
           <div class="drawer-header">
             <div class="drawer-title-wrap">
-              <span class="drawer-title">Backlog / Later</span>
+              <span class="drawer-title">Backlog</span>
               <span class="backlog-counter-pill" id="drawerLaterCount">0</span>
             </div>
             <div class="drawer-actions">
-              <button class="icon-btn mini" onclick="toggleBacklogDrawer()" title="Close">✕</button>
+              <button class="icon-btn mini" onclick="setMobileDayView('agenda')" title="Fermer">✕</button>
             </div>
+          </div>
+          <!-- DRAWER QUICK ADD INPUT -->
+          <div class="drawer-quick-add-wrap">
+            <input type="text" id="drawerQuickTaskInput" class="drawer-quick-input" placeholder="+ Ajouter une tâche au Backlog..." onkeydown="if(event.key==='Enter') submitDrawerQuickAdd()">
+            <button type="button" class="btn-drawer-quick-add" onclick="submitDrawerQuickAdd()">Ajouter</button>
           </div>
           <!-- DRAWER ACTION FILTER PILLS -->
           <div class="drawer-action-filter-pills" id="drawerActionFilterPills">
@@ -765,8 +770,8 @@
   </div>
 
   <!-- SETTINGS MODAL (TABBED & CATEGORIZED) -->
-  <div class="modal-overlay" id="settingsModalOverlay" onclick="handleBackdropClick(event, 'settingsModalOverlay')">
-    <div class="modal-card settings-modal-card" onclick="event.stopPropagation()">
+  <div class="modal-overlay" id="settingsModalOverlay" onclick="handleBackdropClick(event, 'settingsModalOverlay')" ontouchstart="event.stopPropagation()" ontouchmove="event.stopPropagation()" ontouchend="event.stopPropagation()">
+    <div class="modal-card settings-modal-card" onclick="event.stopPropagation()" ontouchstart="event.stopPropagation()" ontouchmove="event.stopPropagation()" ontouchend="event.stopPropagation()">
       <div class="modal-header">
         <div class="settings-header-brand">
           <span class="settings-header-icon">
@@ -1370,14 +1375,14 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/core.js?v=8.04"></script>
-  <script src="js/security.js?v=8.04"></script>
-  <script src="js/sync.js?v=8.04"></script>
-  <script src="js/gcal.js?v=8.04"></script>
-  <script src="js/plan.js?v=8.04"></script>
-  <script src="js/calendar-layout.js?v=8.04"></script>
-  <script src="js/calendar-drag.js?v=8.04"></script>
-  <script src="js/plan-modals.js?v=8.04"></script>
-  <script src="js/app.js?v=8.04"></script>
+  <script src="js/core.js?v=8.05"></script>
+  <script src="js/security.js?v=8.05"></script>
+  <script src="js/sync.js?v=8.05"></script>
+  <script src="js/gcal.js?v=8.05"></script>
+  <script src="js/plan.js?v=8.05"></script>
+  <script src="js/calendar-layout.js?v=8.05"></script>
+  <script src="js/calendar-drag.js?v=8.05"></script>
+  <script src="js/plan-modals.js?v=8.05"></script>
+  <script src="js/app.js?v=8.05"></script>
 </body>
 </html>

@@ -6741,32 +6741,99 @@ body.is-card-dragging * {
     display: none !important;
   }
 
+  /* Vue 7J mobile : style haute lisibilité Google Agenda (blocs colorés pleins, texte sombre en gras) */
   .is-view-7d .schedule-block-item {
-    padding: 2px 2px !important;
-    border-radius: 4px !important;
+    padding: 2px 4px !important;
+    border-radius: 5px !important;
     margin: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
   }
 
-  .is-view-7d .block-title {
-    font-size: 9px !important;
-    line-height: 1.1 !important;
+  .is-view-7d .schedule-block-item.cat-work {
+    background: #a5b4fc !important;
+    color: #0b0b0d !important;
+  }
+
+  .is-view-7d .schedule-block-item.cat-life {
+    background: #6ee7b7 !important;
+    color: #0b0b0d !important;
+  }
+
+  .is-view-7d .schedule-block-item.cat-fun {
+    background: #fcd34d !important;
+    color: #0b0b0d !important;
+  }
+
+  .is-view-7d .schedule-block-item:not(.cat-life):not(.cat-fun) {
+    background: #a5b4fc !important;
+    color: #0b0b0d !important;
+  }
+
+  .is-view-7d .schedule-block-title {
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    color: #0b0b0d !important;
+    line-height: 1.15 !important;
     display: -webkit-box !important;
     -webkit-line-clamp: 2 !important;
     -webkit-box-orient: vertical !important;
     overflow: hidden !important;
     word-break: break-word !important;
+    width: 100% !important;
   }
 
-  .is-view-7d .block-header-row {
-    margin-bottom: 0 !important;
+  .is-view-7d .schedule-block-item .checkbox,
+  .is-view-7d .schedule-block-item .btn-task-menu,
+  .is-view-7d .schedule-block-item .btn-block-quick-add-subtask,
+  .is-view-7d .schedule-block-item .event-progress-pill,
+  .is-view-7d .schedule-block-item .block-subtasks-container,
+  .is-view-7d .schedule-block-item .accordion-subtasks,
+  .is-view-7d .schedule-block-item .schedule-block-time,
+  .is-view-7d .schedule-block-item .compact-time,
+  .is-view-7d .schedule-block-item .block-corner-link-btn,
+  .is-view-7d .schedule-block-item .resize-handle,
+  .is-view-7d .schedule-block-item .schedule-block-top-actions,
+  .is-view-7d .schedule-block-item .block-location-pill,
+  .is-view-7d .schedule-block-item .block-notes-pill,
+  .is-view-7d .schedule-block-item .live-status-pill,
+  .is-view-7d .schedule-block-item .block-time-badge {
+    display: none !important;
   }
 
-  .is-view-7d .btn-task-menu,
-  .is-view-7d .btn-block-quick-add-subtask,
-  .is-view-7d .event-progress-pill,
-  .is-view-7d .block-subtasks-container,
-  .is-view-7d .accordion-subtasks,
-  .is-view-7d .block-time-badge {
+  /* ALL-DAY en 7J : style pastel Google Agenda */
+  .is-view-7d .cal-allday-ribbon {
+    border-radius: 4px !important;
+    padding: 1px 4px !important;
+    border: none !important;
+  }
+
+  .is-view-7d .cal-allday-ribbon.cat-work {
+    background: #a5b4fc !important;
+    color: #0b0b0d !important;
+  }
+
+  .is-view-7d .cal-allday-ribbon.cat-life {
+    background: #6ee7b7 !important;
+    color: #0b0b0d !important;
+  }
+
+  .is-view-7d .cal-allday-ribbon.cat-fun {
+    background: #fcd34d !important;
+    color: #0b0b0d !important;
+  }
+
+  .is-view-7d .cal-allday-ribbon .ribbon-title {
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    color: #0b0b0d !important;
+    line-height: 1.15 !important;
+  }
+
+  .is-view-7d .cal-allday-ribbon .subtask-mini-checkbox,
+  .is-view-7d .cal-allday-ribbon .ribbon-location-pill,
+  .is-view-7d .cal-allday-ribbon .ribbon-link-pill,
+  .is-view-7d .cal-allday-ribbon .event-progress-pill {
     display: none !important;
   }
 
@@ -6827,28 +6894,141 @@ body.is-card-dragging * {
     overflow-y: auto;
   }
 
-  /* Mode Backlog : Journée et contrôles de date masqués, Backlog prend tout l'espace */
+  /* Mode Backlog : Journée et contrôles de date masqués, Backlog prend tout l'espace plein écran */
   .mobile-mode-backlog #mobileDateStripContainer,
   .mobile-mode-backlog #mobileDaySegmented,
-  .mobile-mode-backlog .planner-board-container {
-    display: none;
+  .mobile-mode-backlog .planner-board-container,
+  .mobile-mode-backlog .mobile-fab-btn {
+    display: none !important;
   }
+
   .mobile-mode-backlog .backlog-drawer {
-    display: flex;
-    position: static;
-    transform: none;
-    width: 100%;
-    height: 100%;
-    max-width: 100%;
-    z-index: 10;
-    padding-top: 0;
-    padding-bottom: 0;
-    border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: none;
+    display: flex !important;
+    position: static !important;
+    transform: none !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    flex: 1 1 0% !important;
+    min-height: 0 !important;
+    flex-direction: column !important;
+    overflow-y: auto !important;
+    background: #0b0b0d !important;
+    z-index: 10 !important;
+    padding: 10px 14px !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
   }
 
+  [data-theme="light"] .mobile-mode-backlog .backlog-drawer {
+    background: #f7f5f0 !important;
+  }
 
+  .drawer-quick-add-wrap {
+    display: flex;
+    gap: 8px;
+    margin: 8px 0 10px 0;
+    width: 100%;
+    flex-shrink: 0;
+  }
+
+  .drawer-quick-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: #ffffff;
+    outline: none;
+  }
+
+  [data-theme="light"] .drawer-quick-input {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.12);
+    color: #111827;
+  }
+
+  .btn-drawer-quick-add {
+    background: #f59e0b;
+    color: #0b0b0d;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 0 14px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+  }
+
+  .backlog-task-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .backlog-task-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+  }
+
+  .backlog-cat-badge {
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    background: rgba(255, 255, 255, 0.08);
+    color: #a1a1aa;
+  }
+
+  .backlog-cat-badge.cat-work {
+    background: rgba(129, 140, 248, 0.2);
+    color: #a5b4fc;
+  }
+
+  .backlog-cat-badge.cat-life {
+    background: rgba(52, 211, 153, 0.2);
+    color: #6ee7b7;
+  }
+
+  .backlog-cat-badge.cat-fun {
+    background: rgba(251, 191, 36, 0.2);
+    color: #fcd34d;
+  }
+
+  .backlog-duration-badge {
+    color: #71717a;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .backlog-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .btn-plan-backlog {
+    background: #f59e0b !important;
+    color: #0b0b0d !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    padding: 5px 10px !important;
+    border-radius: 6px !important;
+    border: none !important;
+    cursor: pointer !important;
+    white-space: nowrap !important;
+    box-shadow: 0 1px 3px rgba(245, 158, 11, 0.3) !important;
+  }
+
+  .btn-plan-backlog:active {
+    transform: scale(0.95);
+  }
 
   /* TIROIR BACKLOG SUR MOBILE (FERMÉ PAR DÉFAUT, AUCUN DÉBORDEMENT) */
   .backlog-drawer {
@@ -6857,15 +7037,11 @@ body.is-card-dragging * {
 
   .backlog-drawer.open {
     display: flex;
-    position: fixed;
-    top: calc(44px + env(safe-area-inset-top, 0px));
-    left: 0;
-    right: 0;
-    bottom: calc(48px + 4px + max(6px, calc(env(safe-area-inset-bottom, 0px) - 12px)));
-    width: 100vw;
-    height: auto;
-    max-width: 100vw;
-    z-index: 900;
+    position: static;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    z-index: 10;
     background: #0d0d0f;
     border-left: none;
     border-radius: 0;
@@ -6995,36 +7171,111 @@ body.is-card-dragging * {
     transform: scale(0.92) !important;
   }
 
-  /* BARRE FLOTTANTE MULTI-SÉLECTION : POSITIONNÉE CLAIREMENT AU-DESSUS DE LA BARRE BASSE */
+  /* BARRE FLOTTANTE CONTEXTUELLE DE SÉLECTION (AU-DESSUS DE LA BARRE DU BAS) */
   .multi-select-bar {
     position: fixed;
-    bottom: calc(48px + 4px + max(6px, calc(env(safe-area-inset-bottom, 0px) - 12px)) + 8px) !important;
+    bottom: calc(46px + max(6px, calc(env(safe-area-inset-bottom, 0px) - 10px)) + 10px) !important;
     left: 50%;
     right: auto;
     width: auto;
-    max-width: calc(100vw - 28px);
+    max-width: calc(100vw - 20px);
     transform: translateX(-50%) translateY(120px);
     z-index: 1050;
-    padding: 5px 8px 5px 12px;
+    padding: 6px 10px;
     border-radius: 999px;
-    background: rgba(20, 20, 24, 0.95);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.65);
-    gap: 6px;
-    height: 36px;
+    background: rgba(18, 18, 22, 0.96);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+    gap: 8px;
+    height: auto;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease;
   }
 
   .multi-select-bar.show {
     transform: translateX(-50%) translateY(0);
   }
 
-  .multi-select-bar .multi-select-count-badge {
-    font-size: 11px;
+  .selected-block-info-bar {
+    display: flex;
+    flex-direction: column;
+    max-width: 130px;
+    overflow: hidden;
+    white-space: nowrap;
+    padding-left: 4px;
+  }
+
+  .selected-block-title {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #ffffff;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .multi-select-bar .multi-select-action-btn {
+  .selected-block-time {
+    font-size: 9.5px;
+    color: #a1a1aa;
+    line-height: 1.1;
+  }
+
+  .selected-block-actions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .btn-block-action {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #ffffff;
     padding: 4px 8px;
+    border-radius: 6px;
     font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+  }
+
+  .btn-block-action.btn-focus-action {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: rgba(245, 158, 11, 0.4);
+    color: #f59e0b;
+  }
+
+  .btn-block-action.danger {
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+
+  .multi-select-close-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 14px;
+    padding: 4px 6px;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  /* SÉLECTION LUMINEUSE NETTE SUR LES BLOCS ET RETOUR HAPTIQUE/VISUEL */
+  .schedule-block-item.is-selected {
+    outline: 2px solid #ffffff !important;
+    box-shadow: 0 0 16px rgba(255, 255, 255, 0.5), 0 4px 12px rgba(0, 0, 0, 0.6) !important;
+    z-index: 100 !important;
+  }
+
+  .schedule-block-item.is-touch-held {
+    transform: scale(0.95) !important;
+    transition: transform 0.15s ease !important;
   }
 
   /* CACHER LES POIGNÉES DE REDIMENSIONNEMENT TACTILE INADAPTÉES SUR MOBILE */
@@ -7033,12 +7284,13 @@ body.is-card-dragging * {
   }
 
   /* --------------------------------------------------------------------------
-     BOTTOM-SHEET SETTINGS MODAL (MOBILE)
+     BOTTOM-SHEET SETTINGS MODAL (MOBILE VERROUILLÉE STRICTEMENT À LA VERTICALE)
      -------------------------------------------------------------------------- */
   #settingsModalOverlay {
     align-items: flex-end !important;
     justify-content: center !important;
     padding: 0 !important;
+    touch-action: pan-y !important;
   }
 
   .settings-modal-card {
@@ -7058,6 +7310,21 @@ body.is-card-dragging * {
     display: flex !important;
     flex-direction: column !important;
     box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.65) !important;
+    overflow-x: hidden !important;
+    overflow-y: hidden !important;
+    touch-action: pan-y !important;
+    overscroll-behavior: contain !important;
+  }
+
+  .settings-modal-body,
+  .settings-page-pane {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    touch-action: pan-y !important;
+    overscroll-behavior: contain !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    -webkit-overflow-scrolling: touch !important;
   }
 
   [data-theme="light"] .settings-modal-card {
@@ -7072,6 +7339,8 @@ body.is-card-dragging * {
     gap: 4px !important;
     padding: 6px 10px !important;
     box-sizing: border-box !important;
+    overflow-x: hidden !important;
+    touch-action: none !important;
   }
 
   .settings-tab-btn {
