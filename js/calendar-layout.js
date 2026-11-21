@@ -93,7 +93,7 @@ function handleCanvasHoverLeave(e) {
 }
 
 function isMobileScreen() {
-  return window.innerWidth <= 768;
+  return window.innerWidth < 1024;
 }
 
 function getMonday(d) {
@@ -202,7 +202,7 @@ function renderAllDayContinuousRibbonHtml(visibleDates) {
     const taskDate = task.date.trim();
     const cleanEndDate = (task.endDate && typeof task.endDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(task.endDate.trim())) ? task.endDate.trim() : null;
     const isMultiDay = !!(cleanEndDate && cleanEndDate > taskDate);
-    const isAllDay = !!task.allDay || isMultiDay;
+    const isAllDay = !!task.allDay || (!task.time && !!taskDate) || isMultiDay;
     if (!isAllDay) return;
 
     const contextMatch = isTaskCategoryVisible(task);
@@ -570,12 +570,13 @@ function renderPlanGrid(forceRebuild = false) {
 
   // Construction des en-têtes de colonnes (Badge jour empilé sur 2 lignes)
   const is7d = (visibleDates.length === 7);
+  const isMob = isMobileScreen();
   const singleLettersFr = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
   const threeLettersFr = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
   const headerCellsHtml = visibleDates.map(dateObj => {
     const dateStr = getLocalDateString(dateObj);
     const isToday = (dateStr === TODAY_STR);
-    const weekdayName = is7d ? singleLettersFr[dateObj.getDay()] : threeLettersFr[dateObj.getDay()];
+    const weekdayName = (isMob && is7d) ? singleLettersFr[dateObj.getDay()] : threeLettersFr[dateObj.getDay()];
     const dayNumber = dateObj.getDate();
     const dayInfo = dayDataMap.get(dateStr) || {};
     const timedTasks = dayInfo.timedTasks || [];
@@ -1164,7 +1165,7 @@ function renderTimedBlocks(tasks, dateStr) {
     const remainingMinutes = Math.max(0, endTotal - currentMinutes);
 
     let subtasksHtml = '';
-    const baseVisibleLimit = height >= 95 ? 2 : (height >= 75 ? 1 : 0);
+    const baseVisibleLimit = height >= 105 ? 2 : (height >= 84 ? 1 : 0);
     const zeroVisibleClass = (!isExpanded && baseVisibleLimit === 0) ? 'has-zero-subtasks-visible' : '';
     const overflowCount = Math.max(0, childSubtasks.length - baseVisibleLimit);
     const hasOverflow = overflowCount > 0;
@@ -1177,10 +1178,10 @@ function renderTimedBlocks(tasks, dateStr) {
           ${sortedSubtasks.map((sub, idx) => {
             const subAction = getTaskActionType(sub);
             let subActionBadge = '';
-            if (subAction === 'call') subActionBadge = '<span class="subtask-action-mini-badge" title="Call">📞</span>';
-            else if (subAction === 'mail') subActionBadge = '<span class="subtask-action-mini-badge" title="Mail">✉️</span>';
-            else if (subAction === 'pay') subActionBadge = '<span class="subtask-action-mini-badge" title="Paiement">💳</span>';
-            else if (subAction === 'content') subActionBadge = '<span class="subtask-action-mini-badge" title="Contenu">🎬</span>';
+            if (subAction === 'call') subActionBadge = '<span class="subtask-action-mini-badge" title="Call"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>';
+            else if (subAction === 'mail') subActionBadge = '<span class="subtask-action-mini-badge" title="Mail"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></span>';
+            else if (subAction === 'pay') subActionBadge = '<span class="subtask-action-mini-badge" title="Paiement"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg></span>';
+            else if (subAction === 'content') subActionBadge = '<span class="subtask-action-mini-badge" title="Contenu"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg></span>';
 
             return `
             <div class="block-subtask-row subtask-cat-${sub.context || 'work'} ${sub.completed ? 'completed' : ''} ${idx >= baseVisibleLimit ? 'subtask-overflow-item' : ''}" 
@@ -1204,7 +1205,7 @@ function renderTimedBlocks(tasks, dateStr) {
                       class="btn-subtask-quick-backlog" 
                       onpointerdown="event.stopPropagation()" 
                       onclick="event.stopPropagation(); moveSubtaskToBacklog('${task.id}', '${sub.id}')" 
-                      title="Déplacer vers le Backlog">📥</button>
+                      title="Déplacer vers le Backlog"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></button>
             </div>
           `;}).join('')}
           ${isExpanded ? `
@@ -1309,7 +1310,7 @@ function renderTimedBlocks(tasks, dateStr) {
           ` : ''}
           <div class="schedule-block-top-actions">
             ${progressPillHtml}
-            ${!isEvent ? `<button type="button" class="btn-block-quick-add-subtask" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); quickAddSubtaskFromBlock('${task.id}')" title="Ajouter une sous-tâche">➕</button>` : ''}
+            ${!isEvent ? `<button type="button" class="btn-block-quick-add-subtask" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); quickAddSubtaskFromBlock('${task.id}')" title="Ajouter une sous-tâche">+</button>` : ''}
             <button type="button" class="btn-task-menu" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
           </div>
         </div>
@@ -1332,7 +1333,7 @@ function renderTimedBlocks(tasks, dateStr) {
           <span class="schedule-block-title">${continuationPrefix}${rolloverPrefix}${recPrefix}${renderTitleWithTagsHtml(task.title)}</span>
           <div class="schedule-block-top-actions">
             ${isNarrowCol ? '' : progressPillHtml}
-            ${!isEvent ? `<button type="button" class="btn-block-quick-add-subtask" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); quickAddSubtaskFromBlock('${task.id}')" title="Ajouter une sous-tâche">➕</button>` : ''}
+            ${!isEvent ? `<button type="button" class="btn-block-quick-add-subtask" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); quickAddSubtaskFromBlock('${task.id}')" title="Ajouter une sous-tâche">+</button>` : ''}
             <button type="button" class="btn-task-menu" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
           </div>
         </div>

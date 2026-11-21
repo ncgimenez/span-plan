@@ -8,8 +8,12 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <title>Span Plan</title>
   
-  <meta name="theme-color" content="#0b0b0d" id="themeMetaColor">
+  <meta name="theme-color" content="#0E0F12" id="themeMetaColor">
   <meta name="apple-mobile-web-app-title" content="Plan">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <link rel="icon" type="image/svg+xml" href="span-logo.svg?v=7.50">
   <link rel="icon" type="image/png" sizes="32x32" href="span-logo-32.png?v=7.50">
@@ -21,6 +25,18 @@
   <link rel="manifest" href="manifest.json">
 
   <script>
+    // Initialisation immédiate du thème pour zéro clignotement
+    (function() {
+      var saved = localStorage.getItem('span_theme') || 'dark';
+      var effective = saved;
+      if (saved === 'system') {
+        effective = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+      }
+      document.documentElement.setAttribute('data-theme', effective);
+      var meta = document.getElementById('themeMetaColor');
+      if (meta) meta.setAttribute('content', effective === 'light' ? '#F7F6F2' : '#0E0F12');
+    })();
+
     // Ensure favicon is automatically recognized and rendered by browsers
     (function() {
       function refreshFavicon() {
@@ -41,7 +57,7 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="style.css?v=8.05">
+  <link rel="stylesheet" href="style.css?v=8.06">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -119,14 +135,18 @@
             <span class="backlog-counter-pill" id="sidebarBacklogCount">0</span>
           </div>
           <button type="button" class="btn-mini-toggle-hide active" id="btnMiniToggleHideActions" onclick="togglePlanHideActionsInAll()" title="Masquer les actions (Calls, Mails, Paiements) dans 'Tous'">
-            <span class="mini-toggle-eye">👁️‍🗨️</span>
+            <span class="mini-toggle-eye">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </span>
             <span class="mini-toggle-badge" id="planToggleBadgeText">ON</span>
           </button>
         </div>
 
         <div class="sidebar-backlog-input-wrap">
-          <button type="button" class="btn-sidebar-action-select" id="btnSidebarActionTypeSelect" onclick="cycleSidebarBacklogAction()" title="Type d'action : ⚡ Auto (Cliquer pour changer : Call, Mail, Pay)">
-            <span id="sidebarActionTypeIcon">⚡</span>
+          <button type="button" class="btn-sidebar-action-select" id="btnSidebarActionTypeSelect" onclick="cycleSidebarBacklogAction()" title="Type d'action : Auto (Cliquer pour changer)">
+            <span id="sidebarActionTypeIcon">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </span>
           </button>
           <input type="text" id="sidebarBacklogInput" placeholder="Add unscheduled task..." onkeydown="if(event.key==='Enter') addSidebarBacklogTask()">
           <button type="button" class="btn-sidebar-add" onclick="addSidebarBacklogTask()" title="Add to Backlog">+</button>
@@ -135,10 +155,22 @@
         <!-- ACTION FILTER PILLS -->
         <div class="sidebar-action-filter-pills" id="sidebarActionFilterPills">
           <button type="button" class="plan-filter-pill active" data-filter="all" onclick="setPlanBacklogActionFilter('all')">Tous</button>
-          <button type="button" class="plan-filter-pill" data-filter="call" onclick="setPlanBacklogActionFilter('call')">📞 <span class="pill-count" id="planCountCall">0</span></button>
-          <button type="button" class="plan-filter-pill" data-filter="mail" onclick="setPlanBacklogActionFilter('mail')">✉️ <span class="pill-count" id="planCountMail">0</span></button>
-          <button type="button" class="plan-filter-pill" data-filter="pay" onclick="setPlanBacklogActionFilter('pay')">💳 <span class="pill-count" id="planCountPay">0</span></button>
-          <button type="button" class="plan-filter-pill" data-filter="content" onclick="setPlanBacklogActionFilter('content')">🎬 <span class="pill-count" id="planCountContent">0</span></button>
+          <button type="button" class="plan-filter-pill" data-filter="call" onclick="setPlanBacklogActionFilter('call')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            <span class="pill-count" id="planCountCall">0</span>
+          </button>
+          <button type="button" class="plan-filter-pill" data-filter="mail" onclick="setPlanBacklogActionFilter('mail')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+            <span class="pill-count" id="planCountMail">0</span>
+          </button>
+          <button type="button" class="plan-filter-pill" data-filter="pay" onclick="setPlanBacklogActionFilter('pay')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+            <span class="pill-count" id="planCountPay">0</span>
+          </button>
+          <button type="button" class="plan-filter-pill" data-filter="content" onclick="setPlanBacklogActionFilter('content')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>
+            <span class="pill-count" id="planCountContent">0</span>
+          </button>
         </div>
 
         <div class="sidebar-backlog-scroll" ondragover="allowDrop(event)" ondragleave="handleBacklogDragLeave(event)" ondrop="handleDropToBacklog(event)">
@@ -151,14 +183,16 @@
       <!-- Sidebar Footer -->
       <div class="sidebar-footer">
         <button type="button" class="sidebar-footer-link" onclick="goToFocusApp()" title="Open Span Focus">
-          <span class="footer-icon">⚡</span>
+          <span class="footer-icon">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </span>
           <span class="footer-label">Span Focus ↗</span>
         </button>
         <button type="button" class="sidebar-footer-btn theme-toggle-btn" id="sidebarThemeToggleBtn" onclick="toggleTheme()" title="Basculer thème Clair / Sombre">
-          <span>☀️</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
         </button>
-        <button type="button" class="sidebar-footer-btn" onclick="openSettingsModal()" title="Settings">
-          <span>⚙️</span>
+        <button type="button" class="sidebar-footer-btn" onclick="openSettingsModal()" title="Paramètres">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </button>
       </div>
     </aside>
@@ -167,78 +201,99 @@
     <div class="app-main-area">
       
       <!-- TOP APP HEADER (Streamlined & Minimalist) -->
-      <header class="app-header">
-        <div class="header-left">
-          <button type="button" class="sidebar-expand-btn" id="btnExpandSidebar" onclick="toggleSidebar(true)" title="Open Sidebar (⌘B / [)">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-              <line x1="9" y1="3" x2="9" y2="21"/>
-            </svg>
-          </button>
+      <header class="app-header" id="appHeader">
+        <div class="header-agenda-view" id="headerAgendaView">
+          <div class="header-left">
+            <button type="button" class="sidebar-expand-btn" id="btnExpandSidebar" onclick="toggleSidebar(true)" title="Open Sidebar (⌘B / [)">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <line x1="9" y1="3" x2="9" y2="21"/>
+              </svg>
+            </button>
 
-          <div class="timeline-nav" id="timelineNav">
-            <button type="button" class="nav-arrow-btn nav-prev" onclick="navigateTimeline(-1)" title="Semaine précédente (←)">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            <div class="timeline-nav" id="timelineNav">
+              <button type="button" class="nav-arrow-btn nav-prev" onclick="navigateTimeline(-1)" title="Semaine précédente (←)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <span class="current-range-label" id="currentRangeLabel" title="Cliquer pour choisir un mois">Loading...</span>
+              <button type="button" class="nav-arrow-btn nav-next" onclick="navigateTimeline(1)" title="Semaine suivante (→)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+              <button type="button" class="today-jump-btn" id="headerTodayBtn" onclick="jumpToToday()" title="Revenir à aujourd'hui" style="display: none;">Auj.</button>
+            </div>
+          </div>
+
+          <!-- TOP CATEGORY TOGGLES (3 COLOR DOTS ONLY, CHECKABLE / COLORED) -->
+          <div class="header-center">
+            <div class="header-category-toggles" id="headerCategoryToggles" title="Filtrer les catégories (Cliquer pour masquer/afficher)">
+              <button type="button" class="category-toggle-dot cat-work is-active" id="toggleCatWork" onclick="toggleCategoryFilter('work')" title="Work (Visible - cliquer pour masquer)">
+                <span class="dot-disc"></span>
+              </button>
+              <button type="button" class="category-toggle-dot cat-life is-active" id="toggleCatLife" onclick="toggleCategoryFilter('life')" title="Life (Visible - cliquer pour masquer)">
+                <span class="dot-disc"></span>
+              </button>
+              <button type="button" class="category-toggle-dot cat-fun is-active" id="toggleCatFun" onclick="toggleCategoryFilter('fun')" title="Fun (Visible - cliquer pour masquer)">
+                <span class="dot-disc"></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="header-right">
+            <!-- VIEW SELECTOR PILLS DESKTOP -->
+            <div class="pill-group view-mode-pills" id="daysSelectorGroup">
+              <button class="pill-btn" data-days="1" onclick="setVisibleDays(1)" title="Vue 1 jour (1 / D)">1D</button>
+              <button class="pill-btn" data-days="3" onclick="setVisibleDays(3)" title="Vue 3 jours (3)">3D</button>
+              <button class="pill-btn" data-days="5" onclick="setVisibleDays(5)" title="Semaine ouvrée 5 jours (5)">5D</button>
+              <button class="pill-btn active" data-days="7" onclick="setVisibleDays(7)" title="Semaine complète (7 / W)">7D</button>
+            </div>
+
+            <!-- COMPACT VIEW SELECTOR PILLS MOBILE (1J / 3J / 7J) -->
+            <div class="pill-group mobile-view-pills mobile-only-btn" id="mobileDaysSelectorGroup">
+              <button type="button" class="pill-btn active" data-days="1" onclick="setMobileVisibleDays(1)" title="Vue 1 jour">1J</button>
+              <button type="button" class="pill-btn" data-days="3" onclick="setMobileVisibleDays(3)" title="Vue 3 jours">3J</button>
+              <button type="button" class="pill-btn" data-days="7" onclick="setMobileVisibleDays(7)" title="Vue 7 jours">7J</button>
+            </div>
+
+            <!-- BOUTON CARRÉ AUJOURD'HUI FAÇON GOOGLE AGENDA [20] -->
+            <button type="button" class="header-today-square-btn mobile-only-btn" id="mobileHeaderTodayBtn" onclick="jumpToToday()" title="Revenir à aujourd'hui">
+              <span id="todaySquareNum">20</span>
             </button>
-            <span class="current-range-label" id="currentRangeLabel" title="Cliquer pour choisir un mois">Loading...</span>
-            <button type="button" class="nav-arrow-btn nav-next" onclick="navigateTimeline(1)" title="Semaine suivante (→)">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-            </button>
-            <button type="button" class="today-jump-btn" id="headerTodayBtn" onclick="jumpToToday()" title="Revenir à aujourd'hui" style="display: none;">Auj.</button>
+
+            <div class="header-actions">
+              <button class="icon-btn btn-new-task" onclick="toggleQuickAddBar()" title="Quick add bar (⌘K)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:3px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                <span>Quick</span>
+              </button>
+              <button class="icon-btn btn-backlog-toggle mobile-only-btn" id="btnToggleDrawer" onclick="toggleBacklogDrawer()" ondragover="allowDrop(event)" ondragleave="handleBacklogDragLeave(event)" ondrop="handleDropToBacklog(event)" title="Backlog (B / L)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                <span class="backlog-counter-pill" id="globalLaterCount">0</span>
+              </button>
+              <button class="plan-bridge-btn mobile-only-btn" onclick="goToFocusApp()" title="Open Span Focus">Focus ↗</button>
+              <button type="button" class="icon-btn theme-toggle-btn" id="headerThemeToggleBtn" onclick="toggleTheme()" title="Basculer thème Clair / Sombre">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+              </button>
+              <button class="icon-btn btn-settings" onclick="openSettingsModal()" title="Paramètres">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              </button>
+            </div>
           </div>
         </div>
 
-        <!-- TOP CATEGORY TOGGLES (3 COLOR DOTS ONLY, CHECKABLE / COLORED) -->
-        <div class="header-center">
-          <div class="header-category-toggles" id="headerCategoryToggles" title="Filtrer les catégories (Cliquer pour masquer/afficher)">
-            <button type="button" class="category-toggle-dot cat-work is-active" id="toggleCatWork" onclick="toggleCategoryFilter('work')" title="Work (Visible - cliquer pour masquer)">
-              <span class="dot-disc"></span>
-            </button>
-            <button type="button" class="category-toggle-dot cat-life is-active" id="toggleCatLife" onclick="toggleCategoryFilter('life')" title="Life (Visible - cliquer pour masquer)">
-              <span class="dot-disc"></span>
-            </button>
-            <button type="button" class="category-toggle-dot cat-fun is-active" id="toggleCatFun" onclick="toggleCategoryFilter('fun')" title="Fun (Visible - cliquer pour masquer)">
-              <span class="dot-disc"></span>
-            </button>
+        <!-- MOBILE SUBTAB HEADER (DÉDIÉ AUX ONGLETS BACKLOG & TO-DO) -->
+        <div class="mobile-subtab-header" id="mobileSubtabHeader" style="display: none;">
+          <div class="mobile-subtab-title-wrap">
+            <span class="mobile-subtab-title" id="mobileSubtabTitle">Backlog</span>
+            <span class="backlog-counter-pill" id="mobileSubtabCount">0</span>
           </div>
-        </div>
-
-        <div class="header-right">
-          <!-- VIEW SELECTOR PILLS DESKTOP -->
-          <div class="pill-group view-mode-pills" id="daysSelectorGroup">
-            <button class="pill-btn" data-days="1" onclick="setVisibleDays(1)" title="Vue 1 jour (1 / D)">1D</button>
-            <button class="pill-btn" data-days="3" onclick="setVisibleDays(3)" title="Vue 3 jours (3)">3D</button>
-            <button class="pill-btn" data-days="5" onclick="setVisibleDays(5)" title="Semaine ouvrée 5 jours (5)">5D</button>
-            <button class="pill-btn active" data-days="7" onclick="setVisibleDays(7)" title="Semaine complète (7 / W)">7D</button>
-          </div>
-
-          <!-- COMPACT VIEW SELECTOR PILLS MOBILE (1J / 3J / 7J) -->
-          <div class="pill-group mobile-view-pills mobile-only-btn" id="mobileDaysSelectorGroup">
-            <button type="button" class="pill-btn active" data-days="1" onclick="setMobileVisibleDays(1)" title="Vue 1 jour">1J</button>
-            <button type="button" class="pill-btn" data-days="3" onclick="setMobileVisibleDays(3)" title="Vue 3 jours">3J</button>
-            <button type="button" class="pill-btn" data-days="7" onclick="setMobileVisibleDays(7)" title="Vue 7 jours">7J</button>
-          </div>
-
-          <!-- BOUTON CARRÉ AUJOURD'HUI FAÇON GOOGLE AGENDA [20] -->
-          <button type="button" class="header-today-square-btn mobile-only-btn" id="mobileHeaderTodayBtn" onclick="jumpToToday()" title="Revenir à aujourd'hui">
-            <span id="todaySquareNum">20</span>
-          </button>
-
-          <div class="header-actions">
-            <button class="icon-btn btn-new-task" onclick="toggleQuickAddBar()" title="Quick add bar (⌘K)">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:3px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-              <span>Quick</span>
-            </button>
-            <button class="icon-btn btn-backlog-toggle mobile-only-btn" id="btnToggleDrawer" onclick="toggleBacklogDrawer()" ondragover="allowDrop(event)" ondragleave="handleBacklogDragLeave(event)" ondrop="handleDropToBacklog(event)" title="Backlog (B / L)">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
-              <span class="backlog-counter-pill" id="globalLaterCount">0</span>
-            </button>
-            <button class="plan-bridge-btn mobile-only-btn" onclick="goToFocusApp()" title="Open Span Focus">Focus ↗</button>
-            <button type="button" class="icon-btn theme-toggle-btn" id="headerThemeToggleBtn" onclick="toggleTheme()" title="Basculer thème Clair / Sombre">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+          <div class="mobile-subtab-actions">
+            <button type="button" class="btn-mini-toggle-hide active" id="btnMobileSubtabToggleHide" onclick="togglePlanHideActionsInAll()" title="Masquer les actions (Calls, Mails, Paiements) dans 'Tous'">
+              <span class="mini-toggle-eye">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              </span>
+              <span class="mini-toggle-badge" id="mobileSubtabToggleBadgeText">ON</span>
             </button>
             <button class="icon-btn btn-settings" onclick="openSettingsModal()" title="Paramètres">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             </button>
           </div>
         </div>
@@ -247,7 +302,9 @@
       <!-- SMART QUICK ADD BAR -->
       <div class="quick-add-container" id="quickAddContainer">
         <div class="quick-input-wrap">
-          <span class="quick-icon">⚡</span>
+          <span class="quick-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </span>
           <input type="text" class="quick-input" id="quickTaskInput" 
                  placeholder="Add task or event... e.g. 'Standup 10:00 #work' or 'Doctor 3pm #life' (⌘K / N)" 
                  onkeydown="if(event.key==='Enter') submitQuickAdd()">
@@ -255,8 +312,8 @@
         
         <div class="quick-selectors">
           <select class="quick-select" id="quickTypeSelect" title="Item type">
-            <option value="task">📋 Task</option>
-            <option value="event">📅 Event</option>
+            <option value="task">Task</option>
+            <option value="event">Event</option>
           </select>
 
           <select class="quick-select" id="quickTargetDate" title="Target date">
@@ -272,12 +329,12 @@
           </select>
 
           <select class="quick-select" id="quickActionSelect" title="Type d'action">
-            <option value="auto" selected>⚡ Auto</option>
-            <option value="call">📞 Call</option>
-            <option value="mail">✉️ Mail</option>
-            <option value="pay">💳 Pay</option>
-            <option value="content">🎬 Contenu</option>
-            <option value="other">📦 Standard</option>
+            <option value="auto" selected>Auto</option>
+            <option value="call">Call</option>
+            <option value="mail">Mail</option>
+            <option value="pay">Pay</option>
+            <option value="content">Contenu</option>
+            <option value="other">Standard</option>
           </select>
 
           <button class="btn-quick-add" onclick="submitQuickAdd()">Add</button>
@@ -319,34 +376,41 @@
               <span class="backlog-counter-pill" id="drawerLaterCount">0</span>
             </div>
             <div class="drawer-actions">
-              <button class="icon-btn mini" onclick="setMobileDayView('agenda')" title="Fermer">✕</button>
+              <button type="button" class="btn-mini-toggle-hide active" id="btnDrawerMiniToggleHide" onclick="togglePlanHideActionsInAll()" title="Masquer les actions (Calls, Mails, Paiements) dans 'Tous'">
+                <span class="mini-toggle-eye">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                </span>
+                <span class="mini-toggle-badge" id="drawerToggleBadgeText">ON</span>
+              </button>
             </div>
           </div>
           <!-- DRAWER QUICK ADD INPUT -->
           <div class="drawer-quick-add-wrap">
             <input type="text" id="drawerQuickTaskInput" class="drawer-quick-input" placeholder="+ Ajouter une tâche au Backlog..." onkeydown="if(event.key==='Enter') submitDrawerQuickAdd()">
-            <button type="button" class="btn-drawer-quick-add" onclick="submitDrawerQuickAdd()">Ajouter</button>
+            <button type="button" class="btn-drawer-quick-add" onclick="submitDrawerQuickAdd()" title="Ajouter">+</button>
           </div>
           <!-- DRAWER ACTION FILTER PILLS -->
           <div class="drawer-action-filter-pills" id="drawerActionFilterPills">
             <button type="button" class="plan-filter-pill active" data-filter="all" onclick="setPlanBacklogActionFilter('all')">Tous</button>
-            <button type="button" class="plan-filter-pill" data-filter="call" onclick="setPlanBacklogActionFilter('call')">📞 Calls <span class="pill-count" id="drawerCountCall">0</span></button>
-            <button type="button" class="plan-filter-pill" data-filter="mail" onclick="setPlanBacklogActionFilter('mail')">✉️ Mails <span class="pill-count" id="drawerCountMail">0</span></button>
-            <button type="button" class="plan-filter-pill" data-filter="pay" onclick="setPlanBacklogActionFilter('pay')">💳 Paiements <span class="pill-count" id="drawerCountPay">0</span></button>
-            <button type="button" class="plan-filter-pill" data-filter="content" onclick="setPlanBacklogActionFilter('content')">🎬 Contenu <span class="pill-count" id="drawerCountContent">0</span></button>
+            <button type="button" class="plan-filter-pill" data-filter="call" onclick="setPlanBacklogActionFilter('call')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              <span>Calls</span> <span class="pill-count" id="drawerCountCall">0</span>
+            </button>
+            <button type="button" class="plan-filter-pill" data-filter="mail" onclick="setPlanBacklogActionFilter('mail')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+              <span>Mails</span> <span class="pill-count" id="drawerCountMail">0</span>
+            </button>
+            <button type="button" class="plan-filter-pill" data-filter="pay" onclick="setPlanBacklogActionFilter('pay')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+              <span>Paiements</span> <span class="pill-count" id="drawerCountPay">0</span>
+            </button>
+            <button type="button" class="plan-filter-pill" data-filter="content" onclick="setPlanBacklogActionFilter('content')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>
+              <span>Contenu</span> <span class="pill-count" id="drawerCountContent">0</span>
+            </button>
           </div>
           <ul class="task-list drawer-list" id="backlogTaskList" ondragover="allowDrop(event)" ondragleave="handleBacklogDragLeave(event)" ondrop="handleDropToBacklog(event)">
           </ul>
-          <!-- DRAWER ACTION VISIBILITY TOGGLE -->
-          <div class="backlog-bottom-action-toggle" id="drawerBacklogBottomToggle">
-            <button type="button" class="btn-toggle-action-hide active" id="btnToggleHideActionsDrawer" onclick="togglePlanHideActionsInAll()" title="Cliquer pour afficher ou masquer Calls/Mails/Pay dans la vue 'Tous'">
-              <span class="toggle-left">
-                <span class="toggle-icon">👁️‍🗨️</span>
-                <span class="toggle-text">Masquer actions dans "Tous"</span>
-              </span>
-              <span class="toggle-status-badge" id="drawerToggleBadgeText">ON</span>
-            </button>
-          </div>
         </aside>
       </main>
 
@@ -796,9 +860,9 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
           <span class="tab-label">Sauvegarde</span>
         </button>
-        <button class="settings-tab-btn desktop-only" data-tab="appearance" onclick="switchSettingsTab('appearance')">
+        <button class="settings-tab-btn" data-tab="appearance" onclick="switchSettingsTab('appearance')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a7 7 0 0 0 7 7c0 1.5-.5 2-1.5 2h-1a2 2 0 0 0-2 2c0 1.1-.9 2-2 2v0a2 2 0 0 1-2-2 4 4 0 0 1 4-4"/></svg>
-          <span class="tab-label">Apparence</span>
+          <span class="tab-label">Affichage</span>
         </button>
         <button class="settings-tab-btn desktop-only" data-tab="shortcuts" onclick="switchSettingsTab('shortcuts')">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="6" y1="8" x2="6.01" y2="8"/><line x1="10" y1="8" x2="10.01" y2="8"/><line x1="14" y1="8" x2="14.01" y2="8"/><line x1="18" y1="8" x2="18.01" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="6" y1="16" x2="6.01" y2="16"/><line x1="18" y1="16" x2="18.01" y2="16"/></svg>
@@ -1173,20 +1237,30 @@
           </div>
         </div>
 
-        <!-- PAGE 4: APPEARANCE -->
+        <!-- PAGE 4: APPEARANCE & THEME (CLAIR / SOMBRE / SYSTÈME) -->
         <div class="settings-page-pane" id="pane_appearance" data-tab="appearance">
           <div class="settings-section-head">
-            <div class="settings-pane-title">Appearance & Display</div>
-            <div class="settings-pane-desc">Customize the visual theme and contrast of Span Plan.</div>
+            <div class="settings-pane-title">Affichage & Thème</div>
+            <div class="settings-pane-desc">Personnalisez le thème visuel et l'ambiance de Span Plan.</div>
           </div>
 
           <div class="settings-card-box">
-            <div class="setting-item" style="border: none; padding: 0;">
-              <div>
-                <div style="font-size: 14px; font-weight: 600;">Theme Mode</div>
-                <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Dark mode by default, optimized for OLED and focus.</div>
-              </div>
-              <button class="btn-theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">Dark</button>
+            <div class="card-box-title">Thème de l'application</div>
+            <div class="card-box-desc">Choisissez entre lin crème éditorial, obsidienne douce ou adaptation automatique au système :</div>
+            
+            <div class="theme-segmented-control" id="themeSegmentedControl" style="margin-top: 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+              <button type="button" class="theme-seg-btn" id="themeBtnLight" data-theme-val="light" onclick="setThemeMode('light')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                <span>Clair</span>
+              </button>
+              <button type="button" class="theme-seg-btn" id="themeBtnDark" data-theme-val="dark" onclick="setThemeMode('dark')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                <span>Sombre</span>
+              </button>
+              <button type="button" class="theme-seg-btn" id="themeBtnSystem" data-theme-val="system" onclick="setThemeMode('system')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+                <span>Système</span>
+              </button>
             </div>
           </div>
         </div>
@@ -1375,14 +1449,14 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/core.js?v=8.05"></script>
-  <script src="js/security.js?v=8.05"></script>
-  <script src="js/sync.js?v=8.05"></script>
-  <script src="js/gcal.js?v=8.05"></script>
-  <script src="js/plan.js?v=8.05"></script>
-  <script src="js/calendar-layout.js?v=8.05"></script>
-  <script src="js/calendar-drag.js?v=8.05"></script>
-  <script src="js/plan-modals.js?v=8.05"></script>
-  <script src="js/app.js?v=8.05"></script>
+  <script src="js/core.js?v=8.06"></script>
+  <script src="js/security.js?v=8.06"></script>
+  <script src="js/sync.js?v=8.06"></script>
+  <script src="js/gcal.js?v=8.06"></script>
+  <script src="js/plan.js?v=8.06"></script>
+  <script src="js/calendar-layout.js?v=8.06"></script>
+  <script src="js/calendar-drag.js?v=8.06"></script>
+  <script src="js/plan-modals.js?v=8.06"></script>
+  <script src="js/app.js?v=8.06"></script>
 </body>
 </html>

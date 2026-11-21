@@ -1,36 +1,69 @@
-// Thème & Préférences globales
-function updateThemeUI(theme) {
-  const isLight = (theme === 'light');
-  const toggleBtn = document.getElementById('themeToggleBtn');
-  if (toggleBtn) toggleBtn.textContent = isLight ? 'Light' : 'Dark';
-  
+// Thème & Préférences globales (Dual Thème Obsidienne Douce / Papier Chaud + Auto Système)
+function getSystemTheme() {
+  return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+}
+
+function applyEffectiveTheme(theme) {
+  const effective = (theme === 'system') ? getSystemTheme() : theme;
+  document.documentElement.setAttribute('data-theme', effective);
+
+  const meta = document.getElementById('themeMetaColor') || document.querySelector('meta[name="theme-color"]');
+  if (meta) {
+    meta.setAttribute('content', effective === 'light' ? '#F7F6F2' : '#0E0F12');
+  }
+
   const sunIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`;
   const moonIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
 
   const headerBtn = document.getElementById('headerThemeToggleBtn');
   if (headerBtn) {
-    headerBtn.innerHTML = isLight ? moonIcon : sunIcon;
-    headerBtn.title = isLight ? 'Passer en mode sombre' : 'Passer en mode clair';
+    headerBtn.innerHTML = effective === 'light' ? moonIcon : sunIcon;
+    headerBtn.title = effective === 'light' ? 'Passer en mode sombre' : 'Passer en mode clair';
   }
 
   const sidebarBtn = document.getElementById('sidebarThemeToggleBtn');
   if (sidebarBtn) {
-    sidebarBtn.innerHTML = `<span>${isLight ? moonIcon : sunIcon}</span>`;
-    sidebarBtn.title = isLight ? 'Passer en mode sombre' : 'Passer en mode clair';
+    sidebarBtn.innerHTML = `<span>${effective === 'light' ? moonIcon : sunIcon}</span>`;
+    sidebarBtn.title = effective === 'light' ? 'Passer en mode sombre' : 'Passer en mode clair';
   }
 
-  const meta = document.getElementById('themeMetaColor');
-  if (meta) meta.setAttribute('content', isLight ? '#f7f5f0' : '#0d0d0f');
+  const pref = localStorage.getItem('span_theme') || 'dark';
+  document.querySelectorAll('.theme-seg-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-theme-val') === pref);
+  });
 }
 
+function updateThemeUI(theme) {
+  applyEffectiveTheme(theme);
+}
+
+function setThemeMode(mode) {
+  if (!['light', 'dark', 'system'].includes(mode)) mode = 'dark';
+  localStorage.setItem('span_theme', mode);
+  applyEffectiveTheme(mode);
+  const labels = {
+    light: 'Mode clair activé (papier chaud)',
+    dark: 'Mode sombre activé (obsidienne)',
+    system: 'Thème synchronisé avec le système'
+  };
+  if (typeof showToast === 'function') showToast(labels[mode]);
+}
+window.setThemeMode = setThemeMode;
+
 function toggleTheme() {
-  const current = document.documentElement.getAttribute('data-theme') || 'dark';
-  const next = current === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', next);
-  localStorage.setItem('span_theme', next);
-  
-  updateThemeUI(next);
-  showToast(next === 'light' ? 'Mode clair activé (papier crème)' : 'Mode sombre activé');
+  const current = localStorage.getItem('span_theme') || 'dark';
+  const effective = (current === 'system') ? getSystemTheme() : current;
+  const next = (effective === 'dark') ? 'light' : 'dark';
+  setThemeMode(next);
+}
+window.toggleTheme = toggleTheme;
+
+if (window.matchMedia) {
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (localStorage.getItem('span_theme') === 'system') {
+      applyEffectiveTheme('system');
+    }
+  });
 }
 
 function switchSettingsTab(tabName) {
@@ -593,8 +626,7 @@ window.addEventListener('keydown', (e) => {
 // Initialisation globale
 window.addEventListener('DOMContentLoaded', () => {
   const savedTheme = localStorage.getItem('span_theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', savedTheme);
-  updateThemeUI(savedTheme);
+  applyEffectiveTheme(savedTheme);
 });
 
 // Unobtrusive Event Delegation for [data-action] attributes

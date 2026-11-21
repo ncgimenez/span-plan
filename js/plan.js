@@ -262,7 +262,7 @@ function isTaskOccurringOnDate(task, targetDateStr) {
   const rec = task.recurrence || 'none';
   if (rec === 'none') {
     // Les plages multi-jours (endDate > date) sont réservées aux événements ALL-DAY
-    const isMultiDaySpan = !!(task.allDay || !task.time);
+    const isMultiDaySpan = !!(task.allDay || !task.time || (task.endDate && task.endDate > task.date));
     if (isMultiDaySpan && task.endDate && task.endDate >= task.date) {
       return task.date <= targetDateStr && targetDateStr <= task.endDate;
     }
@@ -1372,13 +1372,13 @@ function renderBacklogDrawer() {
       const actionType = getTaskActionType(task);
       let actionTagHtml = '';
       if (actionType === 'call') {
-        actionTagHtml = `<span class="plan-action-tag-badge action-call" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Action: Call (cliquer pour changer)">📞 Call</span>`;
+        actionTagHtml = `<span class="plan-action-tag-badge action-call" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Action: Call (cliquer pour changer)"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block;vertical-align:middle;margin-right:2px;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Call</span>`;
       } else if (actionType === 'mail') {
-        actionTagHtml = `<span class="plan-action-tag-badge action-mail" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Action: Mail (cliquer pour changer)">✉️ Mail</span>`;
+        actionTagHtml = `<span class="plan-action-tag-badge action-mail" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Action: Mail (cliquer pour changer)"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block;vertical-align:middle;margin-right:2px;"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>Mail</span>`;
       } else if (actionType === 'pay') {
-        actionTagHtml = `<span class="plan-action-tag-badge action-pay" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Action: Paiement (cliquer pour changer)">💳 Pay</span>`;
+        actionTagHtml = `<span class="plan-action-tag-badge action-pay" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Action: Paiement (cliquer pour changer)"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block;vertical-align:middle;margin-right:2px;"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>Pay</span>`;
       } else if (actionType === 'content') {
-        actionTagHtml = `<span class="plan-action-tag-badge action-content" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Action: Contenu (cliquer pour changer)">🎬 Contenu</span>`;
+        actionTagHtml = `<span class="plan-action-tag-badge action-content" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Action: Contenu (cliquer pour changer)"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block;vertical-align:middle;margin-right:2px;"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>Contenu</span>`;
       } else {
         actionTagHtml = `<span class="plan-action-tag-badge action-none" onclick="event.stopPropagation(); cyclePlanTaskAction('${task.id}')" title="Définir une action (Call, Mail, Pay, Contenu)">+ Action</span>`;
       }
@@ -1409,7 +1409,7 @@ function renderBacklogDrawer() {
       li.innerHTML = `
         <div class="task-row-main" onclick="handleTaskRowClick(event, '${task.id}')">
           ${isEvent ? `
-            <span class="event-icon" title="Événement">⏱</span>
+            <span class="event-icon" title="Événement"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
           ` : `
             <div class="checkbox" onclick="event.stopPropagation(); toggleTaskCompletion('${task.id}')" title="Marquer fait">
               ${task.completed ? '✓' : ''}
@@ -1419,13 +1419,13 @@ function renderBacklogDrawer() {
             <span class="task-text ${completedClass}">${renderTitleWithTagsHtml(task.title)}${actionTagHtml}</span>
             <div class="backlog-task-meta">
               <span class="backlog-cat-badge cat-${task.context || 'work'}">${catLabel}</span>
-              <span class="backlog-duration-badge">⏱ ${durationStr}</span>
+              <span class="backlog-duration-badge">${durationStr}</span>
             </div>
           </div>
           ${backlogLinkHtml}
           <div class="backlog-item-actions">
             ${progressPillHtml}
-            <button type="button" class="btn-plan-backlog" onclick="event.stopPropagation(); scheduleTaskDirectly('${task.id}', '${TODAY_STR}')" title="Planifier pour aujourd'hui (${TODAY_STR})">Planifier</button>
+            <button type="button" class="btn-backlog-schedule-icon" onclick="event.stopPropagation(); scheduleTaskDirectly('${task.id}', '${TODAY_STR}')" title="Planifier pour aujourd'hui (${TODAY_STR})"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M10 14h4"/></svg></button>
             <button type="button" class="btn-task-menu" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation(); openTaskPopover(event, '${task.id}')" title="Options">⋮</button>
           </div>
         </div>
@@ -2175,6 +2175,42 @@ function setMobileDayView(mode) {
     } else if (isMobileScreen()) {
       drawer.classList.remove('open');
     }
+  }
+
+  const headerAgenda = document.getElementById('headerAgendaView');
+  const headerSubtab = document.getElementById('mobileSubtabHeader');
+  const isMob = typeof isMobileScreen === 'function' ? isMobileScreen() : (window.innerWidth < 1024);
+
+  if (isMob) {
+    if (mode === 'agenda') {
+      if (headerAgenda) headerAgenda.style.display = 'flex';
+      if (headerSubtab) headerSubtab.style.display = 'none';
+    } else {
+      if (headerAgenda) headerAgenda.style.display = 'none';
+      if (headerSubtab) {
+        headerSubtab.style.display = 'flex';
+        const titleEl = document.getElementById('mobileSubtabTitle');
+        const countEl = document.getElementById('mobileSubtabCount');
+        const eyeBtn = document.getElementById('btnMobileSubtabToggleHide');
+        const allTasks = (window.SpanPlanState && window.SpanPlanState.tasks) ? window.SpanPlanState.tasks : [];
+
+        if (mode === 'todo') {
+          if (titleEl) titleEl.textContent = 'To-do';
+          if (eyeBtn) eyeBtn.style.display = 'none';
+          const todayStr = typeof getLocalDateString === 'function' ? getLocalDateString(new Date()) : TODAY_STR;
+          const todayCount = allTasks.filter(t => t.date === todayStr && !t.completed).length;
+          if (countEl) countEl.textContent = todayCount;
+        } else if (mode === 'backlog') {
+          if (titleEl) titleEl.textContent = 'Backlog';
+          if (eyeBtn) eyeBtn.style.display = 'inline-flex';
+          const laterCount = allTasks.filter(t => !t.date).length;
+          if (countEl) countEl.textContent = laterCount;
+        }
+      }
+    }
+  } else {
+    if (headerAgenda) headerAgenda.style.display = '';
+    if (headerSubtab) headerSubtab.style.display = 'none';
   }
 
   if (typeof renderDateStrip === 'function') {

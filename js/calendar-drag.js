@@ -191,17 +191,20 @@ function updateSelectionVisuals() {
     bar.innerHTML = `
       <div class="selected-block-info-bar">
         <span class="selected-block-title">${title}</span>
-        ${timeStr ? `<span class="selected-block-time">⏰ ${timeStr}</span>` : ''}
+        ${timeStr ? `<span class="selected-block-time">${timeStr}</span>` : ''}
       </div>
       <div class="selected-block-actions">
+        <button type="button" class="btn-block-action" onclick="openEditModal('${singleId}')" title="Modifier">
+          Modifier
+        </button>
         <button type="button" class="btn-block-action ${isCompleted ? 'is-completed' : ''}" onclick="toggleSelectedTasksCompletion()" title="${isCompleted ? 'Marquer non fait' : 'Terminer'}">
           ${isCompleted ? '↩ Fait' : '✓ Terminer'}
         </button>
         <button type="button" class="btn-block-action btn-focus-action" onclick="pushSelectedTaskToFocus()" title="Lancer en Focus">
-          ⚡ Focus
+          Focus ↗
         </button>
         <button type="button" class="btn-block-action danger" onclick="deleteSelectedTasks()" title="Supprimer">
-          ✕
+          Suppr
         </button>
         <button type="button" class="multi-select-close-btn" onclick="clearSelection()" title="Désélectionner">✕</button>
       </div>
@@ -304,10 +307,6 @@ function handleBlockPointerDown(e, taskId, dateStr) {
   const wasAlreadySelected = selectedTaskIds.has(taskId);
   dragWasAlreadySelected = wasAlreadySelected;
 
-  if (!wasAlreadySelected) {
-    selectTaskExclusively(taskId);
-  }
-
   dragAnchorTaskId = taskId;
   dragAnchorClientY = e.clientY;
   dragAnchorClientX = e.clientX;
@@ -325,7 +324,8 @@ function handleBlockPointerDown(e, taskId, dateStr) {
   }
 
   dragInitialTops.clear();
-  selectedTaskIds.forEach(id => {
+  const idsToTrack = wasAlreadySelected ? Array.from(selectedTaskIds) : [taskId];
+  idsToTrack.forEach(id => {
     const task = window.SpanPlanState.tasks.find(t => t.id === id);
     const el = document.getElementById(`block_${id}`) || document.getElementById(`block_${id}_cont`);
     if (task && el) {
@@ -383,6 +383,9 @@ function handleBlockPointerMove(e) {
     if (Math.hypot(deltaX, deltaY) > 5) {
       hasMovedBeyondThreshold = true;
       isPointerDragging = true;
+      if (!dragWasAlreadySelected) {
+        selectTaskExclusively(dragAnchorTaskId);
+      }
       document.body.classList.add('is-card-dragging');
       if (window.getSelection) {
         const sel = window.getSelection();
@@ -575,7 +578,7 @@ function handleBlockPointerUp(e) {
   if (!moved) {
     // 1 clic court (tap) : 1 clic sélectionne le bloc, un 2e clic le désélectionne sans jamais ouvrir ses paramètres
     if (anchorId) {
-      if (selectedTaskIds.has(anchorId)) {
+      if (dragWasAlreadySelected) {
         selectedTaskIds.delete(anchorId);
         updateSelectionVisuals();
       } else {

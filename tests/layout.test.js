@@ -137,4 +137,48 @@ test('Calendar Layout & Geometry Math', async (t) => {
     assert.strictEqual(renderAllDayContinuousRibbonHtml(null), '', 'Null all-day section must collapse to empty string');
     assert.ok(renderAllDayContinuousRibbonHtml([{ id: '1' }]).length > 0, 'Populated all-day section renders ribbon markup');
   });
+
+  await t.test('multi-day events appear across all dates in interval [date, endDate]', () => {
+    function isTaskOccurringOnDate(task, targetDateStr) {
+      if (!task || !targetDateStr) return false;
+      if (!task.date || typeof task.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(task.date.trim())) return false;
+      const rec = task.recurrence || 'none';
+      if (rec === 'none') {
+        const isMultiDaySpan = !!(task.allDay || !task.time || (task.endDate && task.endDate > task.date));
+        if (isMultiDaySpan && task.endDate && task.endDate >= task.date) {
+          return task.date <= targetDateStr && targetDateStr <= task.endDate;
+        }
+        return task.date === targetDateStr;
+      }
+      return false;
+    }
+
+    const taskParentsOff = {
+      id: 'parents_off',
+      title: 'Parents Off',
+      date: '2026-11-20',
+      endDate: '2026-11-23'
+    };
+
+    assert.strictEqual(isTaskOccurringOnDate(taskParentsOff, '2026-11-19'), false, 'Before start');
+    assert.strictEqual(isTaskOccurringOnDate(taskParentsOff, '2026-11-20'), true, 'Day 1');
+    assert.strictEqual(isTaskOccurringOnDate(taskParentsOff, '2026-11-21'), true, 'Day 2');
+    assert.strictEqual(isTaskOccurringOnDate(taskParentsOff, '2026-11-22'), true, 'Day 3');
+    assert.strictEqual(isTaskOccurringOnDate(taskParentsOff, '2026-11-23'), true, 'Day 4');
+    assert.strictEqual(isTaskOccurringOnDate(taskParentsOff, '2026-11-24'), false, 'After end');
+  });
+
+  await t.test('desktop 7D view keeps 3-letter day names and mobile 7D uses 1-letter', () => {
+    const singleLettersFr = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+    const threeLettersFr = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+    function getWeekdayLabel(isMob, is7d, dayOfWeek) {
+      return (isMob && is7d) ? singleLettersFr[dayOfWeek] : threeLettersFr[dayOfWeek];
+    }
+
+    // Monday (1)
+    assert.strictEqual(getWeekdayLabel(false, true, 1), 'Lun', 'Desktop 7D view displays Lun, not L');
+    assert.strictEqual(getWeekdayLabel(true, true, 1), 'L', 'Mobile 7D view displays L');
+    assert.strictEqual(getWeekdayLabel(false, false, 1), 'Lun', 'Desktop 1D/3D displays Lun');
+    assert.strictEqual(getWeekdayLabel(true, false, 1), 'Lun', 'Mobile 1D/3D displays Lun');
+  });
 });
